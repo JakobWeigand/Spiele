@@ -89,23 +89,29 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--focus); out
   user-select: none; -webkit-user-select: none;
 }
 
-/* Kopfzeile */
-.top {
-  display: grid; grid-template-columns: 1fr auto; grid-template-areas: "title btn" "tabs tabs";
-  align-items: center; gap: 10px 12px;
-  padding: 12px var(--pad-r) 10px var(--pad-l);
+/* Kopfzeile: Zeile 1 Titel · Umschalter (Mitte); Zeile 2 Tabs · Spieler */
+.top { display: grid; gap: 10px; padding: 10px var(--pad-r) 10px var(--pad-l); }
+.top-row { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; }
+.top-row2 { display: grid; grid-template-columns: 1fr auto; gap: 10px; }
+h1 { justify-self: start; margin: 0; font-size: 24px; font-weight: 700; line-height: 1.1; letter-spacing: -.01em; white-space: nowrap; }
+.mode { display: grid; grid-template-columns: 1fr 1fr; border: 2px solid var(--accent); }
+.mode button {
+  min-height: 38px; padding: 0 12px; border: 0; border-radius: 0; background: transparent; cursor: pointer;
+  font-size: 14px; font-weight: 700; color: var(--body); white-space: nowrap;
 }
-h1 { grid-area: title; margin: 0; font-size: 28px; font-weight: 700; line-height: 1.1; letter-spacing: -.01em; }
-.seg { grid-area: tabs; display: grid; grid-template-columns: 1fr 1fr; border: 2px solid var(--accent); }
+.mode button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
+.seg { display: grid; grid-template-columns: 1fr 1fr; border: 2px solid var(--accent); }
 .seg button {
   min-height: 46px; border: 0; border-radius: 0; background: transparent; cursor: pointer;
   font-size: 17px; font-weight: 700; color: var(--body);
 }
 .seg button[aria-selected="true"] { background: var(--accent); color: var(--on-accent); }
 .btn-ghost {
-  grid-area: btn; min-height: 44px; padding: 0 16px; border: 2px solid var(--accent); border-radius: 0;
+  min-height: 44px; padding: 0 16px; border: 2px solid var(--accent); border-radius: 0;
   background: transparent; color: var(--text); font-size: 16px; font-weight: 700; cursor: pointer;
 }
+
+.app.noblock .top-row2, .app.noblock #page-block, .app.noblock .status-who { display: none; }
 
 /* Seiten zum Wischen */
 .pager {
@@ -286,11 +292,14 @@ table.combo { width: 100%; border-collapse: collapse; font-size: 16px; }
 /* Querformat (iPhone 15/16/17 Pro: ca. 852–874 × 393–402 pt) */
 @media (orientation: landscape) and (max-height: 500px) {
   .app { max-width: none; }
-  .top {
-    grid-template-columns: auto minmax(0, 340px) auto; grid-template-areas: "title tabs btn";
-    justify-content: space-between; padding-block: 6px 6px; gap: 16px;
-  }
+  .top { grid-template-columns: 1fr auto minmax(200px, 300px) 1fr; align-items: center; gap: 14px; padding-block: 6px; }
+  .top-row, .top-row2 { display: contents; }
+  .top .spacer { display: none; }
+  #open-settings { justify-self: end; }
+  .app.noblock .top { grid-template-columns: 1fr auto 1fr; }
+  .app.noblock .top .spacer { display: block; }
   h1 { font-size: 22px; }
+  .mode button { min-height: 36px; }
   .seg button { min-height: 38px; font-size: 16px; }
   .btn-ghost { min-height: 40px; }
 
@@ -326,12 +335,21 @@ table.combo { width: 100%; border-collapse: collapse; font-size: 16px; }
 <body>
 <div class="app">
   <header class="top">
-    <h1>Quixx</h1>
-    <div class="seg" role="tablist" aria-label="Ansicht">
-      <button type="button" role="tab" id="tab-dice" aria-selected="true" aria-controls="page-dice" data-page="0">Würfel</button>
-      <button type="button" role="tab" id="tab-block" aria-selected="false" aria-controls="page-block" data-page="1">Block</button>
+    <div class="top-row">
+      <h1>Quixx</h1>
+      <div class="mode" role="group" aria-label="Spielweise">
+        <button type="button" id="mode-block" aria-pressed="true">Mit Block</button>
+        <button type="button" id="mode-plain" aria-pressed="false">Nur Würfel</button>
+      </div>
+      <span class="spacer" aria-hidden="true"></span>
     </div>
-    <button type="button" class="btn-ghost" id="open-settings">Spieler</button>
+    <div class="top-row2">
+      <div class="seg" role="tablist" aria-label="Ansicht">
+        <button type="button" role="tab" id="tab-dice" aria-selected="true" aria-controls="page-dice" data-page="0">Würfel</button>
+        <button type="button" role="tab" id="tab-block" aria-selected="false" aria-controls="page-block" data-page="1">Block</button>
+      </div>
+      <button type="button" class="btn-ghost" id="open-settings">Spieler</button>
+    </div>
   </header>
 
   <div class="pager" id="pager">
@@ -454,6 +472,8 @@ table.combo { width: 100%; border-collapse: collapse; font-size: 16px; }
   }
   function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
   var S = load();
+  if (S.block === undefined) S.block = true;
+  function blockOn() { return S.block !== false; }
   if (S.view >= S.players.length) S.view = 0;
 
   function lockedBySheet(key) { return S.sheets.some(function (s) { return s[key].indexOf(LOCK) !== -1; }); }
@@ -727,7 +747,9 @@ table.combo { width: 100%; border-collapse: collapse; font-size: 16px; }
     if (inp) { inp.focus(); inp.select(); }
   });
   function newGame() {
+    var keepBlock = S.block;
     S = fresh(S.players.slice());
+    S.block = keepBlock;
     qWhiteDice.forEach(function (d) { showFace(d, 0); });
     COLORS.forEach(function (c) { showFace(qColorDice[c.key], 0); });
     save(); render(); goPage(0);
@@ -766,6 +788,20 @@ table.combo { width: 100%; border-collapse: collapse; font-size: 16px; }
     COLORS.forEach(function (c) { if (closed(c.key)) showFace(qColorDice[c.key], 0); });
     renderDice(); renderSheet();
   }
+  /* ---------- Mit Block / Nur Würfel ---------- */
+  var app = $(".app"), modeBlock = $("#mode-block"), modePlain = $("#mode-plain");
+  function applyMode() {
+    var on = blockOn();
+    app.classList.toggle("noblock", !on);
+    modeBlock.setAttribute("aria-pressed", on ? "true" : "false");
+    modePlain.setAttribute("aria-pressed", on ? "false" : "true");
+    if (!on) { goPage(0, true); }
+  }
+  function setMode(on) { S.block = on; save(); applyMode(); render(); say(on ? "Mit Block." : "Nur Würfel."); }
+  modeBlock.addEventListener("click", function () { setMode(true); });
+  modePlain.addEventListener("click", function () { setMode(false); });
+  applyMode();
+
   render();
 
   // Offline-Speicher: lädt die App einmal komplett aufs Gerät.

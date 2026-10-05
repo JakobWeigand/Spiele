@@ -86,23 +86,29 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--focus); out
   user-select: none; -webkit-user-select: none;
 }
 
-/* Kopfzeile */
-.top {
-  display: grid; grid-template-columns: 1fr auto; grid-template-areas: "title btn" "tabs tabs";
-  align-items: center; gap: 10px 12px;
-  padding: 12px var(--pad-r) 10px var(--pad-l);
+/* Kopfzeile: Zeile 1 Titel · Umschalter (Mitte); Zeile 2 Tabs · Spieler */
+.top { display: grid; gap: 10px; padding: 10px var(--pad-r) 10px var(--pad-l); }
+.top-row { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; }
+.top-row2 { display: grid; grid-template-columns: 1fr auto; gap: 10px; }
+h1 { justify-self: start; margin: 0; font-size: 24px; font-weight: 700; line-height: 1.1; letter-spacing: -.01em; white-space: nowrap; }
+.mode { display: grid; grid-template-columns: 1fr 1fr; border: 2px solid var(--accent); }
+.mode button {
+  min-height: 38px; padding: 0 12px; border: 0; border-radius: 0; background: transparent; cursor: pointer;
+  font-size: 14px; font-weight: 700; color: var(--body); white-space: nowrap;
 }
-h1 { grid-area: title; margin: 0; font-size: 28px; font-weight: 700; line-height: 1.1; letter-spacing: -.01em; }
-.seg { grid-area: tabs; display: grid; grid-template-columns: 1fr 1fr; border: 2px solid var(--accent); }
+.mode button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
+.seg { display: grid; grid-template-columns: 1fr 1fr; border: 2px solid var(--accent); }
 .seg button {
   min-height: 46px; border: 0; border-radius: 0; background: transparent; cursor: pointer;
   font-size: 17px; font-weight: 700; color: var(--body);
 }
 .seg button[aria-selected="true"] { background: var(--accent); color: var(--on-accent); }
 .btn-ghost {
-  grid-area: btn; min-height: 44px; padding: 0 16px; border: 2px solid var(--accent); border-radius: 0;
+  min-height: 44px; padding: 0 16px; border: 2px solid var(--accent); border-radius: 0;
   background: transparent; color: var(--text); font-size: 16px; font-weight: 700; cursor: pointer;
 }
+
+.app.noblock .top-row2, .app.noblock #page-block, .app.noblock .status-who { display: none; }
 
 /* Seiten zum Wischen */
 .pager {
@@ -186,6 +192,7 @@ h1 { grid-area: title; margin: 0; font-size: 28px; font-weight: 700; line-height
   padding-block: 12px calc(14px + env(safe-area-inset-bottom, 0px));
   border-top: 2px solid var(--rule);
 }
+.bar.single { grid-template-columns: 1fr; }
 .btn {
   min-height: 64px; border: 0; border-radius: 0; cursor: pointer;
   font-size: 19px; font-weight: 700; padding: 0 12px; line-height: 1.15;
@@ -217,6 +224,8 @@ table.score col.cat-col { width: 40%; }
 }
 .cell.preview { color: var(--muted); font-weight: 400; font-style: italic; }
 .cell.struck { color: var(--muted); }
+.cell.best { color: var(--text); font-style: normal; font-weight: 700; text-decoration: underline 3px; text-underline-offset: 5px; }
+.score td.cat { cursor: pointer; }
 .score tr.total td { font-weight: 700; font-size: 16px; color: var(--text); }
 .score tr.total td.cat { color: var(--text); font-weight: 700; }
 .score tr.grand td, .score tr.grand td.cur { background: var(--emph); color: var(--on-emph); font-size: 18px; border-bottom: 0; }
@@ -263,6 +272,17 @@ table.score col.cat-col { width: 40%; }
 .confirm { background: var(--surface); padding: 14px; display: grid; gap: 10px; }
 .confirm p { margin: 0; font-weight: 700; }
 
+/* Hinweis nach dem Eintragen, mit Rückgängig */
+.toast {
+  position: fixed; z-index: 9; left: 50%; transform: translateX(-50%);
+  bottom: calc(112px + env(safe-area-inset-bottom, 0px)); width: min(520px, calc(100% - 32px));
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 8px 8px 8px 16px; background: var(--emph); color: var(--on-emph); font-size: 15px;
+}
+.toast button {
+  min-height: 42px; padding: 0 14px; border: 2px solid var(--emph-label); border-radius: 0;
+  background: transparent; color: var(--on-emph); font-size: 15px; font-weight: 700; cursor: pointer; white-space: nowrap;
+}
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 @media (max-height: 740px) and (orientation: portrait) {
@@ -274,11 +294,14 @@ table.score col.cat-col { width: 40%; }
 /* Querformat (iPhone 15/16/17 Pro: ca. 852–874 × 393–402 pt) */
 @media (orientation: landscape) and (max-height: 500px) {
   .app { max-width: none; }
-  .top {
-    grid-template-columns: auto minmax(0, 340px) auto; grid-template-areas: "title tabs btn";
-    justify-content: space-between; padding-block: 6px 6px; gap: 16px;
-  }
+  .top { grid-template-columns: 1fr auto minmax(200px, 300px) 1fr; align-items: center; gap: 14px; padding-block: 6px; }
+  .top-row, .top-row2 { display: contents; }
+  .top .spacer { display: none; }
+  #open-settings { justify-self: end; }
+  .app.noblock .top { grid-template-columns: 1fr auto 1fr; }
+  .app.noblock .top .spacer { display: block; }
   h1 { font-size: 22px; }
+  .mode button { min-height: 36px; }
   .seg button { min-height: 38px; font-size: 16px; }
   .btn-ghost { min-height: 40px; }
 
@@ -308,6 +331,7 @@ table.score col.cat-col { width: 40%; }
   .score td.cat { font-size: 14px; }
   .score tr.grand td { font-size: 16px; }
   .sheet-hint { display: none; }
+  .toast { left: var(--pad-l); transform: none; width: min(460px, calc(100% - 330px)); bottom: calc(10px + env(safe-area-inset-bottom, 0px)); }
 
   .overlay { align-items: center; }
   .panel { max-width: 480px; padding: 16px 20px; gap: 10px; }
@@ -320,12 +344,21 @@ table.score col.cat-col { width: 40%; }
 <body>
 <div class="app">
   <header class="top">
-    <h1>Kniffel</h1>
-    <div class="seg" role="tablist" aria-label="Ansicht">
-      <button type="button" role="tab" id="tab-dice" aria-selected="true" aria-controls="page-dice" data-page="0">Würfel</button>
-      <button type="button" role="tab" id="tab-block" aria-selected="false" aria-controls="page-block" data-page="1">Block</button>
+    <div class="top-row">
+      <h1>Kniffel</h1>
+      <div class="mode" role="group" aria-label="Spielweise">
+        <button type="button" id="mode-block" aria-pressed="true">Mit Block</button>
+        <button type="button" id="mode-plain" aria-pressed="false">Nur Würfel</button>
+      </div>
+      <span class="spacer" aria-hidden="true"></span>
     </div>
-    <button type="button" class="btn-ghost" id="open-settings">Spieler</button>
+    <div class="top-row2">
+      <div class="seg" role="tablist" aria-label="Ansicht">
+        <button type="button" role="tab" id="tab-dice" aria-selected="true" aria-controls="page-dice" data-page="0">Würfel</button>
+        <button type="button" role="tab" id="tab-block" aria-selected="false" aria-controls="page-block" data-page="1">Block</button>
+      </div>
+      <button type="button" class="btn-ghost" id="open-settings">Spieler</button>
+    </div>
   </header>
 
   <div class="pager" id="pager">
@@ -334,7 +367,7 @@ table.score col.cat-col { width: 40%; }
       <div class="dice-wrap">
         <div class="dice-main">
           <div class="status">
-            <div class="status-block">
+            <div class="status-block status-who">
               <p class="label">Am Zug</p>
               <div class="who" id="k-who">Spieler 1</div>
               <div class="round" id="k-round">Zug 1 von 13</div>
@@ -357,12 +390,13 @@ table.score col.cat-col { width: 40%; }
               <div class="value" id="k-sum">–</div>
             </div>
             <div class="tile">
-              <p class="label">Bester Wurf</p>
+              <p class="label" id="k-best-label">Bester Wurf</p>
               <div class="value" id="k-best">–</div>
             </div>
           </div>
-          <div class="bar">
+          <div class="bar" id="k-bar">
             <button type="button" class="btn btn-secondary" id="k-next">Nächster Zug</button>
+            <button type="button" class="btn btn-secondary" id="k-enter" hidden>Eintragen</button>
             <button type="button" class="btn btn-primary" id="k-roll">Würfeln</button>
           </div>
         </div>
@@ -374,7 +408,7 @@ table.score col.cat-col { width: 40%; }
       <div class="block-scroll">
         <div class="banner" id="k-over" hidden></div>
         <div class="sheet" id="k-sheet"></div>
-        <p class="hint sheet-hint">Feld antippen zum Eintragen. Grau steht, was der aktuelle Wurf bringen würde. Danach ist automatisch der Nächste dran.</p>
+        <p class="hint sheet-hint">Tippe auf eine Zeile, um den Wurf beim Spieler am Zug einzutragen. Grau steht, was er dort bringt, unterstrichen das beste freie Feld.</p>
       </div>
     </section>
   </div>
@@ -400,6 +434,11 @@ table.score col.cat-col { width: 40%; }
       </div>
       <button type="button" class="btn btn-primary" id="settings-done">Fertig</button>
     </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" hidden>
+    <span id="toast-text"></span>
+    <button type="button" id="toast-undo">Rückgängig</button>
   </div>
 
   <div class="sr-only" aria-live="polite" id="announce"></div>
@@ -505,6 +544,8 @@ table.score col.cat-col { width: 40%; }
   }
   function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
   var S = load();
+  if (S.block === undefined) S.block = true;
+  function blockOn() { return S.block !== false; }
   S.dice.vals.forEach(function (v, i) { if (!v) S.dice.held[i] = false; });
 
   /* ---------- Würfel ---------- */
@@ -549,6 +590,7 @@ table.score col.cat-col { width: 40%; }
     showFace(d, S.dice.vals[i]);
   }
   var kRoll = $("#k-roll"), kNext = $("#k-next"), kLeft = $("#k-left"), kTurn = $("#k-round"), kWho = $("#k-who");
+  var kEnter = $("#k-enter"), kBar = $("#k-bar"), kBestLabel = $("#k-best-label");
   var kBoxes = document.querySelectorAll("#k-throws .box"), kHint = $("#k-hint"), kSum = $("#k-sum"), kBest = $("#k-best");
 
   function toggleHold(i) {
@@ -557,8 +599,21 @@ table.score col.cat-col { width: 40%; }
     save(); renderDice();
   }
 
+  // Bestes Feld, das beim Spieler noch frei ist. Bei Gleichstand gewinnt das seltenere Feld, Chance zuletzt.
+  var PRI = ["kn", "ls", "ss", "fh", "four", "three", "sixes", "fives", "fours", "threes", "twos", "ones", "ch"];
+  function bestFree(p) {
+    var best = null;
+    PRI.forEach(function (id) {
+      if (S.scores[p][id] != null) return;
+      var pts = scoreFor(id, S.dice.vals);
+      if (!best || pts > best.pts) best = { id: id, name: CAT[id].name, pts: pts };
+    });
+    return best;
+  }
+
   function renderDice() {
-    var D = S.dice, rolled = D.vals[0] > 0, allHeld = D.held.every(Boolean), over = gameOver();
+    var D = S.dice, rolled = D.vals[0] > 0, allHeld = D.held.every(Boolean);
+    var useBlock = blockOn(), over = useBlock && gameOver(), done = rolled && (D.left === 0 || allHeld);
     for (var i = 0; i < 5; i++) {
       kBtns[i].setAttribute("aria-pressed", D.held[i] ? "true" : "false");
       kBtns[i].disabled = !rolled;
@@ -571,30 +626,49 @@ table.score col.cat-col { width: 40%; }
     kWho.textContent = S.players[S.cur];
     kTurn.textContent = over ? "Spiel beendet" : "Zug " + Math.min(S.round, 13) + " von 13";
 
-    if (over) kRoll.textContent = "Spiel beendet";
-    else if (D.left === 0) kRoll.textContent = "Keine Würfe mehr";
+    // Buttons: ohne Block wie ein Würfelbecher, mit Block führt "Eintragen" zum Block
+    var plainDone = !useBlock && D.left === 0;
+    kNext.hidden = useBlock;
+    kNext.disabled = busy;
+    kNext.classList.toggle("btn-primary", plainDone);
+    kNext.classList.toggle("btn-secondary", !plainDone);
+    kEnter.hidden = !useBlock || (!rolled && !over);
+    kEnter.textContent = over ? "Ergebnis ansehen" : "Eintragen";
+    kEnter.classList.toggle("btn-primary", over || done);
+    kEnter.classList.toggle("btn-secondary", !(over || done));
+    kEnter.disabled = busy;
+    kRoll.hidden = (useBlock && (over || done)) || plainDone;
+    if (D.left === 0) kRoll.textContent = "Keine Würfe mehr";
     else if (rolled && allHeld) kRoll.textContent = "Alle gehalten";
     else if (D.left === 3) kRoll.textContent = "Würfeln";
     else kRoll.textContent = "Nochmal würfeln";
-    kRoll.disabled = busy || over || D.left === 0 || (rolled && allHeld);
-    kNext.textContent = over ? "Ergebnis" : "Nächster Zug";
-    kNext.disabled = busy;
+    kRoll.disabled = busy || D.left === 0 || (rolled && allHeld);
+    kBar.classList.toggle("single", [kNext, kEnter, kRoll].filter(function (b) { return !b.hidden; }).length === 1);
 
     if (over) kHint.textContent = "Alle Felder sind ausgefüllt. Das Ergebnis steht im Block.";
     else if (!rolled) kHint.textContent = "Würfle zuerst. Danach tippst du einen Würfel an, um ihn zu halten.";
-    else if (D.left === 0) kHint.textContent = "Alle drei Würfe sind verbraucht. Wisch nach links zum Block und trag dein Ergebnis ein.";
-    else kHint.textContent = "Tippe einen Würfel an, um ihn zu halten. Eintragen kannst du jederzeit im Block.";
+    else if (useBlock && done) kHint.textContent = "Fertig gewürfelt. Tippe auf Eintragen und im Block auf die passende Zeile.";
+    else if (useBlock) kHint.textContent = "Tippe einen Würfel an, um ihn zu halten. Mit Eintragen beendest du den Zug.";
+    else if (D.left === 0) kHint.textContent = "Alle drei Würfe sind verbraucht. Mit Nächster Zug geht es weiter.";
+    else kHint.textContent = "Tippe einen Würfel an, um ihn zu halten oder wieder freizugeben.";
 
-    if (rolled) {
+    var freeMode = useBlock && !over;
+    kBestLabel.textContent = freeMode ? "Bestes freies Feld" : "Bester Wurf";
+    if (!rolled) { kSum.textContent = "–"; kBest.textContent = "–"; return; }
+    kSum.textContent = analyse(D.vals).sum;
+    if (freeMode) {
+      var bf = bestFree(S.cur);
+      kBest.innerHTML = !bf ? "–" : bf.pts > 0 ? bf.name + " <small>" + bf.pts + " Punkte</small>"
+        : "Nichts passt <small>ein Feld streichen</small>";
+    } else {
       var best = bestCategory(D.vals);
-      kSum.textContent = analyse(D.vals).sum;
       kBest.innerHTML = best[0] + " <small>" + best[1] + " Punkte</small>";
-    } else { kSum.textContent = "–"; kBest.textContent = "–"; }
+    }
   }
 
   kRoll.addEventListener("click", function () {
     var D = S.dice;
-    if (busy || D.left === 0 || gameOver()) return;
+    if (busy || D.left === 0 || (blockOn() && gameOver())) return;
     var idx = [];
     for (var i = 0; i < 5; i++) if (!D.held[i]) idx.push(i);
     if (!idx.length) return;
@@ -625,12 +699,19 @@ table.score col.cat-col { width: 40%; }
   }
   kNext.addEventListener("click", function () {
     if (busy) return;
-    if (gameOver()) { goPage(1); return; }
+    if (!blockOn()) {
+      // Nur Würfel: einfach neu anfangen, ohne Spieler und Runden
+      S.dice = freshDice();
+      kDice.forEach(function (d) { showFace(d, 0); });
+      save(); render(); say("Neuer Zug.");
+      return;
+    }
     nextTurn();
   });
+  kEnter.addEventListener("click", function () { if (!busy) goPage(1); });
 
   /* ---------- Block ---------- */
-  var sheet = $("#k-sheet"), overBox = $("#k-over");
+  var sheet = $("#k-sheet"), overBox = $("#k-over"), bestId = null;
 
   function cellHtml(p, c) {
     var v = S.scores[p][c.id], rolled = S.dice.vals[0] > 0;
@@ -641,7 +722,7 @@ table.score col.cat-col { width: 40%; }
     }
     if (p === S.cur && rolled && !gameOver()) {
       var pv = scoreFor(c.id, S.dice.vals);
-      return '<button type="button" class="cell preview" data-p="' + p + '" data-c="' + c.id +
+      return '<button type="button" class="cell preview' + (c.id === bestId && pv > 0 ? " best" : "") + '" data-p="' + p + '" data-c="' + c.id +
         '" aria-label="' + who + ": mit diesem Wurf " + pv + ' Punkte">' + pv + "</button>";
     }
     return '<button type="button" class="cell" data-p="' + p + '" data-c="' + c.id + '" aria-label="' + who + ': leer"></button>';
@@ -655,7 +736,7 @@ table.score col.cat-col { width: 40%; }
   function td(p, inner) { return "<td" + (p === S.cur ? ' class="cur"' : "") + ">" + inner + "</td>"; }
   function catRows(list) {
     return list.map(function (c) {
-      return '<tr><td class="cat">' + c.name + "</td>" + S.players.map(function (_, p) { return td(p, cellHtml(p, c)); }).join("") + "</tr>";
+      return '<tr data-c="' + c.id + '"><td class="cat">' + c.name + "</td>" + S.players.map(function (_, p) { return td(p, cellHtml(p, c)); }).join("") + "</tr>";
     }).join("");
   }
   function totalRow(label, fn, cls) {
@@ -664,6 +745,8 @@ table.score col.cat-col { width: 40%; }
   }
 
   function renderSheet() {
+    var bf = S.dice.vals[0] > 0 && !gameOver() ? bestFree(S.cur) : null;
+    bestId = bf ? bf.id : null;
     var up = '<table class="score"><caption class="sr-only">Oberer Block</caption>' + head("Oben") + "<tbody>" +
       catRows(UP) +
       totalRow("Summe oben", function (t) { return t.up; }) +
@@ -697,10 +780,21 @@ table.score col.cat-col { width: 40%; }
     if (e.target.id === "k-again") newGame();
   });
 
+  // Ein Tipp auf die Zeile (oder das Feld des Spielers am Zug) trägt den Wurf direkt ein.
+  function quickOK(p, id) {
+    return blockOn() && !busy && p === S.cur && S.dice.vals[0] > 0 && S.scores[p][id] == null && !gameOver();
+  }
   sheet.addEventListener("click", function (e) {
-    var b = e.target.closest(".cell");
-    if (!b) return;
-    openEntry(+b.dataset.p, b.dataset.c, b);
+    var b = e.target.closest(".cell"), p, id;
+    if (b) { p = +b.dataset.p; id = b.dataset.c; }
+    else {
+      var row = e.target.closest("tr[data-c]");
+      if (!row || !e.target.closest("td.cat")) return;
+      p = S.cur; id = row.dataset.c;
+      b = row.querySelector('.cell[data-p="' + p + '"]');
+    }
+    if (quickOK(p, id)) commit(p, id, scoreFor(id, S.dice.vals));
+    else openEntry(p, id, b);
   });
 
   /* ---------- Eintragen ---------- */
@@ -740,13 +834,38 @@ table.score col.cat-col { width: 40%; }
     if (lastFocus && document.body.contains(lastFocus)) lastFocus.focus();
   }
   function setScore(v) {
-    var p = entryCtx.p, id = entryCtx.id, wasEmpty = S.scores[p][id] == null;
-    S.scores[p][id] = v;
+    var p = entryCtx.p, id = entryCtx.id;
     closeEntry();
-    say(S.players[p] + ": " + CAT[id].name + " " + v + " Punkte eingetragen.");
-    if (wasEmpty && p === S.cur) { nextTurn(); goPage(0); }
-    else { save(); render(); }
+    commit(p, id, v);
   }
+
+  /* ---------- Eintragen mit Rückgängig ---------- */
+  var toast = $("#toast"), toastText = $("#toast-text"), undoSnap = null, toastTimer = 0;
+  function hideToast() { toast.hidden = true; undoSnap = null; clearTimeout(toastTimer); }
+  function commit(p, id, v) {
+    var snap = JSON.stringify(S), wasEmpty = S.scores[p][id] == null, name = S.players[p];
+    S.scores[p][id] = v;
+    if (wasEmpty && p === S.cur) {
+      nextTurn(); goPage(0);
+      undoSnap = snap;
+      toastText.textContent = name + ": " + CAT[id].name + (v ? " · " + v + " Punkte" : " gestrichen");
+      toast.hidden = false;
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(hideToast, 6000);
+    } else {
+      save(); render();
+      say(name + ": " + CAT[id].name + " " + v + " Punkte eingetragen.");
+    }
+  }
+  $("#toast-undo").addEventListener("click", function () {
+    if (!undoSnap) return;
+    S = JSON.parse(undoSnap);
+    hideToast();
+    S.dice.vals.forEach(function (v, i) { showFace(kDice[i], v); });
+    save(); render(); goPage(1);
+    say("Rückgängig gemacht. Wähle eine andere Zeile.");
+  });
+
   panel.addEventListener("click", function (e) {
     var b = e.target.closest("button");
     if (!b || !entryCtx) return;
@@ -797,7 +916,9 @@ table.score col.cat-col { width: 40%; }
     if (inp) { inp.focus(); inp.select(); }
   });
   function newGame() {
+    var keepBlock = S.block;
     S = fresh(S.players.slice());
+    S.block = keepBlock;
     kDice.forEach(function (d) { showFace(d, 0); });
     save(); render(); goPage(0);
     say("Neues Spiel.");
@@ -836,6 +957,20 @@ table.score col.cat-col { width: 40%; }
   window.addEventListener("resize", function () { pager.scrollLeft = page * pager.clientWidth; });
 
   function render() { renderDice(); renderSheet(); }
+  /* ---------- Mit Block / Nur Würfel ---------- */
+  var app = $(".app"), modeBlock = $("#mode-block"), modePlain = $("#mode-plain");
+  function applyMode() {
+    var on = blockOn();
+    app.classList.toggle("noblock", !on);
+    modeBlock.setAttribute("aria-pressed", on ? "true" : "false");
+    modePlain.setAttribute("aria-pressed", on ? "false" : "true");
+    if (!on) { if (typeof hideToast === "function") hideToast(); goPage(0, true); }
+  }
+  function setMode(on) { S.block = on; save(); applyMode(); render(); say(on ? "Mit Block." : "Nur Würfel."); }
+  modeBlock.addEventListener("click", function () { setMode(true); });
+  modePlain.addEventListener("click", function () { setMode(false); });
+  applyMode();
+
   render();
 
   // Offline-Speicher: lädt die App einmal komplett aufs Gerät.

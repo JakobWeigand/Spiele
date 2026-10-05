@@ -11,8 +11,9 @@ Die Startseite https://jakobweigand.github.io/Spiele/ verlinkt beide Apps.
 
 ## Funktionen
 
+- **Mit Block oder nur Würfel:** Oben in der Mitte schaltest du um. „Nur Würfel“ blendet Block, Tabs und Spieler aus.
 - **Würfel und Block:** Jede App hat zwei Seiten. Du wischst zwischen „Würfel“ und „Block“ oder tippst oben auf die Tabs.
-- **Kniffel-Block:** Grau zeigt jedes freie Feld, wie viele Punkte der aktuelle Wurf dort bringen würde. Ein Tipp trägt ein, danach ist automatisch der nächste Spieler dran. Bonus ab 63 und alle Summen werden berechnet.
+- **Kniffel-Block:** Nach dem Würfeln führt „Eintragen“ zum Block. Ein Tipp auf die Zeile trägt den Wurf beim Spieler am Zug ein, danach ist automatisch der nächste Spieler dran; „Rückgängig“ macht das kurz danach wieder ungeschehen. Grau steht in jedem freien Feld, was der Wurf dort bringt, unterstrichen das beste freie Feld. Bonus ab 63 und alle Summen werden berechnet.
 - **Quixx-Block:** Ankreuzen nur von links nach rechts, das letzte Feld erst ab 5 Kreuzen, das Schloss kreuzt sich dann selbst an und der Farbwürfel wird weggelegt. Fehlwürfe zählen −5. Das Spiel endet bei zwei geschlossenen Reihen oder vier Fehlwürfen.
 - **Spieler:** 1 bis 6 Spieler mit Namen. Dort startest du auch ein neues Spiel.
 - **Hoch- und Querformat:** Im Querformat stehen die Würfel links, Status und Buttons rechts. Ausgelegt für iPhone 15/16/17 Pro.
