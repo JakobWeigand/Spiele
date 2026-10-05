@@ -272,17 +272,6 @@ table.score col.cat-col { width: 40%; }
 .confirm { background: var(--surface); padding: 14px; display: grid; gap: 10px; }
 .confirm p { margin: 0; font-weight: 700; }
 
-/* Hinweis nach dem Eintragen, mit Rückgängig */
-.toast {
-  position: fixed; z-index: 9; left: 50%; transform: translateX(-50%);
-  bottom: calc(112px + env(safe-area-inset-bottom, 0px)); width: min(520px, calc(100% - 32px));
-  display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  padding: 8px 8px 8px 16px; background: var(--emph); color: var(--on-emph); font-size: 15px;
-}
-.toast button {
-  min-height: 42px; padding: 0 14px; border: 2px solid var(--emph-label); border-radius: 0;
-  background: transparent; color: var(--on-emph); font-size: 15px; font-weight: 700; cursor: pointer; white-space: nowrap;
-}
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 @media (max-height: 740px) and (orientation: portrait) {
@@ -331,7 +320,6 @@ table.score col.cat-col { width: 40%; }
   .score td.cat { font-size: 14px; }
   .score tr.grand td { font-size: 16px; }
   .sheet-hint { display: none; }
-  .toast { left: var(--pad-l); transform: none; width: min(460px, calc(100% - 330px)); bottom: calc(10px + env(safe-area-inset-bottom, 0px)); }
 
   .overlay { align-items: center; }
   .panel { max-width: 480px; padding: 16px 20px; gap: 10px; }
@@ -434,11 +422,6 @@ table.score col.cat-col { width: 40%; }
       </div>
       <button type="button" class="btn btn-primary" id="settings-done">Fertig</button>
     </div>
-  </div>
-
-  <div class="toast" id="toast" role="status" hidden>
-    <span id="toast-text"></span>
-    <button type="button" id="toast-undo">Rückgängig</button>
   </div>
 
   <div class="sr-only" aria-live="polite" id="announce"></div>
@@ -839,32 +822,13 @@ table.score col.cat-col { width: 40%; }
     commit(p, id, v);
   }
 
-  /* ---------- Eintragen mit Rückgängig ---------- */
-  var toast = $("#toast"), toastText = $("#toast-text"), undoSnap = null, toastTimer = 0;
-  function hideToast() { toast.hidden = true; undoSnap = null; clearTimeout(toastTimer); }
   function commit(p, id, v) {
-    var snap = JSON.stringify(S), wasEmpty = S.scores[p][id] == null, name = S.players[p];
+    var wasEmpty = S.scores[p][id] == null, name = S.players[p];
     S.scores[p][id] = v;
-    if (wasEmpty && p === S.cur) {
-      nextTurn(); goPage(0);
-      undoSnap = snap;
-      toastText.textContent = name + ": " + CAT[id].name + (v ? " · " + v + " Punkte" : " gestrichen");
-      toast.hidden = false;
-      clearTimeout(toastTimer);
-      toastTimer = setTimeout(hideToast, 6000);
-    } else {
-      save(); render();
-      say(name + ": " + CAT[id].name + " " + v + " Punkte eingetragen.");
-    }
+    say(name + ": " + CAT[id].name + (v ? " " + v + " Punkte" : " gestrichen") + ".");
+    if (wasEmpty && p === S.cur) { nextTurn(); goPage(0); }
+    else { save(); render(); }
   }
-  $("#toast-undo").addEventListener("click", function () {
-    if (!undoSnap) return;
-    S = JSON.parse(undoSnap);
-    hideToast();
-    S.dice.vals.forEach(function (v, i) { showFace(kDice[i], v); });
-    save(); render(); goPage(1);
-    say("Rückgängig gemacht. Wähle eine andere Zeile.");
-  });
 
   panel.addEventListener("click", function (e) {
     var b = e.target.closest("button");
@@ -964,7 +928,7 @@ table.score col.cat-col { width: 40%; }
     app.classList.toggle("noblock", !on);
     modeBlock.setAttribute("aria-pressed", on ? "true" : "false");
     modePlain.setAttribute("aria-pressed", on ? "false" : "true");
-    if (!on) { if (typeof hideToast === "function") hideToast(); goPage(0, true); }
+    if (!on) goPage(0, true);
   }
   function setMode(on) { S.block = on; save(); applyMode(); render(); say(on ? "Mit Block." : "Nur Würfel."); }
   modeBlock.addEventListener("click", function () { setMode(true); });
