@@ -33,6 +33,9 @@
   --red: #c0392b;         /* nur: Explosion, verlorene Runde */
   --overlay: rgba(13, 27, 42, .5);
   --focus: #4a6fa5;
+  --turn-bg: #1a2c42;      /* navy: Hälfte der Person am Zug */
+  --turn-label: #b8c4d4;
+  --lose-bg: #c0392b;      /* red: Hälfte der Person, die verloren hat */
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
@@ -40,6 +43,7 @@
     --bg: #0d1b2a; --surface: #1a2c42; --text: #ffffff; --body: #dde3ea; --small: #dde3ea;
     --muted: #b8c4d4; --rule: #6a7d93; --accent: #ffffff; --on-accent: #0d1b2a;
     --clock: #1a2c42; --clock-mark: #b8c4d4; --red: #e0574a; --overlay: rgba(0, 0, 0, .6); --focus: #b8c4d4;
+    --turn-bg: #4a6fa5; --turn-label: #e8eef6; --lose-bg: #c0392b;
     color-scheme: dark;
   }
 }
@@ -47,6 +51,7 @@
   --bg: #0d1b2a; --surface: #1a2c42; --text: #ffffff; --body: #dde3ea; --small: #dde3ea;
   --muted: #b8c4d4; --rule: #6a7d93; --accent: #ffffff; --on-accent: #0d1b2a;
   --clock: #1a2c42; --clock-mark: #b8c4d4; --red: #e0574a; --overlay: rgba(0, 0, 0, .6); --focus: #b8c4d4;
+  --turn-bg: #4a6fa5; --turn-label: #e8eef6; --lose-bg: #c0392b;
   color-scheme: dark;
 }
 
@@ -103,8 +108,20 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--focus); out
 .half {
   min-width: 0; min-height: 0; overflow: hidden;
   display: flex; flex-direction: column; justify-content: center; align-items: center;
-  gap: 8px; text-align: center;
+  gap: 8px; text-align: center; padding: 8px;
+  transition: background-color .25s ease, color .25s ease;
 }
+.half.turn { background: var(--turn-bg); color: #ffffff; }
+.half.lost { background: var(--lose-bg); color: #ffffff; }
+.half.turn .label, .half.lost .label { color: var(--turn-label); }
+.half.lost .label { color: #ffffff; }
+.half.turn .cat, .half.lost .cat, .half.turn .line strong, .half.lost .line strong { color: #ffffff; }
+.half.turn .line, .half.lost .line, .half.turn .score, .half.lost .score { color: rgba(255, 255, 255, .85); }
+.half.turn .small-btn, .half.lost .small-btn { border-color: #ffffff; color: #ffffff; }
+.half.turn .small-btn.fill, .half.lost .small-btn.fill { background: #ffffff; color: #0d1b2a; }
+.big { margin: 0; font-size: clamp(24px, 7.2vmin, 36px); font-weight: 700; line-height: 1.1; text-wrap: balance; }
+.center.focus-down { grid-template-rows: minmax(0, .8fr) auto minmax(0, 1.3fr); }
+.center.focus-up { grid-template-rows: minmax(0, 1.3fr) auto minmax(0, .8fr); }
 .half.up { transform: rotate(180deg); }
 .label {
   margin: 0; font-size: 11px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--muted);
@@ -170,7 +187,9 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--focus); out
 
 /* Querformat: Uhr in der Mitte, Kategorie links und rechts daneben */
 @media (orientation: landscape) {
-  .center { grid-template-rows: minmax(0, 1fr); grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 14px; padding: 2px 6px; }
+  .center, .center.focus-down, .center.focus-up { grid-template-rows: minmax(0, 1fr); grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 14px; padding: 2px 6px; }
+  .center.focus-down { grid-template-columns: minmax(0, .85fr) auto minmax(0, 1.25fr); }
+  .center.focus-up { grid-template-columns: minmax(0, 1.25fr) auto minmax(0, .85fr); }
   .clock { width: min(150px, 40vmin); }
   .cat { font-size: clamp(17px, 5vmin, 24px); }
 }
@@ -322,6 +341,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--focus); out
 
   /* ---------- Einstellungen und Punkte (bleiben gespeichert) ---------- */
   var KEY = "wortbombe-v1";
+  var MAX_PLAYERS = 5;
   function freshP() {
     return { v: 1, players: ["Spieler 1", "Spieler 2"], scores: [0, 0], mode: "turn", tempo: "normal", sound: true, starter: 0, deck: [], deckPos: 0 };
   }
@@ -335,6 +355,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--focus); out
   }
   function save() { try { localStorage.setItem(KEY, JSON.stringify(P)); } catch (e) {} }
   var P = load();
+  if (P.players.length > MAX_PLAYERS) { P.players = P.players.slice(0, MAX_PLAYERS); P.scores = P.scores.slice(0, MAX_PLAYERS); P.starter = 0; }
 
   // Kategorien als gemischter Stapel: keine Wiederholung, bis alle einmal dran waren
   function nextCategory() {
@@ -354,6 +375,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--focus); out
   function resetAlive() { R.alive = P.players.map(function (_, i) { return i; }); }
   resetAlive();
 
+  var GRACE_MS = 1500;   // Mindestzeit für die nächste Person bei „Zeit pro Runde“
   function secondsFor(kind) { var r = TEMPO[P.tempo][kind]; return randBetween(r[0], r[1]); }
 
   /* ---------- Ton (wird erst nach dem ersten Tippen erzeugt) ---------- */
@@ -454,6 +476,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--focus); out
       setTimeout(function () { R.flash = ""; render(); }, 3500);
     }
     if (P.mode === "turn") arm(secondsFor("turn"));
+    else if (R.deadline - Date.now() < GRACE_MS) arm(GRACE_MS / 1000);   // nie direkt nach dem Weitergeben
     render();
     say(P.players[R.cur] + " ist dran.");
   }
@@ -570,20 +593,25 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--focus); out
   function scoreLine() {
     return P.players.map(function (n, i) { return esc(n) + " " + P.scores[i]; }).join(" · ");
   }
+  // Bei zwei Spielern sitzt Spieler 1 unten, Spieler 2 oben. Ab drei Spielern zeigen beide Hälften dasselbe.
+  function seat(side) { return P.players.length === 2 ? (side === "down" ? 0 : 1) : -1; }
   function halfHtml(side) {
-    var cur = esc(P.players[R.cur]), two = P.players.length === 2;
-    // Bei zwei Spielern sitzt Spieler 1 unten, Spieler 2 oben
-    var mine = two ? (side === "down" ? 0 : 1) : -1;
+    var cur = esc(P.players[R.cur]), two = P.players.length === 2, mine = seat(side);
     var catBlock = '<p class="label">Kategorie</p><p class="cat">' + esc(R.cat) + "</p>";
+    var meta = '<div class="row meta"><span class="score">' + scoreLine() + '</span>' +
+      '<button type="button" class="small-btn slim" data-act="reset">Neustart</button></div>';
 
     if (R.phase === "boom") {
-      var html = '<p class="label red">Bumm!</p><p class="line"><strong>' + esc(P.players[R.loser]) + "</strong> war dran" +
-        (R.winner >= 0 ? ". Punkt für <strong>" + esc(P.players[R.winner]) + "</strong>." : " und ist raus.") + "</p>";
-      html += '<p class="score">' + scoreLine() + "</p>";
-      html += R.winner >= 0
+      var next = R.winner >= 0
         ? '<button type="button" class="small-btn fill" data-act="new">Nächste Runde</button>'
         : '<button type="button" class="small-btn fill" data-act="go">Weiter mit ' + esc(P.players[nextAlive(R.loser)]) + "</button>";
-      return html;
+      var loser = esc(P.players[R.loser]);
+      if (two && mine === R.loser) return '<p class="label">Bumm!</p><p class="big">Zu langsam!</p><p class="score">' + scoreLine() + "</p>" + next;
+      if (two) return '<p class="label">Gewonnen</p><p class="big">Punkt für dich!</p><p class="line"><strong>' + loser + "</strong> war zu langsam.</p>" +
+        '<p class="score">' + scoreLine() + "</p>" + next;
+      return '<p class="label">Bumm!</p><p class="big">' + loser + (R.winner >= 0 ? " war dran" : " ist raus") + "</p>" +
+        (R.winner >= 0 ? '<p class="line">Punkt für <strong>' + esc(P.players[R.winner]) + "</strong></p>" : "") +
+        '<p class="score">' + scoreLine() + "</p>" + next;
     }
     if (R.flash) return '<p class="label">Geschafft</p><p class="line"><strong>' + esc(R.flash) + "</strong></p>" + catBlock;
 
@@ -603,16 +631,22 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--focus); out
         '<button type="button" class="small-btn" data-act="reset-all">Alles auf 0</button></div>' +
         '<button type="button" class="small-btn slim" data-act="reset-cancel">Weiterspielen</button>';
     }
-    var chipOn = two ? mine === R.cur : true;
-    var html2 = catBlock + '<span class="chip' + (chipOn ? " on" : "") + '">' + (two && chipOn ? "Du bist dran" : "Dran: " + cur) + "</span>";
-    if (R.phase === "pause") html2 += '<p class="line">Pause. Uhr antippen zum Weiterspielen.</p>';
-    html2 += '<div class="row meta"><span class="score">' + scoreLine() + '</span>' +
-      '<button type="button" class="small-btn slim" data-act="reset">Neustart</button></div>';
-    return html2;
+    var pauseLine = R.phase === "pause" ? '<p class="line">Pause. Uhr antippen zum Weiterspielen.</p>' : "";
+    if (two && mine !== R.cur) return catBlock + '<p class="line"><strong>' + cur + "</strong> ist dran</p>" + pauseLine + meta;
+    return catBlock + '<p class="big">' + (two ? "Du bist dran" : cur + " ist dran") + "</p>" + pauseLine + meta;
   }
+  var centerEl = $("#center");
   function render() {
     up.innerHTML = halfHtml("up");
     down.innerHTML = halfHtml("down");
+    var playing = (R.phase === "run" || R.phase === "pause") && !R.confirm && !R.flash, two = P.players.length === 2;
+    ["up", "down"].forEach(function (side) {
+      var el = side === "up" ? up : down, mine = seat(side);
+      el.classList.toggle("turn", playing && (!two || mine === R.cur));
+      el.classList.toggle("lost", R.phase === "boom" && (!two || mine === R.loser));
+    });
+    centerEl.classList.toggle("focus-down", playing && two && R.cur === 0);
+    centerEl.classList.toggle("focus-up", playing && two && R.cur === 1);
     board.classList.toggle("idle", R.phase === "idle");
     clockEl.classList.toggle("run", R.phase === "run");
     clockEl.classList.toggle("gone", R.phase === "boom");
@@ -661,7 +695,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--focus); out
       return '<div class="prow"><input type="text" id="pname-' + i + '" value="' + esc(n) + '" maxlength="14" autocomplete="off" aria-label="Name von Spieler ' + (i + 1) + '">' +
         (P.players.length > 2 ? '<button type="button" class="small-btn" data-remove="' + i + '">Entfernen</button>' : "") + "</div>";
     }).join("");
-    $("#p-add").disabled = P.players.length >= 8;
+    $("#p-add").disabled = P.players.length >= MAX_PLAYERS;
   }
   $("#set-mode").addEventListener("click", function (e) { var b = e.target.closest("[data-mode]"); if (b) { P.mode = b.dataset.mode; save(); renderSettings(); render(); } });
   $("#set-tempo").addEventListener("click", function (e) { var b = e.target.closest("[data-tempo]"); if (b) { P.tempo = b.dataset.tempo; save(); renderSettings(); } });
@@ -681,7 +715,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--focus); out
     save(); renderSettings(); newRound();
   });
   $("#p-add").addEventListener("click", function () {
-    if (P.players.length >= 8) return;
+    if (P.players.length >= MAX_PLAYERS) return;
     P.players.push("Spieler " + (P.players.length + 1)); P.scores.push(0);
     save(); renderSettings(); newRound();
     var inp = $("#pname-" + (P.players.length - 1)); if (inp) { inp.focus(); inp.select(); }

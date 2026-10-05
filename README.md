@@ -5,19 +5,21 @@
 - **Kniffel:** https://jakobweigand.github.io/Spiele/kniffel/
 - **Quixx:** https://jakobweigand.github.io/Spiele/quixx/
 - **Wortbombe:** https://jakobweigand.github.io/Spiele/wortbombe/
+- **Chooser:** https://jakobweigand.github.io/Spiele/chooser/
 - **Startseite mit allen Spielen:** https://jakobweigand.github.io/Spiele/
 
 Aufs iPhone: Link in Safari öffnen → Teilen → „Zum Home-Bildschirm“ → einmal mit Internet öffnen. Danach läuft die App offline.
 
 ---
 
-Drei Spiele-Apps für das Handy, jede als eigene Web-App, die nach der Installation offline läuft.
+Vier Spiele-Apps für das Handy, jede als eigene Web-App, die nach der Installation offline läuft.
 
 | App | Ordner | Adresse |
 |---|---|---|
 | Kniffel | [`kniffel/`](kniffel/) | https://jakobweigand.github.io/Spiele/kniffel/ |
 | Quixx | [`quixx/`](quixx/) | https://jakobweigand.github.io/Spiele/quixx/ |
 | Wortbombe | [`wortbombe/`](wortbombe/) | https://jakobweigand.github.io/Spiele/wortbombe/ |
+| Chooser | [`chooser/`](chooser/) | https://jakobweigand.github.io/Spiele/chooser/ |
 
 Die Startseite https://jakobweigand.github.io/Spiele/ verlinkt alle Apps.
 
@@ -38,7 +40,16 @@ Das Handy liegt flach zwischen den Spielern. Um den Rand liegen 24 Buchstaben (A
 - Uhr antippen startet die Runde. Wer dran ist, nennt ein Wort zur Kategorie und drückt dessen Anfangsbuchstaben. Gedrückte Buchstaben werden durchsichtig.
 - Die Uhr zeigt keine Restzeit, sie tickt nur. Läuft sie ab, explodiert die Bombe: Wer dran war, verliert die Runde.
 - **Zeit pro Zug:** Jeder Buchstabe startet eine neue, geheime Zeit. **Zeit pro Runde:** Eine geheime Zeit für die ganze Runde.
-- Tempo, Ton, 2–8 Spieler und Punkte unter „Einstellungen“. Uhr antippen während der Runde pausiert.
+- Wer dran ist, hat die Hälfte in der Mitte dunkelblau hinterlegt; wer verliert, rot.
+- Bei „Zeit pro Runde“ hat die nächste Person nach dem Weitergeben immer noch mindestens 1,5 Sekunden.
+- Tempo, Ton, 2–5 Spieler und Punkte unter „Einstellungen“. Uhr antippen während der Runde pausiert, „Neustart“ setzt Runde oder Punkte zurück.
+
+## Chooser
+
+Alle legen einen Finger aufs Display. Sobald keine Finger mehr dazukommen, läuft ein kurzer Countdown, dann wählt die App zufällig aus. Gewählte Finger werden grün, die anderen verblassen. Alle Finger loslassen startet die nächste Runde.
+
+- Oben in der Mitte stellst du ein, wie viele gewählt werden: mit −/+ oder indem du die Zahl antippst und eintippst. Keine Obergrenze.
+- Es braucht immer mindestens einen Finger mehr, als gewählt werden. Wie viele Finger gleichzeitig erkannt werden, begrenzt nur das Handy selbst.
 
 ## Aufbau
 
