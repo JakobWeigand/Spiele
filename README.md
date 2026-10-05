@@ -37,6 +37,7 @@ Die Startseite https://jakobweigand.github.io/Spiele/ verlinkt alle Apps.
 
 Das Handy liegt flach zwischen den Spielern. Um den Rand liegen 24 Buchstaben (A–Z ohne Q und X), in der Mitte stehen Uhr und Kategorie. Die obere Hälfte steht auf dem Kopf, damit die Person gegenüber mitlesen kann.
 
+- 427 Kategorien, darunter Satzanfänge wie „In der Dusche ist immer …“, die man mit einem Wort ergänzt.
 - Uhr antippen startet die Runde. Wer dran ist, nennt ein Wort zur Kategorie und drückt dessen Anfangsbuchstaben. Gedrückte Buchstaben werden durchsichtig.
 - Die Uhr zeigt keine Restzeit, sie tickt nur. Läuft sie ab, explodiert die Bombe: Wer dran war, verliert die Runde.
 - **Zeit pro Zug:** Jeder Buchstabe startet eine neue, geheime Zeit. **Zeit pro Runde:** Eine geheime Zeit für die ganze Runde.
