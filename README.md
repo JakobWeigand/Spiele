@@ -1,13 +1,14 @@
 # Spiele
 
-Zwei Würfel-Apps für das Handy, jede als eigene Web-App, die nach der Installation offline läuft.
+Drei Spiele-Apps für das Handy, jede als eigene Web-App, die nach der Installation offline läuft.
 
 | App | Ordner | Adresse |
 |---|---|---|
 | Kniffel | [`kniffel/`](kniffel/) | https://jakobweigand.github.io/Spiele/kniffel/ |
 | Quixx | [`quixx/`](quixx/) | https://jakobweigand.github.io/Spiele/quixx/ |
+| Wortbombe | [`wortbombe/`](wortbombe/) | https://jakobweigand.github.io/Spiele/wortbombe/ |
 
-Die Startseite https://jakobweigand.github.io/Spiele/ verlinkt beide Apps.
+Die Startseite https://jakobweigand.github.io/Spiele/ verlinkt alle Apps.
 
 ## Funktionen
 
@@ -18,6 +19,15 @@ Die Startseite https://jakobweigand.github.io/Spiele/ verlinkt beide Apps.
 - **Spieler:** 1 bis 6 Spieler mit Namen. Dort startest du auch ein neues Spiel.
 - **Hoch- und Querformat:** Im Querformat stehen die Würfel links, Status und Buttons rechts. Ausgelegt für iPhone 15/16/17 Pro.
 - **Spielstand bleibt erhalten:** auch wenn die App geschlossen wird. Gespeichert wird nur auf dem jeweiligen Gerät.
+
+## Wortbombe
+
+Das Handy liegt flach zwischen den Spielern. Um den Rand liegen 24 Buchstaben (A–Z ohne Q und X), in der Mitte stehen Uhr und Kategorie. Die obere Hälfte steht auf dem Kopf, damit die Person gegenüber mitlesen kann.
+
+- Uhr antippen startet die Runde. Wer dran ist, nennt ein Wort zur Kategorie und drückt dessen Anfangsbuchstaben. Gedrückte Buchstaben werden durchsichtig.
+- Die Uhr zeigt keine Restzeit, sie tickt nur. Läuft sie ab, explodiert die Bombe: Wer dran war, verliert die Runde.
+- **Zeit pro Zug:** Jeder Buchstabe startet eine neue, geheime Zeit. **Zeit pro Runde:** Eine geheime Zeit für die ganze Runde.
+- Tempo, Ton, 2–8 Spieler und Punkte unter „Einstellungen“. Uhr antippen während der Runde pausiert.
 
 ## Aufbau
 
