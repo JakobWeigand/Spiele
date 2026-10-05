@@ -129,6 +129,8 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--focus); out
   background: transparent; color: var(--text); font-size: 14px; font-weight: 700; cursor: pointer;
 }
 .small-btn.fill { background: var(--accent); color: var(--on-accent); }
+.small-btn.slim { min-height: 32px; padding: 0 10px; font-size: 13px; }
+.row.meta { align-items: center; }
 .mode { display: grid; grid-template-columns: 1fr 1fr; border: 2px solid var(--accent); }
 .mode button {
   min-height: 36px; padding: 0 10px; border: 0; border-radius: 0; background: transparent; cursor: pointer;
@@ -348,7 +350,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--focus); out
 
   /* ---------- Runde ---------- */
   // phase: idle (vor dem Start) · run · pause · boom (abgelaufen)
-  var R = { phase: "idle", cat: nextCategory(), used: {}, cur: P.starter % P.players.length, alive: [], loser: -1, winner: -1, deadline: 0, left: 0, flash: "" };
+  var R = { phase: "idle", cat: nextCategory(), used: {}, cur: P.starter % P.players.length, alive: [], loser: -1, winner: -1, deadline: 0, left: 0, flash: "", confirm: false };
   function resetAlive() { R.alive = P.players.map(function (_, i) { return i; }); }
   resetAlive();
 
@@ -423,7 +425,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--focus); out
   }
   function resume() {
     audio();
-    R.phase = "run";
+    R.phase = "run"; R.confirm = false;
     clearTimeout(timer); R.deadline = Date.now() + R.left; timer = setTimeout(expire, R.left);
     startTicking(); keepAwake(true);
     render(); say("Weiter.");
@@ -475,7 +477,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--focus); out
 
   function newRound() {
     stopClock(); keepAwake(false);
-    R.phase = "idle"; R.used = {}; R.cat = nextCategory(); R.loser = -1; R.winner = -1; R.flash = "";
+    R.phase = "idle"; R.used = {}; R.cat = nextCategory(); R.loser = -1; R.winner = -1; R.flash = ""; R.confirm = false;
     resetAlive();
     R.cur = P.starter % P.players.length;
     letterBtns.forEach(function (b) { b.classList.remove("used"); b.setAttribute("aria-label", "Buchstabe " + b.dataset.l); });
@@ -595,10 +597,17 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--focus); out
         '<button type="button" class="small-btn" data-act="settings">Einstellungen</button></div>';
     }
     // run / pause
+    if (R.confirm) {
+      return '<p class="label">Neustart</p><p class="line">Was soll zurückgesetzt werden?</p>' +
+        '<div class="row"><button type="button" class="small-btn fill" data-act="reset-round">Runde neu</button>' +
+        '<button type="button" class="small-btn" data-act="reset-all">Alles auf 0</button></div>' +
+        '<button type="button" class="small-btn slim" data-act="reset-cancel">Weiterspielen</button>';
+    }
     var chipOn = two ? mine === R.cur : true;
     var html2 = catBlock + '<span class="chip' + (chipOn ? " on" : "") + '">' + (two && chipOn ? "Du bist dran" : "Dran: " + cur) + "</span>";
     if (R.phase === "pause") html2 += '<p class="line">Pause. Uhr antippen zum Weiterspielen.</p>';
-    else html2 += '<p class="score">' + scoreLine() + "</p>";
+    html2 += '<div class="row meta"><span class="score">' + scoreLine() + '</span>' +
+      '<button type="button" class="small-btn slim" data-act="reset">Neustart</button></div>';
     return html2;
   }
   function render() {
@@ -623,6 +632,10 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--focus); out
     var act = b.dataset.act;
     if (act === "new") newRound();
     else if (act === "go") continueRound();
+    else if (act === "reset") { pause(); R.confirm = true; render(); }
+    else if (act === "reset-cancel") { if (R.phase === "pause") resume(); else { R.confirm = false; render(); } }
+    else if (act === "reset-round") { newRound(); say("Runde neu gestartet."); }
+    else if (act === "reset-all") { P.scores = P.players.map(function () { return 0; }); save(); newRound(); say("Alles zurückgesetzt."); }
     else if (act === "cat") { R.cat = nextCategory(); render(); }
     else if (act === "settings") openSettings();
     else if (act === "mode-turn" || act === "mode-round") { P.mode = act === "mode-turn" ? "turn" : "round"; save(); render(); }

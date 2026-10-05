@@ -1,5 +1,16 @@
 # Spiele
 
+## ▶ Direkt spielen
+
+- **Kniffel:** https://jakobweigand.github.io/Spiele/kniffel/
+- **Quixx:** https://jakobweigand.github.io/Spiele/quixx/
+- **Wortbombe:** https://jakobweigand.github.io/Spiele/wortbombe/
+- **Startseite mit allen Spielen:** https://jakobweigand.github.io/Spiele/
+
+Aufs iPhone: Link in Safari öffnen → Teilen → „Zum Home-Bildschirm“ → einmal mit Internet öffnen. Danach läuft die App offline.
+
+---
+
 Drei Spiele-Apps für das Handy, jede als eigene Web-App, die nach der Installation offline läuft.
 
 | App | Ordner | Adresse |
