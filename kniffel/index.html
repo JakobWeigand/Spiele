@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0d1b2a" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Kniffel">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<title>Kniffel</title>
+<style>
+/* Navy Research auf dem Handy: weißer Grund, helle Karten, ein Navy.
+   Eine Spalte, Würfel oben, Daumen-Buttons unten. Alle Ecken eckig, keine Schatten. */
+:root {
+  --sans: "Neue Montreal", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --bg: #ffffff;          /* white */
+  --surface: #f4f6f8;     /* card */
+  --text: #0d1b2a;        /* dark */
+  --body: #1a2c42;        /* navy */
+  --small: #3a4a5c;       /* slate */
+  --muted: #6a7d93;       /* gray, nur Labels */
+  --rule: #d6dce4;        /* line */
+  --accent: #1a2c42;      /* navy */
+  --on-accent: #ffffff;
+  --focus: #4a6fa5;
+  --die-bg: #f4f6f8;
+  --die-pip: #0d1b2a;
+  --die-held-bg: #1a2c42;
+  --die-held-pip: #ffffff;
+  --die-blank: #d6dce4;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0d1b2a; --surface: #1a2c42; --text: #ffffff; --body: #dde3ea; --small: #dde3ea;
+    --muted: #b8c4d4; --rule: #6a7d93; --accent: #ffffff; --on-accent: #0d1b2a; --focus: #b8c4d4;
+    --die-bg: #1a2c42; --die-pip: #ffffff; --die-held-bg: #ffffff; --die-held-pip: #0d1b2a; --die-blank: #6a7d93;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0d1b2a; --surface: #1a2c42; --text: #ffffff; --body: #dde3ea; --small: #dde3ea;
+  --muted: #b8c4d4; --rule: #6a7d93; --accent: #ffffff; --on-accent: #0d1b2a; --focus: #b8c4d4;
+  --die-bg: #1a2c42; --die-pip: #ffffff; --die-held-bg: #ffffff; --die-held-pip: #0d1b2a; --die-blank: #6a7d93;
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--text); font-family: var(--sans);
+  font-size: 16px; line-height: 1.4; -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent; font-variant-numeric: tabular-nums;
+}
+button { font: inherit; color: inherit; touch-action: manipulation; }
+button:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+
+.app {
+  display: flex; flex-direction: column; height: 100%; height: 100dvh;
+  max-width: 560px; margin: 0 auto;
+  padding-inline: max(16px, env(safe-area-inset-left, 0px));
+  padding-top: env(safe-area-inset-top, 0px);
+  user-select: none; -webkit-user-select: none;
+}
+
+.head { padding-block: 16px 12px; display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+h1 { margin: 0; font-size: 30px; font-weight: 700; line-height: 1.1; letter-spacing: -.01em; color: var(--text); }
+.meta { font-size: 14px; color: var(--small); white-space: nowrap; }
+
+main { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-block: 8px 16px; }
+.mode { display: flex; flex-direction: column; gap: 20px; }
+
+.label {
+  font-size: 12px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--muted); margin: 0;
+}
+
+.status { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; }
+.status-block { display: grid; gap: 6px; }
+.status-block.right { justify-items: end; }
+.turn { font-size: 28px; font-weight: 700; line-height: 1; color: var(--text); }
+.turn small { font-size: 18px; font-weight: 400; color: var(--muted); }
+.throws { display: flex; align-items: center; gap: 8px; }
+.throws .box { width: 22px; height: 22px; border: 2px solid var(--accent); background: transparent; }
+.throws .box.on { background: var(--accent); }
+.throws .count { font-size: 28px; font-weight: 700; line-height: 1; min-width: 1ch; text-align: right; margin-left: 6px; }
+
+.die-btn {
+  display: grid; gap: 8px; justify-items: stretch;
+  padding: 0; border: 0; background: transparent; cursor: pointer; border-radius: 0;
+}
+.die-btn:disabled { cursor: default; }
+.die {
+  width: 100%; aspect-ratio: 1; max-width: 100%;
+  display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr);
+  padding: 14%; background: var(--die-bg); --pip: var(--die-pip);
+  transition: background-color .15s ease;
+}
+.pip { width: 72%; aspect-ratio: 1; border-radius: 50%; place-self: center; background: var(--pip); opacity: 0; }
+.pip.on { opacity: 1; }
+.die.blank { background: transparent; outline: 2px dashed var(--die-blank); outline-offset: -2px; }
+.die.blank .pip { opacity: 0; }
+.die-btn[aria-pressed="true"] .die { background: var(--die-held-bg); --pip: var(--die-held-pip); }
+.tag {
+  font-size: 12px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
+  text-align: center; min-height: 1.4em; line-height: 1.4em; color: var(--accent);
+}
+
+.die.rolling { animation: tumble .48s cubic-bezier(.3,.7,.4,1); }
+@keyframes tumble {
+  0%   { transform: none; }
+  20%  { transform: translateY(-8px) rotate(-16deg) scale(.9); }
+  50%  { transform: translateY(2px) rotate(11deg) scale(1.04); }
+  75%  { transform: rotate(-4deg); }
+  100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .die.rolling { animation: none; }
+  .die { transition: none; }
+}
+
+/* 3 + 2 Würfel, zweite Reihe mittig */
+.kdice { display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px; }
+.kdice .die-btn { grid-column: span 2; }
+.kdice .die-btn:nth-child(4) { grid-column: 2 / span 2; }
+
+.hint { margin: 0; font-size: 15px; color: var(--small); }
+
+.tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.tile { background: var(--surface); padding: 14px 16px; display: grid; gap: 4px; min-width: 0; align-content: start; }
+.tile .value { font-size: 22px; font-weight: 700; line-height: 1.2; color: var(--text); hyphens: auto; -webkit-hyphens: auto; }
+.tile .value small { display: block; font-size: 15px; font-weight: 400; color: var(--small); }
+
+.bar {
+  display: grid; grid-template-columns: 1fr 1.5fr; gap: 12px;
+  padding-block: 12px calc(14px + env(safe-area-inset-bottom, 0px));
+  border-top: 2px solid var(--rule);
+}
+.btn {
+  min-height: 68px; border: 0; border-radius: 0; cursor: pointer;
+  font-size: 19px; font-weight: 700; padding: 0 10px; line-height: 1.15;
+  transition: transform .08s ease;
+}
+.btn:active:not(:disabled) { transform: scale(.98); }
+.btn:disabled { opacity: .38; cursor: default; }
+.btn-primary { background: var(--accent); color: var(--on-accent); }
+.btn-secondary { background: var(--surface); color: var(--text); }
+
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+@media (max-height: 700px) {
+  .head { padding-block: 10px 8px; }
+  .mode { gap: 14px; }
+  .btn { min-height: 60px; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="head">
+    <h1>Kniffel</h1>
+    <span class="meta">5 Würfel · 3 Würfe</span>
+  </header>
+
+  <main>
+    <section class="mode" aria-label="Kniffel">
+      <div class="status">
+        <div class="status-block">
+          <p class="label">Zug</p>
+          <div class="turn"><span id="k-turn">1</span> <small>/ 13</small></div>
+        </div>
+        <div class="status-block right">
+          <p class="label">Würfe übrig</p>
+          <div class="throws" id="k-throws" aria-hidden="true">
+            <span class="box on"></span><span class="box on"></span><span class="box on"></span>
+            <span class="count" id="k-left">3</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="kdice" id="k-dice"></div>
+
+      <p class="hint" id="k-hint">Würfle zuerst. Danach tippst du einen Würfel an, um ihn zu halten.</p>
+
+      <div class="tiles">
+        <div class="tile">
+          <p class="label">Augensumme</p>
+          <div class="value" id="k-sum">–</div>
+        </div>
+        <div class="tile">
+          <p class="label">Bester Wurf</p>
+          <div class="value" id="k-best">–</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="bar">
+    <button class="btn btn-secondary" id="k-next">Nächster Zug</button>
+    <button class="btn btn-primary" id="k-roll">Würfeln</button>
+  </footer>
+
+  <div class="sr-only" aria-live="polite" id="announce"></div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* Zufall: crypto.getRandomValues liefert Zufall aus dem Betriebssystem.
+     Bytes ab 252 werden verworfen, damit 0–251 sich glatt auf 6 Seiten
+     verteilt (252 = 6 × 42) und keine Augenzahl bevorzugt wird. */
+  var buf = new Uint8Array(1);
+  function rollD6() {
+    if (window.crypto && crypto.getRandomValues) {
+      do { crypto.getRandomValues(buf); } while (buf[0] >= 252);
+      return (buf[0] % 6) + 1;
+    }
+    return Math.floor(Math.random() * 6) + 1;
+  }
+  function flickerD6() { return Math.floor(Math.random() * 6) + 1; } // nur für die Animation
+
+  var reduceMotion = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var NAMES = ["", "Eins", "Zwei", "Drei", "Vier", "Fünf", "Sechs"];
+  var FACES = { 1: [4], 2: [2, 6], 3: [2, 4, 6], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8] };
+
+  function makeDie() {
+    var d = document.createElement("div");
+    d.className = "die blank";
+    d.setAttribute("aria-hidden", "true");
+    for (var i = 0; i < 9; i++) {
+      var p = document.createElement("span");
+      p.className = "pip";
+      d.appendChild(p);
+    }
+    return d;
+  }
+  function showFace(die, v) {
+    var on = FACES[v] || [];
+    die.classList.toggle("blank", !v);
+    for (var i = 0; i < 9; i++) die.children[i].classList.toggle("on", on.indexOf(i) !== -1);
+  }
+
+  // Kurze Würfelanimation: Augen flackern, dann landet der echte Wert.
+  function tumble(dice, finals, done) {
+    if (navigator.vibrate) { try { navigator.vibrate(12); } catch (e) {} }
+    if (reduceMotion) {
+      dice.forEach(function (d, k) { showFace(d, finals[k]); });
+      done();
+      return;
+    }
+    dice.forEach(function (d) { d.classList.remove("rolling"); void d.offsetWidth; d.classList.add("rolling"); });
+    var iv = setInterval(function () { dice.forEach(function (d) { showFace(d, flickerD6()); }); }, 65);
+    setTimeout(function () {
+      clearInterval(iv);
+      dice.forEach(function (d, k) { showFace(d, finals[k]); d.classList.remove("rolling"); });
+      done();
+    }, 480);
+  }
+
+  var announce = document.getElementById("announce");
+  function say(text) { announce.textContent = ""; setTimeout(function () { announce.textContent = text; }, 30); }
+
+  var K = { vals: [0, 0, 0, 0, 0], held: [false, false, false, false, false], left: 3, turn: 1, busy: false };
+  var kWrap = document.getElementById("k-dice");
+  var kBtns = [], kDice = [], kTags = [];
+  for (var i = 0; i < 5; i++) {
+    var b = document.createElement("button");
+    b.className = "die-btn";
+    b.type = "button";
+    b.setAttribute("aria-pressed", "false");
+    var d = makeDie();
+    var t = document.createElement("span");
+    t.className = "tag";
+    b.appendChild(d);
+    b.appendChild(t);
+    b.addEventListener("click", toggleHold.bind(null, i));
+    kWrap.appendChild(b);
+    kBtns.push(b); kDice.push(d); kTags.push(t);
+  }
+  var kRoll = document.getElementById("k-roll");
+  var kNext = document.getElementById("k-next");
+  var kLeft = document.getElementById("k-left");
+  var kBoxes = document.querySelectorAll("#k-throws .box");
+  var kTurn = document.getElementById("k-turn");
+  var kHint = document.getElementById("k-hint");
+  var kSum = document.getElementById("k-sum");
+  var kBest = document.getElementById("k-best");
+
+  function toggleHold(i) {
+    if (K.busy || !K.vals[i]) return;
+    K.held[i] = !K.held[i];
+    render();
+  }
+
+  // Beste Kniffel-Kategorie des aktuellen Wurfs, mit Punkten
+  function bestCategory(v) {
+    var counts = [0, 0, 0, 0, 0, 0, 0];
+    v.forEach(function (x) { counts[x]++; });
+    var sum = v.reduce(function (a, x) { return a + x; }, 0);
+    var max = Math.max.apply(null, counts);
+    var has = function (arr) { return arr.every(function (x) { return counts[x] > 0; }); };
+    var shape = counts.filter(function (c) { return c > 0; }).sort().join("");
+    if (max === 5) return ["Kniffel", 50];
+    if (has([1, 2, 3, 4, 5]) || has([2, 3, 4, 5, 6])) return ["Große Straße", 40];
+    if (has([1, 2, 3, 4]) || has([2, 3, 4, 5]) || has([3, 4, 5, 6])) return ["Kleine Straße", 30];
+    if (shape === "23") return ["Full House", 25];
+    if (max >= 4) return ["Viererpasch", sum];
+    if (max >= 3) return ["Dreierpasch", sum];
+    return ["Chance", sum];
+  }
+
+  function render() {
+    var rolled = K.vals[0] > 0;
+    var allHeld = K.held.every(Boolean);
+    for (var i = 0; i < 5; i++) {
+      kBtns[i].setAttribute("aria-pressed", K.held[i] ? "true" : "false");
+      kBtns[i].disabled = !rolled;
+      kTags[i].textContent = K.held[i] ? "Gehalten" : "";
+      kBtns[i].setAttribute("aria-label",
+        "Würfel " + (i + 1) + ": " + (K.vals[i] ? NAMES[K.vals[i]] : "noch nicht gewürfelt") +
+        (K.held[i] ? ", gehalten" : ""));
+    }
+    kLeft.textContent = K.left;
+    kBoxes.forEach(function (bx, n) { bx.classList.toggle("on", n < K.left); });
+    kTurn.textContent = K.turn;
+
+    if (K.left === 0) kRoll.textContent = "Keine Würfe mehr";
+    else if (rolled && allHeld) kRoll.textContent = "Alle gehalten";
+    else if (K.left === 3) kRoll.textContent = "Würfeln";
+    else kRoll.textContent = "Nochmal würfeln";
+    kRoll.disabled = K.busy || K.left === 0 || (rolled && allHeld);
+    kNext.textContent = K.turn >= 13 ? "Neues Spiel" : "Nächster Zug";
+    kNext.disabled = K.busy;
+
+    if (!rolled) kHint.textContent = "Würfle zuerst. Danach tippst du einen Würfel an, um ihn zu halten.";
+    else if (K.left === 0) kHint.textContent = "Alle drei Würfe sind verbraucht. Trag dein Ergebnis ein und starte den nächsten Zug.";
+    else kHint.textContent = "Tippe einen Würfel an, um ihn zu halten oder wieder freizugeben.";
+
+    if (rolled) {
+      var sum = K.vals.reduce(function (a, x) { return a + x; }, 0);
+      var best = bestCategory(K.vals);
+      kSum.textContent = sum;
+      kBest.innerHTML = best[0] + " <small>" + best[1] + " Punkte</small>";
+    } else {
+      kSum.textContent = "–";
+      kBest.textContent = "–";
+    }
+  }
+
+  kRoll.addEventListener("click", function () {
+    if (K.busy || K.left === 0) return;
+    var idx = [];
+    for (var i = 0; i < 5; i++) if (!K.held[i]) idx.push(i);
+    if (!idx.length) return;
+    var finals = idx.map(function () { return rollD6(); });
+    K.busy = true;
+    K.left--;
+    render();
+    tumble(idx.map(function (i) { return kDice[i]; }), finals, function () {
+      idx.forEach(function (i, k) { K.vals[i] = finals[k]; });
+      K.busy = false;
+      render();
+      say("Gewürfelt: " + K.vals.join(", ") + ". Noch " + K.left + " Würfe.");
+    });
+  });
+
+  kNext.addEventListener("click", function () {
+    if (K.busy) return;
+    K.turn = K.turn >= 13 ? 1 : K.turn + 1;
+    K.vals = [0, 0, 0, 0, 0];
+    K.held = [false, false, false, false, false];
+    K.left = 3;
+    kDice.forEach(function (d) { showFace(d, 0); });
+    render();
+    say("Zug " + K.turn + ". Drei Würfe übrig.");
+  });
+
+  render();
+
+  // Offline-Speicher: lädt die App einmal komplett aufs Gerät
+  if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
+    navigator.serviceWorker.register("sw.js").catch(function () {});
+  }
+})();
+</script>
+</body>
+</html>
