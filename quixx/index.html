@@ -153,7 +153,7 @@ h1 { justify-self: start; margin: 0; font-size: 24px; font-weight: 700; line-hei
 .die-name { font-size: 14px; font-weight: 700; text-align: center; color: var(--body); line-height: 1.4em; }
 .die.white  { background: #ffffff; --pip: #0d1b2a; outline: 2px solid var(--white-die-edge); outline-offset: -2px; }
 .die.red    { background: var(--q-red);    --pip: #ffffff; }
-.die.yellow { background: var(--q-yellow); --pip: #0d1b2a; }
+.die.yellow { background: var(--q-yellow); --pip: #ffffff; }
 .die.green  { background: var(--q-green);  --pip: #ffffff; }
 .die.blue   { background: var(--q-blue);   --pip: #ffffff; }
 .die-btn.locked .die { opacity: .22; }
@@ -248,6 +248,7 @@ table.combo { width: 100%; border-collapse: collapse; font-size: 16px; }
 .qband .label { color: var(--emph-label); font-size: 11px; }
 .qband .v { font-size: 24px; font-weight: 700; line-height: 1.1; }
 .qband .total .v { font-size: 28px; }
+.qband .v small { font-size: 13px; font-weight: 400; color: var(--emph-label); margin-left: 4px; white-space: nowrap; }
 .msg { min-height: 1.4em; }
 
 .banner { background: var(--emph); color: var(--on-emph); padding: 16px; display: grid; gap: 10px; }
@@ -654,7 +655,9 @@ table.combo { width: 100%; border-collapse: collapse; font-size: 16px; }
 
     var t = sheetTotal(s);
     qBand.innerHTML = COLORS.map(function (c, k) {
-      return '<div><span class="label">' + c.name + '</span><span class="v">' + t.rows[k] + "</span></div>";
+      var n = s[c.key].length;  // inklusive Schloss
+      return '<div><span class="label">' + c.name + '</span><span class="v">' + t.rows[k] +
+        (n ? " <small>" + n + " ✕</small>" : "") + "</span></div>";
     }).join("") +
       '<div><span class="label">Fehlwürfe</span><span class="v">' + (t.pen ? "−" + t.pen : 0) + "</span></div>" +
       '<div class="total"><span class="label">Gesamt</span><span class="v">' + signed(t.total) + "</span></div>";
@@ -699,7 +702,7 @@ table.combo { width: 100%; border-collapse: collapse; font-size: 16px; }
     m.push(idx);
     if (idx === LAST) {
       m.push(LOCK);
-      msg("Reihe " + c.name + " geschlossen. Der Würfel " + c.name + " ist weggelegt.");
+      msg("Reihe " + c.name + " geschlossen: " + c.nums[LAST] + " und Schloss angekreuzt, also 2 Kreuze. Der Würfel " + c.name + " ist weggelegt.");
     }
     m.sort(function (a, b) { return a - b; });
     save(); render(); say(c.name + " " + c.nums[idx] + " angekreuzt.");
