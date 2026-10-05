@@ -14,8 +14,9 @@
 <link rel="icon" type="image/png" href="icon-192.png">
 <title>Kniffel</title>
 <style>
-/* Navy Research auf dem Handy: weißer Grund, helle Karten, ein Navy.
-   Eine Spalte, Würfel oben, Daumen-Buttons unten. Alle Ecken eckig, keine Schatten. */
+/* Navy Research auf dem Handy: weißer Grund, helle Karten, ein Navy. Alle Ecken eckig, keine Schatten.
+   Zwei Seiten nebeneinander (Würfel, Block), per Wischen oder Tabs. Hochformat: eine Spalte.
+   Querformat: Würfel links, Status und Buttons rechts; Block oben/unten nebeneinander. */
 :root {
   --sans: "Neue Montreal", "Helvetica Neue", Helvetica, Arial, sans-serif;
   --bg: #ffffff;          /* white */
@@ -27,25 +28,41 @@
   --rule: #d6dce4;        /* line */
   --accent: #1a2c42;      /* navy */
   --on-accent: #ffffff;
+  --emph: #1a2c42;
+  --on-emph: #ffffff;
+  --emph-label: #b8c4d4;
+  --th-bg: #1a2c42;
+  --th-fg: #ffffff;
+  --th-mark: #b8c4d4;
+  --hl: #e8eef6;          /* highlight: Spalte des Spielers am Zug */
+  --overlay: rgba(13, 27, 42, .5);
   --focus: #4a6fa5;
   --die-bg: #f4f6f8;
   --die-pip: #0d1b2a;
   --die-held-bg: #1a2c42;
   --die-held-pip: #ffffff;
   --die-blank: #d6dce4;
+  --pad-l: max(16px, env(safe-area-inset-left, 0px));
+  --pad-r: max(16px, env(safe-area-inset-right, 0px));
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #0d1b2a; --surface: #1a2c42; --text: #ffffff; --body: #dde3ea; --small: #dde3ea;
-    --muted: #b8c4d4; --rule: #6a7d93; --accent: #ffffff; --on-accent: #0d1b2a; --focus: #b8c4d4;
+    --muted: #b8c4d4; --rule: #6a7d93; --accent: #ffffff; --on-accent: #0d1b2a;
+    --emph: #1a2c42; --on-emph: #ffffff; --emph-label: #b8c4d4;
+    --th-bg: #b8c4d4; --th-fg: #0d1b2a; --th-mark: #1a2c42; --hl: #1f3550;
+    --overlay: rgba(0, 0, 0, .6); --focus: #b8c4d4;
     --die-bg: #1a2c42; --die-pip: #ffffff; --die-held-bg: #ffffff; --die-held-pip: #0d1b2a; --die-blank: #6a7d93;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #0d1b2a; --surface: #1a2c42; --text: #ffffff; --body: #dde3ea; --small: #dde3ea;
-  --muted: #b8c4d4; --rule: #6a7d93; --accent: #ffffff; --on-accent: #0d1b2a; --focus: #b8c4d4;
+  --muted: #b8c4d4; --rule: #6a7d93; --accent: #ffffff; --on-accent: #0d1b2a;
+  --emph: #1a2c42; --on-emph: #ffffff; --emph-label: #b8c4d4;
+  --th-bg: #b8c4d4; --th-fg: #0d1b2a; --th-mark: #1a2c42; --hl: #1f3550;
+  --overlay: rgba(0, 0, 0, .6); --focus: #b8c4d4;
   --die-bg: #1a2c42; --die-pip: #ffffff; --die-held-bg: #ffffff; --die-held-pip: #0d1b2a; --die-blank: #6a7d93;
   color-scheme: dark;
 }
@@ -57,43 +74,74 @@ body {
   margin: 0; background: var(--bg); color: var(--text); font-family: var(--sans);
   font-size: 16px; line-height: 1.4; -webkit-text-size-adjust: 100%;
   -webkit-tap-highlight-color: transparent; font-variant-numeric: tabular-nums;
+  overflow: hidden;
 }
 button { font: inherit; color: inherit; touch-action: manipulation; }
-button:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+button:focus-visible, input:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
 
 .app {
   display: flex; flex-direction: column; height: 100%; height: 100dvh;
   max-width: 560px; margin: 0 auto;
-  padding-inline: max(16px, env(safe-area-inset-left, 0px));
   padding-top: env(safe-area-inset-top, 0px);
   user-select: none; -webkit-user-select: none;
 }
 
-.head { padding-block: 16px 12px; display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
-h1 { margin: 0; font-size: 30px; font-weight: 700; line-height: 1.1; letter-spacing: -.01em; color: var(--text); }
-.meta { font-size: 14px; color: var(--small); white-space: nowrap; }
+/* Kopfzeile */
+.top {
+  display: grid; grid-template-columns: 1fr auto; grid-template-areas: "title btn" "tabs tabs";
+  align-items: center; gap: 10px 12px;
+  padding: 12px var(--pad-r) 10px var(--pad-l);
+}
+h1 { grid-area: title; margin: 0; font-size: 28px; font-weight: 700; line-height: 1.1; letter-spacing: -.01em; }
+.seg { grid-area: tabs; display: grid; grid-template-columns: 1fr 1fr; border: 2px solid var(--accent); }
+.seg button {
+  min-height: 46px; border: 0; border-radius: 0; background: transparent; cursor: pointer;
+  font-size: 17px; font-weight: 700; color: var(--body);
+}
+.seg button[aria-selected="true"] { background: var(--accent); color: var(--on-accent); }
+.btn-ghost {
+  grid-area: btn; min-height: 44px; padding: 0 16px; border: 2px solid var(--accent); border-radius: 0;
+  background: transparent; color: var(--text); font-size: 16px; font-weight: 700; cursor: pointer;
+}
 
-main { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-block: 8px 16px; }
-.mode { display: flex; flex-direction: column; gap: 20px; }
+/* Seiten zum Wischen */
+.pager {
+  flex: 1; min-height: 0; display: flex; overflow-x: auto; overflow-y: hidden; position: relative;
+  scroll-snap-type: x mandatory; overscroll-behavior-x: contain; scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.pager::-webkit-scrollbar { display: none; }
+.page {
+  flex: 0 0 100%; width: 100%; min-width: 0; min-height: 0; position: relative;
+  scroll-snap-align: start; scroll-snap-stop: always;
+  display: flex; flex-direction: column;
+  padding-left: var(--pad-l); padding-right: var(--pad-r);
+}
 
 .label {
   font-size: 12px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
   color: var(--muted); margin: 0;
 }
+.hint { margin: 0; font-size: 15px; color: var(--small); }
+
+/* Würfel-Seite */
+.dice-wrap { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.dice-main { flex: 1; min-height: 0; overflow-y: auto; padding-block: 6px 14px; display: flex; flex-direction: column; gap: 18px; }
+.dice-side { display: flex; flex-direction: column; gap: 12px; }
 
 .status { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; }
-.status-block { display: grid; gap: 6px; }
+.status-block { display: grid; gap: 4px; min-width: 0; }
 .status-block.right { justify-items: end; }
-.turn { font-size: 28px; font-weight: 700; line-height: 1; color: var(--text); }
-.turn small { font-size: 18px; font-weight: 400; color: var(--muted); }
+.who { font-size: 26px; font-weight: 700; line-height: 1.1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.round { font-size: 15px; color: var(--small); }
 .throws { display: flex; align-items: center; gap: 8px; }
-.throws .box { width: 22px; height: 22px; border: 2px solid var(--accent); background: transparent; }
+.throws .box { width: 22px; height: 22px; border: 2px solid var(--accent); }
 .throws .box.on { background: var(--accent); }
-.throws .count { font-size: 28px; font-weight: 700; line-height: 1; min-width: 1ch; text-align: right; margin-left: 6px; }
+.throws .count { font-size: 26px; font-weight: 700; line-height: 1; min-width: 1ch; text-align: right; margin-left: 6px; }
 
 .die-btn {
-  display: grid; gap: 8px; justify-items: stretch;
-  padding: 0; border: 0; background: transparent; cursor: pointer; border-radius: 0;
+  display: grid; gap: 6px; justify-items: stretch; padding: 0; border: 0;
+  background: transparent; cursor: pointer; border-radius: 0; min-width: 0;
 }
 .die-btn:disabled { cursor: default; }
 .die {
@@ -111,7 +159,6 @@ main { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: tou
   font-size: 12px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
   text-align: center; min-height: 1.4em; line-height: 1.4em; color: var(--accent);
 }
-
 .die.rolling { animation: tumble .48s cubic-bezier(.3,.7,.4,1); }
 @keyframes tumble {
   0%   { transform: none; }
@@ -125,17 +172,14 @@ main { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: tou
   .die { transition: none; }
 }
 
-/* 3 + 2 Würfel, zweite Reihe mittig */
 .kdice { display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px; }
 .kdice .die-btn { grid-column: span 2; }
 .kdice .die-btn:nth-child(4) { grid-column: 2 / span 2; }
 
-.hint { margin: 0; font-size: 15px; color: var(--small); }
-
 .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.tile { background: var(--surface); padding: 14px 16px; display: grid; gap: 4px; min-width: 0; align-content: start; }
-.tile .value { font-size: 22px; font-weight: 700; line-height: 1.2; color: var(--text); hyphens: auto; -webkit-hyphens: auto; }
-.tile .value small { display: block; font-size: 15px; font-weight: 400; color: var(--small); }
+.tile { background: var(--surface); padding: 12px 14px; display: grid; gap: 4px; min-width: 0; align-content: start; }
+.tile .value { font-size: 22px; font-weight: 700; line-height: 1.2; hyphens: auto; -webkit-hyphens: auto; }
+.tile .value small { display: block; font-size: 14px; font-weight: 400; color: var(--small); }
 
 .bar {
   display: grid; grid-template-columns: 1fr 1.5fr; gap: 12px;
@@ -143,8 +187,8 @@ main { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: tou
   border-top: 2px solid var(--rule);
 }
 .btn {
-  min-height: 68px; border: 0; border-radius: 0; cursor: pointer;
-  font-size: 19px; font-weight: 700; padding: 0 10px; line-height: 1.15;
+  min-height: 64px; border: 0; border-radius: 0; cursor: pointer;
+  font-size: 19px; font-weight: 700; padding: 0 12px; line-height: 1.15;
   transition: transform .08s ease;
 }
 .btn:active:not(:disabled) { transform: scale(.98); }
@@ -152,59 +196,211 @@ main { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: tou
 .btn-primary { background: var(--accent); color: var(--on-accent); }
 .btn-secondary { background: var(--surface); color: var(--text); }
 
+/* Block-Seite */
+.block-scroll { flex: 1; min-height: 0; overflow-y: auto; padding-block: 6px calc(16px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 14px; align-content: start; }
+.sheet { display: grid; gap: 14px; align-items: start; }
+table.score { width: 100%; border-collapse: collapse; table-layout: fixed; }
+table.score col.cat-col { width: 40%; }
+.score th {
+  background: var(--th-bg); color: var(--th-fg); font-size: 13px; font-weight: 700;
+  padding: 8px 4px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.score th:first-child { text-align: left; padding-left: 10px; letter-spacing: .1em; text-transform: uppercase; }
+.score th.cur { box-shadow: inset 0 -4px 0 var(--th-mark); }
+.score td { border-bottom: 2px solid var(--rule); padding: 0; text-align: center; height: 44px; }
+.score tbody tr:nth-child(even) td { background: var(--surface); }
+.score td.cur, .score tbody tr:nth-child(even) td.cur { background: var(--hl); }
+.score td.cat { text-align: left; padding: 0 10px; font-size: 15px; color: var(--body); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cell {
+  display: block; width: 100%; height: 100%; min-height: 44px; border: 0; border-radius: 0;
+  background: transparent; cursor: pointer; font-size: 18px; font-weight: 700; color: var(--text);
+}
+.cell.preview { color: var(--muted); font-weight: 400; font-style: italic; }
+.cell.struck { color: var(--muted); }
+.score tr.total td { font-weight: 700; font-size: 16px; color: var(--text); }
+.score tr.total td.cat { color: var(--text); font-weight: 700; }
+.score tr.grand td, .score tr.grand td.cur { background: var(--emph); color: var(--on-emph); font-size: 18px; border-bottom: 0; }
+.score tr.grand td.cat { color: var(--on-emph); }
+.need { display: block; font-size: 11px; font-weight: 400; color: var(--muted); line-height: 1.2; }
+
+.banner { background: var(--emph); color: var(--on-emph); padding: 16px; display: grid; gap: 10px; }
+.banner .label { color: var(--emph-label); }
+.banner ol { margin: 0; padding-left: 1.4em; display: grid; gap: 4px; font-size: 18px; }
+.banner li:first-child { font-weight: 700; font-size: 22px; }
+.banner .btn { min-height: 52px; background: var(--on-emph); color: var(--emph); }
+
+/* Overlays: Eintragen und Spieler */
+.overlay {
+  position: fixed; inset: 0; z-index: 10; background: var(--overlay);
+  display: flex; align-items: flex-end; justify-content: center;
+}
+.panel {
+  width: 100%; max-width: 560px; max-height: 100%; overflow-y: auto; background: var(--bg);
+  padding: 20px var(--pad-r) calc(20px + env(safe-area-inset-bottom, 0px)) var(--pad-l);
+  display: grid; gap: 14px;
+}
+.panel h2 { margin: 0; font-size: 26px; line-height: 1.15; }
+.opts { display: grid; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: 8px; }
+.opt {
+  min-height: 52px; border: 0; border-radius: 0; background: var(--surface); color: var(--text);
+  font-size: 20px; font-weight: 700; cursor: pointer;
+}
+.opt[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
+.stepper { display: grid; grid-template-columns: 64px 1fr 64px; gap: 8px; align-items: center; }
+.stepper output { text-align: center; font-size: 40px; font-weight: 700; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.panel .btn { min-height: 56px; }
+.panel .btn-ghost { min-height: 52px; }
+
+.plist { display: grid; gap: 8px; }
+.prow { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+.prow input {
+  min-height: 50px; width: 100%; padding: 0 12px; font: inherit; font-size: 17px;
+  color: var(--text); background: var(--bg); border: 2px solid var(--rule); border-radius: 0;
+  user-select: text; -webkit-user-select: text;
+}
+.prow .btn-ghost { min-height: 50px; font-size: 15px; padding: 0 12px; }
+.confirm { background: var(--surface); padding: 14px; display: grid; gap: 10px; }
+.confirm p { margin: 0; font-weight: 700; }
+
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
-@media (max-height: 700px) {
-  .head { padding-block: 10px 8px; }
-  .mode { gap: 14px; }
-  .btn { min-height: 60px; }
+@media (max-height: 740px) and (orientation: portrait) {
+  .top { padding-block: 8px 8px; gap: 8px; }
+  .dice-main { gap: 12px; }
+  .btn { min-height: 56px; }
+}
+
+/* Querformat (iPhone 15/16/17 Pro: ca. 852–874 × 393–402 pt) */
+@media (orientation: landscape) and (max-height: 500px) {
+  .app { max-width: none; }
+  .top {
+    grid-template-columns: auto minmax(0, 340px) auto; grid-template-areas: "title tabs btn";
+    justify-content: space-between; padding-block: 6px 6px; gap: 16px;
+  }
+  h1 { font-size: 22px; }
+  .seg button { min-height: 38px; font-size: 16px; }
+  .btn-ghost { min-height: 40px; }
+
+  .dice-wrap { display: grid; grid-template-columns: minmax(0, 1fr) 250px; gap: 24px; }
+  .dice-main { padding-block: 4px 8px; gap: 12px; }
+  .dice-side { padding-block: 4px 0; min-height: 0; overflow-y: auto; }
+  .kdice { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; max-width: 600px; }
+  .kdice .die-btn, .kdice .die-btn:nth-child(4) { grid-column: auto; }
+  .who { font-size: 22px; }
+  .hint { font-size: 14px; }
+  .tiles { grid-template-columns: 1fr; gap: 8px; }
+  .tile { padding: 8px 12px; }
+  .tile .value { font-size: 19px; }
+  .tile .value small { display: inline; margin-left: 6px; }
+  .bar {
+    grid-template-columns: 1fr; margin-top: auto; gap: 8px; border-top: 0;
+    padding-block: 0 calc(8px + env(safe-area-inset-bottom, 0px));
+  }
+  .bar #k-roll { order: -1; }
+  .btn { min-height: 52px; font-size: 18px; }
+
+  .block-scroll { padding-block: 4px calc(8px + env(safe-area-inset-bottom, 0px)); gap: 10px; }
+  .sheet { grid-template-columns: 1fr 1fr; gap: 20px; }
+  .score th { padding: 5px 4px; }
+  .score td { height: 29px; }
+  .cell { min-height: 29px; font-size: 15px; }
+  .score td.cat { font-size: 14px; }
+  .score tr.grand td { font-size: 16px; }
+  .sheet-hint { display: none; }
+
+  .overlay { align-items: center; }
+  .panel { max-width: 480px; padding: 16px 20px; gap: 10px; }
+  .panel h2 { font-size: 22px; }
+  .opt { min-height: 44px; }
+  .panel .btn { min-height: 48px; }
 }
 </style>
 </head>
 <body>
 <div class="app">
-  <header class="head">
+  <header class="top">
     <h1>Kniffel</h1>
-    <span class="meta">5 Würfel · 3 Würfe</span>
+    <div class="seg" role="tablist" aria-label="Ansicht">
+      <button type="button" role="tab" id="tab-dice" aria-selected="true" aria-controls="page-dice" data-page="0">Würfel</button>
+      <button type="button" role="tab" id="tab-block" aria-selected="false" aria-controls="page-block" data-page="1">Block</button>
+    </div>
+    <button type="button" class="btn-ghost" id="open-settings">Spieler</button>
   </header>
 
-  <main>
-    <section class="mode" aria-label="Kniffel">
-      <div class="status">
-        <div class="status-block">
-          <p class="label">Zug</p>
-          <div class="turn"><span id="k-turn">1</span> <small>/ 13</small></div>
+  <div class="pager" id="pager">
+    <!-- Würfel -->
+    <section class="page" id="page-dice" role="tabpanel" aria-labelledby="tab-dice">
+      <div class="dice-wrap">
+        <div class="dice-main">
+          <div class="status">
+            <div class="status-block">
+              <p class="label">Am Zug</p>
+              <div class="who" id="k-who">Spieler 1</div>
+              <div class="round" id="k-round">Zug 1 von 13</div>
+            </div>
+            <div class="status-block right">
+              <p class="label">Würfe übrig</p>
+              <div class="throws" id="k-throws" aria-hidden="true">
+                <span class="box on"></span><span class="box on"></span><span class="box on"></span>
+                <span class="count" id="k-left">3</span>
+              </div>
+            </div>
+          </div>
+          <div class="kdice" id="k-dice"></div>
+          <p class="hint" id="k-hint">Würfle zuerst. Danach tippst du einen Würfel an, um ihn zu halten.</p>
         </div>
-        <div class="status-block right">
-          <p class="label">Würfe übrig</p>
-          <div class="throws" id="k-throws" aria-hidden="true">
-            <span class="box on"></span><span class="box on"></span><span class="box on"></span>
-            <span class="count" id="k-left">3</span>
+        <div class="dice-side">
+          <div class="tiles">
+            <div class="tile">
+              <p class="label">Augensumme</p>
+              <div class="value" id="k-sum">–</div>
+            </div>
+            <div class="tile">
+              <p class="label">Bester Wurf</p>
+              <div class="value" id="k-best">–</div>
+            </div>
+          </div>
+          <div class="bar">
+            <button type="button" class="btn btn-secondary" id="k-next">Nächster Zug</button>
+            <button type="button" class="btn btn-primary" id="k-roll">Würfeln</button>
           </div>
         </div>
       </div>
+    </section>
 
-      <div class="kdice" id="k-dice"></div>
-
-      <p class="hint" id="k-hint">Würfle zuerst. Danach tippst du einen Würfel an, um ihn zu halten.</p>
-
-      <div class="tiles">
-        <div class="tile">
-          <p class="label">Augensumme</p>
-          <div class="value" id="k-sum">–</div>
-        </div>
-        <div class="tile">
-          <p class="label">Bester Wurf</p>
-          <div class="value" id="k-best">–</div>
-        </div>
+    <!-- Block -->
+    <section class="page" id="page-block" role="tabpanel" aria-labelledby="tab-block">
+      <div class="block-scroll">
+        <div class="banner" id="k-over" hidden></div>
+        <div class="sheet" id="k-sheet"></div>
+        <p class="hint sheet-hint">Feld antippen zum Eintragen. Grau steht, was der aktuelle Wurf bringen würde. Danach ist automatisch der Nächste dran.</p>
       </div>
     </section>
-  </main>
+  </div>
 
-  <footer class="bar">
-    <button class="btn btn-secondary" id="k-next">Nächster Zug</button>
-    <button class="btn btn-primary" id="k-roll">Würfeln</button>
-  </footer>
+  <!-- Eintragen -->
+  <div class="overlay" id="entry" hidden>
+    <div class="panel" id="entry-panel" role="dialog" aria-modal="true" aria-labelledby="entry-title"></div>
+  </div>
+
+  <!-- Spieler -->
+  <div class="overlay" id="settings" hidden>
+    <div class="panel" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+      <h2 id="settings-title">Spieler</h2>
+      <div class="plist" id="plist"></div>
+      <button type="button" class="btn btn-secondary" id="p-add">Spieler hinzufügen</button>
+      <button type="button" class="btn btn-secondary" id="new-game">Neues Spiel</button>
+      <div class="confirm" id="confirm" hidden>
+        <p>Alle Ergebnisse löschen und neu anfangen?</p>
+        <div class="two">
+          <button type="button" class="btn btn-secondary" id="confirm-no">Abbrechen</button>
+          <button type="button" class="btn btn-primary" id="confirm-yes">Ja, neues Spiel</button>
+        </div>
+      </div>
+      <button type="button" class="btn btn-primary" id="settings-done">Fertig</button>
+    </div>
+  </div>
 
   <div class="sr-only" aria-live="polite" id="announce"></div>
 </div>
@@ -212,8 +408,10 @@ main { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: tou
 <script>
 (function () {
   "use strict";
+  var $ = function (s) { return document.querySelector(s); };
 
-  /* Zufall: crypto.getRandomValues liefert Zufall aus dem Betriebssystem.
+  /* ---------- Zufall ----------
+     crypto.getRandomValues liefert Zufall aus dem Betriebssystem.
      Bytes ab 252 werden verworfen, damit 0–251 sich glatt auf 6 Seiten
      verteilt (252 = 6 × 42) und keine Augenzahl bevorzugt wird. */
   var buf = new Uint8Array(1);
@@ -229,16 +427,92 @@ main { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: tou
   var reduceMotion = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
   var NAMES = ["", "Eins", "Zwei", "Drei", "Vier", "Fünf", "Sechs"];
   var FACES = { 1: [4], 2: [2, 6], 3: [2, 4, 6], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8] };
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
 
+  /* ---------- Kniffel-Regeln ---------- */
+  var CATS = [
+    { id: "ones", name: "Einser", face: 1 }, { id: "twos", name: "Zweier", face: 2 },
+    { id: "threes", name: "Dreier", face: 3 }, { id: "fours", name: "Vierer", face: 4 },
+    { id: "fives", name: "Fünfer", face: 5 }, { id: "sixes", name: "Sechser", face: 6 },
+    { id: "three", name: "Dreierpasch", kind: "sum" }, { id: "four", name: "Viererpasch", kind: "sum" },
+    { id: "fh", name: "Full House", fixed: 25 }, { id: "ss", name: "Kleine Straße", fixed: 30 },
+    { id: "ls", name: "Große Straße", fixed: 40 }, { id: "kn", name: "Kniffel", fixed: 50 },
+    { id: "ch", name: "Chance", kind: "sum" }
+  ];
+  var UP = CATS.slice(0, 6), LOW = CATS.slice(6);
+  var CAT = {}; CATS.forEach(function (c) { CAT[c.id] = c; });
+
+  function analyse(v) {
+    var counts = [0, 0, 0, 0, 0, 0, 0];
+    v.forEach(function (x) { counts[x]++; });
+    var has = function (arr) { return arr.every(function (x) { return counts[x] > 0; }); };
+    return {
+      counts: counts,
+      sum: v.reduce(function (a, x) { return a + x; }, 0),
+      max: Math.max.apply(null, counts),
+      shape: counts.filter(function (c) { return c > 0; }).sort().join(""),
+      small: has([1, 2, 3, 4]) || has([2, 3, 4, 5]) || has([3, 4, 5, 6]),
+      large: has([1, 2, 3, 4, 5]) || has([2, 3, 4, 5, 6])
+    };
+  }
+  function scoreFor(id, v) {
+    var a = analyse(v), c = CAT[id];
+    if (c.face) return a.counts[c.face] * c.face;
+    switch (id) {
+      case "three": return a.max >= 3 ? a.sum : 0;
+      case "four": return a.max >= 4 ? a.sum : 0;
+      case "fh": return a.shape === "23" ? 25 : 0;
+      case "ss": return a.small ? 30 : 0;
+      case "ls": return a.large ? 40 : 0;
+      case "kn": return a.max === 5 ? 50 : 0;
+      default: return a.sum; // Chance
+    }
+  }
+  function bestCategory(v) {
+    var a = analyse(v);
+    if (a.max === 5) return ["Kniffel", 50];
+    if (a.large) return ["Große Straße", 40];
+    if (a.small) return ["Kleine Straße", 30];
+    if (a.shape === "23") return ["Full House", 25];
+    if (a.max >= 4) return ["Viererpasch", a.sum];
+    if (a.max >= 3) return ["Dreierpasch", a.sum];
+    return ["Chance", a.sum];
+  }
+  function totals(p) {
+    var s = S.scores[p], up = 0, low = 0, upDone = true;
+    UP.forEach(function (c) { if (s[c.id] == null) upDone = false; else up += s[c.id]; });
+    LOW.forEach(function (c) { if (s[c.id] != null) low += s[c.id]; });
+    var bonus = up >= 63 ? 35 : 0;
+    return { up: up, bonus: bonus, upDone: upDone, upTotal: up + bonus, low: low, grand: up + bonus + low };
+  }
+  function playerDone(p) { return CATS.every(function (c) { return S.scores[p][c.id] != null; }); }
+  function gameOver() { return S.players.every(function (_, p) { return playerDone(p); }); }
+
+  /* ---------- Spielstand (bleibt beim Schließen der App erhalten) ---------- */
+  var KEY = "kniffel-spiel-v1";
+  function freshDice() { return { vals: [0, 0, 0, 0, 0], held: [false, false, false, false, false], left: 3 }; }
+  function fresh(players) {
+    players = players || ["Spieler 1", "Spieler 2"];
+    return { v: 1, players: players, cur: 0, round: 1, scores: players.map(function () { return {}; }), dice: freshDice() };
+  }
+  function load() {
+    try {
+      var s = JSON.parse(localStorage.getItem(KEY));
+      if (s && s.v === 1 && Array.isArray(s.players) && s.players.length &&
+          Array.isArray(s.scores) && s.scores.length === s.players.length && s.dice) return s;
+    } catch (e) {}
+    return fresh();
+  }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
+  var S = load();
+  S.dice.vals.forEach(function (v, i) { if (!v) S.dice.held[i] = false; });
+
+  /* ---------- Würfel ---------- */
   function makeDie() {
     var d = document.createElement("div");
     d.className = "die blank";
     d.setAttribute("aria-hidden", "true");
-    for (var i = 0; i < 9; i++) {
-      var p = document.createElement("span");
-      p.className = "pip";
-      d.appendChild(p);
-    }
+    for (var i = 0; i < 9; i++) { var p = document.createElement("span"); p.className = "pip"; d.appendChild(p); }
     return d;
   }
   function showFace(die, v) {
@@ -246,15 +520,9 @@ main { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: tou
     die.classList.toggle("blank", !v);
     for (var i = 0; i < 9; i++) die.children[i].classList.toggle("on", on.indexOf(i) !== -1);
   }
-
-  // Kurze Würfelanimation: Augen flackern, dann landet der echte Wert.
   function tumble(dice, finals, done) {
     if (navigator.vibrate) { try { navigator.vibrate(12); } catch (e) {} }
-    if (reduceMotion) {
-      dice.forEach(function (d, k) { showFace(d, finals[k]); });
-      done();
-      return;
-    }
+    if (reduceMotion) { dice.forEach(function (d, k) { showFace(d, finals[k]); }); done(); return; }
     dice.forEach(function (d) { d.classList.remove("rolling"); void d.offsetWidth; d.classList.add("rolling"); });
     var iv = setInterval(function () { dice.forEach(function (d) { showFace(d, flickerD6()); }); }, 65);
     setTimeout(function () {
@@ -264,128 +532,319 @@ main { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: tou
     }, 480);
   }
 
-  var announce = document.getElementById("announce");
+  var announce = $("#announce");
   function say(text) { announce.textContent = ""; setTimeout(function () { announce.textContent = text; }, 30); }
 
-  var K = { vals: [0, 0, 0, 0, 0], held: [false, false, false, false, false], left: 3, turn: 1, busy: false };
-  var kWrap = document.getElementById("k-dice");
-  var kBtns = [], kDice = [], kTags = [];
+  var busy = false;
+  var kWrap = $("#k-dice"), kBtns = [], kDice = [], kTags = [];
   for (var i = 0; i < 5; i++) {
     var b = document.createElement("button");
-    b.className = "die-btn";
-    b.type = "button";
-    b.setAttribute("aria-pressed", "false");
-    var d = makeDie();
-    var t = document.createElement("span");
+    b.className = "die-btn"; b.type = "button"; b.setAttribute("aria-pressed", "false");
+    var d = makeDie(), t = document.createElement("span");
     t.className = "tag";
-    b.appendChild(d);
-    b.appendChild(t);
+    b.appendChild(d); b.appendChild(t);
     b.addEventListener("click", toggleHold.bind(null, i));
     kWrap.appendChild(b);
     kBtns.push(b); kDice.push(d); kTags.push(t);
+    showFace(d, S.dice.vals[i]);
   }
-  var kRoll = document.getElementById("k-roll");
-  var kNext = document.getElementById("k-next");
-  var kLeft = document.getElementById("k-left");
-  var kBoxes = document.querySelectorAll("#k-throws .box");
-  var kTurn = document.getElementById("k-turn");
-  var kHint = document.getElementById("k-hint");
-  var kSum = document.getElementById("k-sum");
-  var kBest = document.getElementById("k-best");
+  var kRoll = $("#k-roll"), kNext = $("#k-next"), kLeft = $("#k-left"), kTurn = $("#k-round"), kWho = $("#k-who");
+  var kBoxes = document.querySelectorAll("#k-throws .box"), kHint = $("#k-hint"), kSum = $("#k-sum"), kBest = $("#k-best");
 
   function toggleHold(i) {
-    if (K.busy || !K.vals[i]) return;
-    K.held[i] = !K.held[i];
-    render();
+    if (busy || !S.dice.vals[i]) return;
+    S.dice.held[i] = !S.dice.held[i];
+    save(); renderDice();
   }
 
-  // Beste Kniffel-Kategorie des aktuellen Wurfs, mit Punkten
-  function bestCategory(v) {
-    var counts = [0, 0, 0, 0, 0, 0, 0];
-    v.forEach(function (x) { counts[x]++; });
-    var sum = v.reduce(function (a, x) { return a + x; }, 0);
-    var max = Math.max.apply(null, counts);
-    var has = function (arr) { return arr.every(function (x) { return counts[x] > 0; }); };
-    var shape = counts.filter(function (c) { return c > 0; }).sort().join("");
-    if (max === 5) return ["Kniffel", 50];
-    if (has([1, 2, 3, 4, 5]) || has([2, 3, 4, 5, 6])) return ["Große Straße", 40];
-    if (has([1, 2, 3, 4]) || has([2, 3, 4, 5]) || has([3, 4, 5, 6])) return ["Kleine Straße", 30];
-    if (shape === "23") return ["Full House", 25];
-    if (max >= 4) return ["Viererpasch", sum];
-    if (max >= 3) return ["Dreierpasch", sum];
-    return ["Chance", sum];
-  }
-
-  function render() {
-    var rolled = K.vals[0] > 0;
-    var allHeld = K.held.every(Boolean);
+  function renderDice() {
+    var D = S.dice, rolled = D.vals[0] > 0, allHeld = D.held.every(Boolean), over = gameOver();
     for (var i = 0; i < 5; i++) {
-      kBtns[i].setAttribute("aria-pressed", K.held[i] ? "true" : "false");
+      kBtns[i].setAttribute("aria-pressed", D.held[i] ? "true" : "false");
       kBtns[i].disabled = !rolled;
-      kTags[i].textContent = K.held[i] ? "Gehalten" : "";
-      kBtns[i].setAttribute("aria-label",
-        "Würfel " + (i + 1) + ": " + (K.vals[i] ? NAMES[K.vals[i]] : "noch nicht gewürfelt") +
-        (K.held[i] ? ", gehalten" : ""));
+      kTags[i].textContent = D.held[i] ? "Gehalten" : "";
+      kBtns[i].setAttribute("aria-label", "Würfel " + (i + 1) + ": " +
+        (D.vals[i] ? NAMES[D.vals[i]] : "noch nicht gewürfelt") + (D.held[i] ? ", gehalten" : ""));
     }
-    kLeft.textContent = K.left;
-    kBoxes.forEach(function (bx, n) { bx.classList.toggle("on", n < K.left); });
-    kTurn.textContent = K.turn;
+    kLeft.textContent = D.left;
+    kBoxes.forEach(function (bx, n) { bx.classList.toggle("on", n < D.left); });
+    kWho.textContent = S.players[S.cur];
+    kTurn.textContent = over ? "Spiel beendet" : "Zug " + Math.min(S.round, 13) + " von 13";
 
-    if (K.left === 0) kRoll.textContent = "Keine Würfe mehr";
+    if (over) kRoll.textContent = "Spiel beendet";
+    else if (D.left === 0) kRoll.textContent = "Keine Würfe mehr";
     else if (rolled && allHeld) kRoll.textContent = "Alle gehalten";
-    else if (K.left === 3) kRoll.textContent = "Würfeln";
+    else if (D.left === 3) kRoll.textContent = "Würfeln";
     else kRoll.textContent = "Nochmal würfeln";
-    kRoll.disabled = K.busy || K.left === 0 || (rolled && allHeld);
-    kNext.textContent = K.turn >= 13 ? "Neues Spiel" : "Nächster Zug";
-    kNext.disabled = K.busy;
+    kRoll.disabled = busy || over || D.left === 0 || (rolled && allHeld);
+    kNext.textContent = over ? "Ergebnis" : "Nächster Zug";
+    kNext.disabled = busy;
 
-    if (!rolled) kHint.textContent = "Würfle zuerst. Danach tippst du einen Würfel an, um ihn zu halten.";
-    else if (K.left === 0) kHint.textContent = "Alle drei Würfe sind verbraucht. Trag dein Ergebnis ein und starte den nächsten Zug.";
-    else kHint.textContent = "Tippe einen Würfel an, um ihn zu halten oder wieder freizugeben.";
+    if (over) kHint.textContent = "Alle Felder sind ausgefüllt. Das Ergebnis steht im Block.";
+    else if (!rolled) kHint.textContent = "Würfle zuerst. Danach tippst du einen Würfel an, um ihn zu halten.";
+    else if (D.left === 0) kHint.textContent = "Alle drei Würfe sind verbraucht. Wisch nach links zum Block und trag dein Ergebnis ein.";
+    else kHint.textContent = "Tippe einen Würfel an, um ihn zu halten. Eintragen kannst du jederzeit im Block.";
 
     if (rolled) {
-      var sum = K.vals.reduce(function (a, x) { return a + x; }, 0);
-      var best = bestCategory(K.vals);
-      kSum.textContent = sum;
+      var best = bestCategory(D.vals);
+      kSum.textContent = analyse(D.vals).sum;
       kBest.innerHTML = best[0] + " <small>" + best[1] + " Punkte</small>";
-    } else {
-      kSum.textContent = "–";
-      kBest.textContent = "–";
-    }
+    } else { kSum.textContent = "–"; kBest.textContent = "–"; }
   }
 
   kRoll.addEventListener("click", function () {
-    if (K.busy || K.left === 0) return;
+    var D = S.dice;
+    if (busy || D.left === 0 || gameOver()) return;
     var idx = [];
-    for (var i = 0; i < 5; i++) if (!K.held[i]) idx.push(i);
+    for (var i = 0; i < 5; i++) if (!D.held[i]) idx.push(i);
     if (!idx.length) return;
     var finals = idx.map(function () { return rollD6(); });
-    K.busy = true;
-    K.left--;
-    render();
+    busy = true; D.left--;
+    renderDice();
     tumble(idx.map(function (i) { return kDice[i]; }), finals, function () {
-      idx.forEach(function (i, k) { K.vals[i] = finals[k]; });
-      K.busy = false;
-      render();
-      say("Gewürfelt: " + K.vals.join(", ") + ". Noch " + K.left + " Würfe.");
+      idx.forEach(function (i, k) { D.vals[i] = finals[k]; });
+      busy = false;
+      save(); render();
+      say("Gewürfelt: " + D.vals.join(", ") + ". Noch " + D.left + " Würfe.");
     });
   });
 
-  kNext.addEventListener("click", function () {
-    if (K.busy) return;
-    K.turn = K.turn >= 13 ? 1 : K.turn + 1;
-    K.vals = [0, 0, 0, 0, 0];
-    K.held = [false, false, false, false, false];
-    K.left = 3;
+  function nextTurn() {
+    S.dice = freshDice();
     kDice.forEach(function (d) { showFace(d, 0); });
-    render();
-    say("Zug " + K.turn + ". Drei Würfe übrig.");
+    if (!gameOver()) {
+      // nächster Spieler, der noch freie Felder hat
+      for (var k = 0; k < S.players.length; k++) {
+        S.cur = (S.cur + 1) % S.players.length;
+        if (S.cur === 0) S.round++;
+        if (!playerDone(S.cur)) break;
+      }
+    }
+    save(); render();
+    say(gameOver() ? "Spiel beendet." : S.players[S.cur] + " ist dran.");
+  }
+  kNext.addEventListener("click", function () {
+    if (busy) return;
+    if (gameOver()) { goPage(1); return; }
+    nextTurn();
   });
 
+  /* ---------- Block ---------- */
+  var sheet = $("#k-sheet"), overBox = $("#k-over");
+
+  function cellHtml(p, c) {
+    var v = S.scores[p][c.id], rolled = S.dice.vals[0] > 0;
+    var who = esc(S.players[p]) + ", " + c.name;
+    if (v != null) {
+      return '<button type="button" class="cell' + (v === 0 ? " struck" : "") + '" data-p="' + p + '" data-c="' + c.id +
+        '" aria-label="' + who + ": " + v + ' Punkte, ändern">' + (v === 0 ? "–" : v) + "</button>";
+    }
+    if (p === S.cur && rolled && !gameOver()) {
+      var pv = scoreFor(c.id, S.dice.vals);
+      return '<button type="button" class="cell preview" data-p="' + p + '" data-c="' + c.id +
+        '" aria-label="' + who + ": mit diesem Wurf " + pv + ' Punkte">' + pv + "</button>";
+    }
+    return '<button type="button" class="cell" data-p="' + p + '" data-c="' + c.id + '" aria-label="' + who + ': leer"></button>';
+  }
+  function head(title) {
+    return '<colgroup><col class="cat-col">' + S.players.map(function () { return "<col>"; }).join("") + "</colgroup>" +
+      '<thead><tr><th scope="col">' + title + "</th>" + S.players.map(function (n, p) {
+        return '<th scope="col"' + (p === S.cur ? ' class="cur"' : "") + ">" + esc(n) + "</th>";
+      }).join("") + "</tr></thead>";
+  }
+  function td(p, inner) { return "<td" + (p === S.cur ? ' class="cur"' : "") + ">" + inner + "</td>"; }
+  function catRows(list) {
+    return list.map(function (c) {
+      return '<tr><td class="cat">' + c.name + "</td>" + S.players.map(function (_, p) { return td(p, cellHtml(p, c)); }).join("") + "</tr>";
+    }).join("");
+  }
+  function totalRow(label, fn, cls) {
+    return '<tr class="' + (cls || "total") + '"><td class="cat">' + label + "</td>" +
+      S.players.map(function (_, p) { return td(p, fn(totals(p))); }).join("") + "</tr>";
+  }
+
+  function renderSheet() {
+    var up = '<table class="score"><caption class="sr-only">Oberer Block</caption>' + head("Oben") + "<tbody>" +
+      catRows(UP) +
+      totalRow("Summe oben", function (t) { return t.up; }) +
+      totalRow("Bonus ab 63", function (t) {
+        if (t.bonus) return 35;
+        if (t.upDone) return 0;
+        return '<span class="need">noch ' + (63 - t.up) + "</span>";
+      }) +
+      totalRow("Gesamt oben", function (t) { return t.upTotal; }) +
+      "</tbody></table>";
+    var low = '<table class="score"><caption class="sr-only">Unterer Block</caption>' + head("Unten") + "<tbody>" +
+      catRows(LOW) +
+      totalRow("Summe unten", function (t) { return t.low; }) +
+      totalRow("Endsumme", function (t) { return t.grand; }, "grand") +
+      "</tbody></table>";
+    sheet.innerHTML = up + low;
+
+    if (gameOver()) {
+      var rank = S.players.map(function (n, p) { return { n: n, s: totals(p).grand }; })
+        .sort(function (a, b) { return b.s - a.s; });
+      overBox.innerHTML = '<p class="label">Spielende</p><ol>' + rank.map(function (r) {
+        return "<li>" + esc(r.n) + " · " + r.s + " Punkte</li>";
+      }).join("") + '</ol><button type="button" class="btn" id="k-again">Neues Spiel mit denselben Spielern</button>';
+      overBox.hidden = false;
+    } else {
+      overBox.hidden = true;
+      overBox.innerHTML = "";
+    }
+  }
+  overBox.addEventListener("click", function (e) {
+    if (e.target.id === "k-again") newGame();
+  });
+
+  sheet.addEventListener("click", function (e) {
+    var b = e.target.closest(".cell");
+    if (!b) return;
+    openEntry(+b.dataset.p, b.dataset.c, b);
+  });
+
+  /* ---------- Eintragen ---------- */
+  var entry = $("#entry"), panel = $("#entry-panel"), lastFocus = null, stepVal = 0, entryCtx = null;
+
+  function openEntry(p, id, opener) {
+    var c = CAT[id], cur = S.scores[p][id], rolled = S.dice.vals[0] > 0;
+    entryCtx = { p: p, id: id };
+    lastFocus = opener || null;
+    var html = '<p class="label">' + esc(S.players[p]) + '</p><h2 id="entry-title">' + c.name + "</h2>";
+    if (rolled && cur == null && p === S.cur) {
+      var sc = scoreFor(id, S.dice.vals);
+      html += '<button type="button" class="btn btn-primary" data-set="' + sc + '">' + sc + " aus dem Wurf eintragen</button>";
+    }
+    if (c.kind === "sum") {
+      stepVal = cur != null ? cur : (rolled ? analyse(S.dice.vals).sum : 20);
+      html += '<p class="label">Wert selbst eingeben</p>' +
+        '<div class="stepper"><button type="button" class="opt" data-step="-1" aria-label="Weniger">−</button>' +
+        '<output id="step-val">' + stepVal + '</output><button type="button" class="opt" data-step="1" aria-label="Mehr">+</button></div>' +
+        '<div class="two"><button type="button" class="btn btn-secondary" data-set="0">Streichen</button>' +
+        '<button type="button" class="btn btn-secondary" data-set-step>Wert eintragen</button></div>';
+    } else {
+      var opts = c.face ? [0, 1, 2, 3, 4, 5].map(function (k) { return k * c.face; }) : [0, c.fixed];
+      html += '<p class="label">Wert wählen</p><div class="opts">' + opts.map(function (v) {
+        return '<button type="button" class="opt" data-set="' + v + '" aria-pressed="' + (cur === v) + '">' + (v === 0 ? "0 · streichen" : v) + "</button>";
+      }).join("") + "</div>";
+    }
+    if (cur != null) html += '<button type="button" class="btn btn-secondary" data-clear>Eintrag löschen</button>';
+    html += '<button type="button" class="btn-ghost" data-close>Abbrechen</button>';
+    panel.innerHTML = html;
+    entry.hidden = false;
+    var first = panel.querySelector("button");
+    if (first) first.focus();
+  }
+  function closeEntry() {
+    entry.hidden = true; entryCtx = null;
+    if (lastFocus && document.body.contains(lastFocus)) lastFocus.focus();
+  }
+  function setScore(v) {
+    var p = entryCtx.p, id = entryCtx.id, wasEmpty = S.scores[p][id] == null;
+    S.scores[p][id] = v;
+    closeEntry();
+    say(S.players[p] + ": " + CAT[id].name + " " + v + " Punkte eingetragen.");
+    if (wasEmpty && p === S.cur) { nextTurn(); goPage(0); }
+    else { save(); render(); }
+  }
+  panel.addEventListener("click", function (e) {
+    var b = e.target.closest("button");
+    if (!b || !entryCtx) return;
+    if (b.hasAttribute("data-close")) return closeEntry();
+    if (b.hasAttribute("data-clear")) {
+      delete S.scores[entryCtx.p][entryCtx.id];
+      closeEntry(); save(); render(); return;
+    }
+    if (b.hasAttribute("data-step")) {
+      stepVal = Math.max(0, Math.min(30, stepVal + +b.dataset.step));
+      $("#step-val").textContent = stepVal; return;
+    }
+    if (b.hasAttribute("data-set-step")) return setScore(stepVal);
+    if (b.dataset.set != null) return setScore(+b.dataset.set);
+  });
+  entry.addEventListener("click", function (e) { if (e.target === entry) closeEntry(); });
+
+  /* ---------- Spieler ---------- */
+  var settings = $("#settings"), plist = $("#plist"), confirmBox = $("#confirm");
+  function renderPlayers() {
+    plist.innerHTML = S.players.map(function (n, p) {
+      return '<div class="prow"><input type="text" id="pname-' + p + '" value="' + esc(n) + '" maxlength="16" autocomplete="off" aria-label="Name von Spieler ' + (p + 1) + '">' +
+        (S.players.length > 1 ? '<button type="button" class="btn-ghost" data-remove="' + p + '">Entfernen</button>' : "") + "</div>";
+    }).join("");
+    $("#p-add").disabled = S.players.length >= 6;
+  }
+  plist.addEventListener("input", function (e) {
+    var m = /^pname-(\d+)$/.exec(e.target.id);
+    if (!m) return;
+    S.players[+m[1]] = e.target.value.trim() || "Spieler " + (+m[1] + 1);
+    save(); render();
+  });
+  plist.addEventListener("click", function (e) {
+    var b = e.target.closest("[data-remove]");
+    if (!b) return;
+    var p = +b.dataset.remove;
+    S.players.splice(p, 1); S.scores.splice(p, 1);
+    if (S.cur > p) S.cur--;
+    if (S.cur >= S.players.length) S.cur = 0;
+    save(); renderPlayers(); render();
+  });
+  $("#p-add").addEventListener("click", function () {
+    if (S.players.length >= 6) return;
+    S.players.push("Spieler " + (S.players.length + 1));
+    S.scores.push({});
+    save(); renderPlayers(); render();
+    var inp = $("#pname-" + (S.players.length - 1));
+    if (inp) { inp.focus(); inp.select(); }
+  });
+  function newGame() {
+    S = fresh(S.players.slice());
+    kDice.forEach(function (d) { showFace(d, 0); });
+    save(); render(); goPage(0);
+    say("Neues Spiel.");
+  }
+  $("#new-game").addEventListener("click", function () { confirmBox.hidden = false; $("#confirm-no").focus(); });
+  $("#confirm-no").addEventListener("click", function () { confirmBox.hidden = true; });
+  $("#confirm-yes").addEventListener("click", function () { confirmBox.hidden = true; closeSettings(); newGame(); });
+  function openSettings() { renderPlayers(); confirmBox.hidden = true; settings.hidden = false; $("#settings-done").focus(); }
+  function closeSettings() { settings.hidden = true; $("#open-settings").focus(); }
+  $("#open-settings").addEventListener("click", openSettings);
+  $("#settings-done").addEventListener("click", closeSettings);
+  settings.addEventListener("click", function (e) { if (e.target === settings) closeSettings(); });
+  document.addEventListener("keydown", function (e) {
+    if (e.key !== "Escape") return;
+    if (!entry.hidden) closeEntry();
+    else if (!settings.hidden) closeSettings();
+  });
+
+  /* ---------- Wischen zwischen Würfel und Block ---------- */
+  var pager = $("#pager"), tabs = document.querySelectorAll("[data-page]"), page = 0, raf = 0;
+  function setTabs(i) { tabs.forEach(function (t) { t.setAttribute("aria-selected", +t.dataset.page === i ? "true" : "false"); }); }
+  function goPage(i, instant) {
+    page = i; setTabs(i);
+    pager.scrollTo({ left: i * pager.clientWidth, behavior: instant || reduceMotion ? "auto" : "smooth" });
+  }
+  tabs.forEach(function (t) { t.addEventListener("click", function () { goPage(+t.dataset.page); }); });
+  pager.addEventListener("scroll", function () {
+    if (raf) return;
+    raf = requestAnimationFrame(function () {
+      raf = 0;
+      var i = Math.round(pager.scrollLeft / Math.max(1, pager.clientWidth));
+      if (i !== page) { page = i; setTabs(i); }
+    });
+  });
+  // Beim Drehen des Handys auf derselben Seite bleiben
+  window.addEventListener("resize", function () { pager.scrollLeft = page * pager.clientWidth; });
+
+  function render() { renderDice(); renderSheet(); }
   render();
 
-  // Offline-Speicher: lädt die App einmal komplett aufs Gerät
+  // Offline-Speicher: lädt die App einmal komplett aufs Gerät.
+  // Kommt ein Update, lädt die App einmal neu (der Spielstand bleibt erhalten).
   if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
+    var hadController = !!navigator.serviceWorker.controller, reloaded = false;
+    navigator.serviceWorker.addEventListener("controllerchange", function () {
+      if (hadController && !reloaded) { reloaded = true; location.reload(); }
+    });
     navigator.serviceWorker.register("sw.js").catch(function () {});
   }
 })();

@@ -4,11 +4,11 @@
 // Beide Spiele liegen auf derselben Domain und teilen sich den Cache-Speicher:
 // Deshalb räumt diese App nur Caches mit ihrem eigenen Präfix auf.
 const PREFIX = "kniffel-";
-const CACHE = PREFIX + "v1";
+const CACHE = PREFIX + "v2";
 const FILES = ["./", "index.html", "manifest.webmanifest", "icon-180.png", "icon-192.png", "icon-512.png"];
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(CACHE).then((c) => c.addAll(FILES)).then(() => self.skipWaiting()));
+  event.waitUntil(caches.open(CACHE).then((c) => c.addAll(FILES.map((f) => new Request(f, { cache: "reload" })))).then(() => self.skipWaiting()));
 });
 
 self.addEventListener("activate", (event) => {
