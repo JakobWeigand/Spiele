@@ -6,13 +6,14 @@
 - **Quixx:** https://jakobweigand.github.io/Spiele/quixx/
 - **Wortbombe:** https://jakobweigand.github.io/Spiele/wortbombe/
 - **Chooser:** https://jakobweigand.github.io/Spiele/chooser/
+- **Codenames Duett:** https://jakobweigand.github.io/Spiele/codenames/
 - **Startseite mit allen Spielen:** https://jakobweigand.github.io/Spiele/
 
 Aufs iPhone: Link in Safari öffnen → Teilen → „Zum Home-Bildschirm“ → einmal mit Internet öffnen. Danach läuft die App offline.
 
 ---
 
-Vier Spiele-Apps für das Handy, jede als eigene Web-App, die nach der Installation offline läuft.
+Fünf Spiele-Apps für das Handy, jede als eigene Web-App, die nach der Installation offline läuft.
 
 | App | Ordner | Adresse |
 |---|---|---|
@@ -20,6 +21,7 @@ Vier Spiele-Apps für das Handy, jede als eigene Web-App, die nach der Installat
 | Quixx | [`quixx/`](quixx/) | https://jakobweigand.github.io/Spiele/quixx/ |
 | Wortbombe | [`wortbombe/`](wortbombe/) | https://jakobweigand.github.io/Spiele/wortbombe/ |
 | Chooser | [`chooser/`](chooser/) | https://jakobweigand.github.io/Spiele/chooser/ |
+| Codenames Duett | [`codenames/`](codenames/) | https://jakobweigand.github.io/Spiele/codenames/ |
 
 Die Startseite https://jakobweigand.github.io/Spiele/ verlinkt alle Apps.
 
@@ -51,6 +53,24 @@ Alle legen einen Finger aufs Display. Sobald keine Finger mehr dazukommen, läuf
 
 - Oben in der Mitte stellst du ein, wie viele gewählt werden: mit −/+ oder indem du die Zahl antippst und eintippst. Keine Obergrenze.
 - Es braucht immer mindestens einen Finger mehr, als gewählt werden. Wie viele Finger gleichzeitig erkannt werden, begrenzt nur das Handy selbst.
+
+## Codenames Duett
+
+Kooperatives Wortspiel für zwei nach dem Vorbild von Codenames Duett. 25 Wörter liegen auf dem Brett. Jede Seite hat einen eigenen Schlüssel mit 9 Agenten, 3 Attentätern und 13 Passanten, zusammen gibt es 15 Agenten. Abwechselnd gibt eine Person einen Hinweis (ein Wort und eine Zahl), die andere tippt Wörter an. Agent heißt weiter raten, Passant beendet den Zug, ein Attentäter beendet das Spiel. Nach 9 Zügen (einstellbar 6 bis 12) folgt der plötzliche Tod ohne Hinweise.
+
+**Drei Spielarten**
+
+- **Zwei Handys:** Ein Handy erstellt das Spiel und zeigt einen Spiel-Code (z. B. `KX7-P3M`), das zweite tritt mit dem Code bei. Jedes Handy zeigt nur den eigenen Schlüssel.
+  - *Mit Internet:* Hinweise und Tipps erscheinen live auf beiden Handys. Die Züge laufen verschlüsselt (AES-GCM, Schlüssel aus dem Spiel-Code) über den freien Dienst ntfy.sh. Nach einem Funkloch holt das Handy verpasste Züge nach.
+  - *Ohne Internet:* Der Code erzeugt auf beiden Handys dasselbe Brett und dieselben Schlüssel. Hinweise sagt ihr laut, jeden Tipp tippt ihr auf beiden Handys an. Der „Stand“ oben muss auf beiden Handys gleich sein.
+- **Ein Handy zu zweit:** Ihr gebt das Handy weiter. Vor jedem Wechsel verdeckt ein Sichtschutz den Schlüssel („Handy an Lea“ → „Ich bin Lea“). Komplett offline.
+- **Allein mit KI-Partner:** Die KI spielt die zweite Seite. Sie gibt Hinweise mit Zahl und versteht deine Hinweise, solange sie das Wort kennt (Vorschläge beim Tippen). Nach jedem Zug zeigt der Verlauf, welche Wörter die KI gemeint hat. Komplett offline.
+
+**Virtueller Gegner (ein- und ausschaltbar):** Ein KI-Team spielt vorab dasselbe Brett, in drei Stärken. Oben steht, wie viele Agenten es nach gleich vielen Zügen hatte. Am Ende gewinnt das Duell, wer mit weniger Zügen fertig wird. Bei Zwei Handys steckt die Einstellung im Spiel-Code, beide Handys sehen denselben Gegner.
+
+Die KI kennt 418 Spielwörter mit je 15 bis 18 Assoziationen (gut 3.100 Begriffe), Doppelbedeutungen inklusive (Bank, Schloss, Kiefer, Strauß). Sie gibt keine Hinweise, die auf dem Brett liegen oder ein Brettwort enthalten.
+
+Weitere Funktionen: letzter Schritt zurücknehmen, Verlauf aller Züge, beide Schlüssel nach dem Spiel aufdecken, Spielstand bleibt beim Schließen erhalten, Hoch- und Querformat, helles und dunkles Design.
 
 ## Aufbau
 

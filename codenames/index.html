@@ -1,0 +1,1467 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0d1b2a" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Duett">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<title>Codenames Duett</title>
+<style>
+/* Navy Research: weißer Grund, Karten in card-Grau, ein Navy für Auswahl und Aktionen.
+   Grün heißt Agent (gefunden oder auf dem eigenen Schlüssel), Rot heißt Attentäter.
+   Farbe steht nie allein: Agent trägt ●/✓, Attentäter ✕, Passanten einen Buchstaben. Alle Ecken eckig. */
+:root {
+  --sans: "Neue Montreal", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --bg: #ffffff;          /* white */
+  --surface: #f4f6f8;     /* card */
+  --text: #0d1b2a;        /* dark */
+  --body: #1a2c42;        /* navy */
+  --small: #3a4a5c;       /* slate */
+  --muted: #6a7d93;       /* gray, nur Labels */
+  --rule: #d6dce4;        /* line */
+  --accent: #1a2c42;      /* navy */
+  --on-accent: #ffffff;
+  --agent: #2e8b6e;       /* green */
+  --agent-ink: #1f6b53;
+  --red: #c0392b;         /* red: Attentäter */
+  --mark: #e8eef6;        /* highlight */
+  --dead: #d6dce4;
+  --overlay: rgba(13, 27, 42, .55);
+  --focus: #4a6fa5;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0d1b2a; --surface: #1a2c42; --text: #ffffff; --body: #dde3ea; --small: #dde3ea;
+    --muted: #b8c4d4; --rule: #6a7d93; --accent: #ffffff; --on-accent: #0d1b2a;
+    --agent: #2e8b6e; --agent-ink: #6fcfae; --red: #e0574a; --mark: #24384f; --dead: #14243a;
+    --overlay: rgba(0, 0, 0, .65); --focus: #b8c4d4;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0d1b2a; --surface: #1a2c42; --text: #ffffff; --body: #dde3ea; --small: #dde3ea;
+  --muted: #b8c4d4; --rule: #6a7d93; --accent: #ffffff; --on-accent: #0d1b2a;
+  --agent: #2e8b6e; --agent-ink: #6fcfae; --red: #e0574a; --mark: #24384f; --dead: #14243a;
+  --overlay: rgba(0, 0, 0, .65); --focus: #b8c4d4;
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--text); font-family: var(--sans);
+  font-size: 16px; line-height: 1.35;
+  -webkit-text-size-adjust: 100%; -webkit-tap-highlight-color: transparent;
+}
+button, input { font: inherit; color: inherit; }
+button { touch-action: manipulation; cursor: pointer; }
+button:focus-visible, input:focus-visible, label:focus-within { outline: 3px solid var(--focus); outline-offset: 2px; }
+.eyebrow { margin: 0; font-size: 12px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* ---------- Knöpfe ---------- */
+.btn {
+  min-height: 48px; padding: 10px 18px; border: 2px solid var(--accent); border-radius: 0;
+  background: transparent; color: var(--text); font-size: 17px; font-weight: 700; line-height: 1.15;
+}
+.btn.primary { background: var(--accent); color: var(--on-accent); }
+.btn:disabled { opacity: .35; cursor: default; }
+.btn.wide { width: 100%; }
+.btn-s {
+  min-height: 40px; padding: 6px 12px; border: 2px solid var(--accent); border-radius: 0;
+  background: transparent; font-size: 15px; font-weight: 700;
+}
+.linkish { border: 0; background: none; padding: 8px 0; font-size: 15px; font-weight: 700; color: var(--small); text-decoration: underline; text-underline-offset: 3px; }
+
+/* ---------- Start ---------- */
+.setup { min-height: 100%; }
+.setup .wrap {
+  max-width: 560px; margin: 0 auto; display: grid; gap: 22px;
+  padding: calc(22px + env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) calc(32px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+}
+.setup h1 { margin: 4px 0 6px; font-size: 36px; line-height: 1.05; letter-spacing: -.01em; }
+.setup .lead { margin: 0; color: var(--small); font-size: 16px; max-width: 40ch; }
+.group { display: grid; gap: 10px; border: 0; margin: 0; padding: 0; min-width: 0; }
+.group > legend { padding: 0; margin-bottom: 10px; }
+.opt {
+  display: grid; grid-template-columns: 22px 1fr; gap: 12px; align-items: start;
+  padding: 14px 16px; background: var(--surface); cursor: pointer;
+}
+.opt input { margin: 3px 0 0; width: 20px; height: 20px; accent-color: var(--accent); }
+.opt strong { display: block; font-size: 18px; }
+.opt span { display: block; font-size: 14px; color: var(--small); margin-top: 2px; }
+.opt.on { box-shadow: inset 0 0 0 2px var(--accent); }
+.field { display: grid; gap: 6px; }
+.field label { font-size: 14px; font-weight: 700; color: var(--small); }
+.text {
+  width: 100%; min-height: 48px; padding: 10px 12px; border: 2px solid var(--rule); border-radius: 0;
+  background: var(--bg); color: var(--text); font-size: 17px;
+}
+.text:focus { border-color: var(--accent); outline: none; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; border: 2px solid var(--accent); }
+.seg button { min-height: 44px; border: 0; border-radius: 0; background: transparent; font-size: 15px; font-weight: 700; padding: 6px 8px; }
+.seg button + button { border-left: 2px solid var(--accent); }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
+.row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.row .t strong { display: block; font-size: 17px; }
+.row .t span { display: block; font-size: 14px; color: var(--small); }
+.stepper { display: flex; align-items: center; }
+.stepper button { width: 44px; height: 44px; border: 2px solid var(--accent); background: transparent; font-size: 22px; font-weight: 700; padding: 0; border-radius: 0; }
+.stepper output { min-width: 48px; text-align: center; font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.switch { position: relative; width: 58px; height: 34px; flex: none; }
+.switch input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+.switch span { position: absolute; inset: 0; border: 2px solid var(--accent); background: var(--bg); pointer-events: none; }
+.switch span::after { content: ""; position: absolute; top: 4px; left: 4px; width: 22px; height: 22px; background: var(--muted); transition: transform .15s ease; }
+.switch input:checked + span { background: var(--accent); }
+.switch input:checked + span::after { transform: translateX(24px); background: var(--on-accent); }
+.switch input:focus-visible + span { outline: 3px solid var(--focus); outline-offset: 2px; }
+.box { background: var(--surface); padding: 14px 16px; display: grid; gap: 12px; }
+.note { margin: 0; font-size: 14px; color: var(--small); }
+.err { margin: 0; font-size: 15px; font-weight: 700; color: var(--red); }
+
+/* ---------- Spiel ---------- */
+.game {
+  height: 100%; height: 100dvh; display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  grid-template-areas: "bar" "banner" "board" "panel";
+  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+  user-select: none; -webkit-user-select: none;
+}
+.bar {
+  grid-area: bar; display: grid; grid-template-columns: 1fr auto; gap: 8px 12px; align-items: center;
+  padding: 10px 16px 10px; border-bottom: 2px solid var(--rule);
+}
+.bar .top { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+.bar h1 { margin: 0; font-size: 20px; font-weight: 700; white-space: nowrap; }
+.bar .mode { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stats { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; font-size: 14px; color: var(--small); font-variant-numeric: tabular-nums; }
+.stats b { color: var(--text); }
+.tokens { display: inline-flex; gap: 3px; vertical-align: middle; }
+.tokens i { width: 11px; height: 11px; border: 2px solid var(--accent); display: block; }
+.tokens i.used { background: var(--accent); }
+.tokens.sudden i { border-color: var(--red); background: var(--red); }
+
+.banner { grid-area: banner; padding: 10px 16px 8px; display: grid; gap: 2px; min-height: 74px; align-content: center; }
+.banner .main { margin: 0; font-size: 26px; font-weight: 700; line-height: 1.1; overflow-wrap: anywhere; }
+.banner .main.clue { text-transform: uppercase; letter-spacing: .02em; }
+.banner .main.small { font-size: 19px; }
+.banner .sub { margin: 0; font-size: 14px; color: var(--small); }
+.banner.sudden .main { color: var(--red); }
+
+.board-wrap { grid-area: board; min-height: 0; display: grid; place-items: center; padding: 4px 12px; }
+.board {
+  display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); grid-template-rows: repeat(5, minmax(0, 1fr));
+  gap: 5px; width: 100%; height: 100%; max-width: 720px; max-height: min(560px, 92vw); min-height: 250px;
+}
+.card {
+  position: relative; min-width: 0; min-height: 0; padding: 0 3px; border: 0; border-radius: 0;
+  background: var(--surface); color: var(--text); display: grid; place-items: center;
+  container-type: size; overflow: hidden;
+}
+.card .w {
+  display: block; max-width: 100%; text-align: center; font-weight: 700; line-height: 1.05;
+  font-size: 14px; font-size: clamp(9px, min(15cqw, 30cqh), 21px);
+  overflow-wrap: anywhere; hyphens: manual; -webkit-hyphens: manual;
+}
+.card:disabled { cursor: default; color: var(--text); }
+.card.tap:active { background: var(--mark); }
+.card.k-G { box-shadow: inset 0 0 0 3px var(--agent); }
+.card.k-X { box-shadow: inset 0 0 0 3px var(--red); }
+.card .km { position: absolute; top: 2px; left: 4px; font-size: 11px; font-weight: 700; line-height: 1; }
+.card .km.r { left: auto; right: 4px; }
+.card .km.G { color: var(--agent-ink); }
+.card .km.X { color: var(--red); }
+.card .km.N { color: var(--muted); }
+.card .nm { position: absolute; bottom: 2px; font-size: 10px; font-weight: 700; line-height: 1; color: var(--small); background: var(--rule); padding: 2px 3px; }
+.card .nm.l { left: 2px; }
+.card .nm.r { right: 2px; }
+.card.found { background: var(--agent); color: #ffffff; box-shadow: none; }
+.card.found .w { opacity: .9; }
+.card.found::after { content: "✓"; position: absolute; top: 2px; right: 4px; font-size: 12px; font-weight: 700; color: #ffffff; }
+.card.found .km { color: #ffffff; }
+.card.rv::after { display: none; }
+.card.boom { background: var(--red); color: #ffffff; box-shadow: none; }
+.card.boom .km { color: #ffffff; }
+.card.neutral-both { background: var(--dead); color: var(--muted); }
+.card.off { opacity: .45; }
+.card.sel { background: var(--accent); color: var(--on-accent); box-shadow: none; }
+.card.sel .km { color: var(--on-accent); }
+.card.flash { animation: flash .6s ease; }
+@keyframes flash { 0% { transform: scale(.92); } 60% { transform: scale(1.04); } 100% { transform: scale(1); } }
+
+.panel { grid-area: panel; padding: 10px 16px calc(12px + env(safe-area-inset-bottom, 0px) * 0); border-top: 2px solid var(--rule); display: grid; gap: 10px; }
+.panel .hint { margin: 0; font-size: 15px; color: var(--small); }
+.panel .hint b { color: var(--text); }
+.actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.actions.one { grid-template-columns: 1fr; }
+.clue-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; }
+.clue-row .text { text-transform: none; }
+.sugg { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; min-height: 0; }
+.sugg button { flex: none; min-height: 34px; padding: 4px 10px; border: 2px solid var(--rule); background: var(--bg); font-size: 14px; font-weight: 700; border-radius: 0; }
+.think { display: flex; align-items: center; gap: 10px; min-height: 48px; font-size: 16px; color: var(--small); }
+.think i { width: 10px; height: 10px; background: var(--accent); display: block; animation: blink 1s infinite ease-in-out; }
+.think i:nth-child(2) { animation-delay: .15s; } .think i:nth-child(3) { animation-delay: .3s; }
+@keyframes blink { 0%, 100% { opacity: .2; } 50% { opacity: 1; } }
+
+.toast {
+  position: fixed; left: 50%; top: calc(64px + env(safe-area-inset-top, 0px)); transform: translate(-50%, -12px);
+  max-width: min(92vw, 460px); padding: 12px 16px; background: var(--accent); color: var(--on-accent);
+  font-size: 16px; font-weight: 700; opacity: 0; pointer-events: none; transition: opacity .2s ease, transform .2s ease; z-index: 30;
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+.toast.G { background: var(--agent); color: #ffffff; }
+.toast.X { background: var(--red); color: #ffffff; }
+
+/* ---------- Überlagerungen ---------- */
+.overlay { position: fixed; inset: 0; background: var(--overlay); z-index: 20; display: grid; place-items: end center; }
+.sheet {
+  width: min(100%, 560px); max-height: 92dvh; overflow: auto; background: var(--bg);
+  padding: 20px 16px calc(20px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 14px; align-content: start;
+}
+.sheet h2 { margin: 0; font-size: 24px; }
+.sheet h3 { margin: 6px 0 0; font-size: 15px; }
+.sheet p, .sheet li { font-size: 15px; color: var(--small); margin: 0; }
+.sheet ul { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; }
+.menu { display: grid; gap: 8px; }
+.menu .btn { text-align: left; }
+.code-big { font-size: 40px; font-weight: 700; letter-spacing: .12em; font-variant-numeric: tabular-nums; margin: 0; color: var(--text); }
+.handoff {
+  position: fixed; inset: 0; z-index: 25; background: var(--body); color: #ffffff;
+  display: grid; place-items: center; padding: 24px; text-align: center;
+}
+:root[data-theme="dark"] .handoff { background: #1a2c42; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .handoff { background: #1a2c42; } }
+.handoff .in { display: grid; gap: 14px; max-width: 360px; justify-items: center; }
+.handoff .eyebrow { color: #b8c4d4; }
+.handoff h2 { margin: 0; font-size: 34px; line-height: 1.1; }
+.handoff p { margin: 0; color: #dde3ea; }
+.handoff .btn { border-color: #ffffff; background: #ffffff; color: #0d1b2a; min-width: 220px; }
+.handoff .linkish { color: #dde3ea; }
+.log { display: grid; gap: 10px; }
+.log .turn { background: var(--surface); padding: 10px 12px; display: grid; gap: 4px; }
+.log .turn .h { font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.log .turn .c { font-size: 17px; font-weight: 700; text-transform: uppercase; color: var(--text); }
+.log .turn .g { font-size: 15px; color: var(--small); }
+.log .turn .m { font-size: 14px; color: var(--small); font-style: italic; }
+.end-title { margin: 0; font-size: 30px; line-height: 1.1; }
+.end-title.win { color: var(--agent-ink); }
+.end-title.lose { color: var(--red); }
+.vs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.vs div { background: var(--surface); padding: 12px; display: grid; gap: 2px; }
+.vs div.best { background: var(--accent); color: var(--on-accent); }
+.vs div.best .eyebrow, .vs div.best span { color: var(--on-accent); }
+.vs b { font-size: 22px; font-variant-numeric: tabular-nums; }
+.vs span { font-size: 14px; color: var(--small); }
+.legend { display: grid; gap: 8px; }
+.legend div { display: grid; grid-template-columns: 64px 1fr; gap: 10px; align-items: center; font-size: 14px; color: var(--small); }
+.legend .card { height: 40px; font-size: 12px; }
+.legend .card .w { font-size: 12px; }
+
+/* Querformat: Brett links, Hinweis und Aktionen rechts */
+@media (orientation: landscape) and (min-width: 640px) {
+  .game {
+    grid-template-columns: minmax(0, 1fr) minmax(260px, 340px);
+    grid-template-rows: auto auto minmax(0, 1fr);
+    grid-template-areas: "bar bar" "board banner" "board panel";
+  }
+  .panel { border-top: 0; border-left: 2px solid var(--rule); align-content: start; }
+  .banner { border-left: 2px solid var(--rule); align-content: end; }
+}
+</style>
+</head>
+<body>
+
+<!-- ============ Start ============ -->
+<main class="setup" id="setup" hidden>
+  <div class="wrap">
+    <header>
+      <p class="eyebrow">Kooperativ · zu zweit · 15 Agenten</p>
+      <h1>Codenames Duett</h1>
+      <p class="lead">Findet gemeinsam alle 15 Agenten, bevor die Züge ausgehen. Jeder sieht nur seinen eigenen Schlüssel.</p>
+    </header>
+
+    <button type="button" class="btn primary wide" id="resume" hidden>Weiterspielen</button>
+
+    <fieldset class="group" id="modes">
+      <legend class="eyebrow">Wie spielt ihr?</legend>
+      <label class="opt" data-mode="duo"><input type="radio" name="mode" value="duo"><div><strong>Zwei Handys</strong><span>Jeder hat seinen Schlüssel auf dem eigenen Handy. Mit Internet live verbunden, ohne Internet über denselben Spiel-Code.</span></div></label>
+      <label class="opt" data-mode="local"><input type="radio" name="mode" value="local"><div><strong>Ein Handy zu zweit</strong><span>Ihr gebt das Handy weiter. Ein Sichtschutz verdeckt den Schlüssel bei der Übergabe. Komplett offline.</span></div></label>
+      <label class="opt" data-mode="ai"><input type="radio" name="mode" value="ai"><div><strong>Allein mit KI-Partner</strong><span>Die KI spielt die zweite Seite: Sie gibt dir Hinweise und versteht deine. Komplett offline.</span></div></label>
+    </fieldset>
+
+    <div class="group" id="duo-box" hidden>
+      <div class="seg" role="group" aria-label="Zwei Handys">
+        <button type="button" id="duo-new" aria-pressed="true">Spiel erstellen</button>
+        <button type="button" id="duo-join" aria-pressed="false">Mit Code beitreten</button>
+      </div>
+      <div class="field" id="join-field" hidden>
+        <label for="join-code">Spiel-Code vom anderen Handy</label>
+        <input class="text" id="join-code" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="9" placeholder="z. B. KX7-P3M" style="text-transform:uppercase;letter-spacing:.1em">
+      </div>
+      <div class="row">
+        <div class="t"><strong>Online verbinden</strong><span>Züge erscheinen live auf beiden Handys. Ohne Internet tippt ihr die Züge auf beiden Handys an.</span></div>
+        <label class="switch"><input type="checkbox" id="online" checked aria-label="Online verbinden"><span></span></label>
+      </div>
+    </div>
+
+    <div class="two">
+      <div class="field"><label for="name-me">Dein Name</label><input class="text" id="name-me" maxlength="14" autocomplete="nickname" placeholder="Name"></div>
+      <div class="field" id="partner-field"><label for="name-partner">Partner</label><input class="text" id="name-partner" maxlength="14" autocomplete="off" placeholder="Name"></div>
+    </div>
+
+    <div class="box" id="opts">
+      <div class="row" id="turns-row">
+        <div class="t"><strong>Züge</strong><span>Original: 9. Weniger ist schwerer.</span></div>
+        <div class="stepper"><button type="button" id="turns-minus" aria-label="Ein Zug weniger">−</button><output id="turns" aria-live="polite">9</output><button type="button" id="turns-plus" aria-label="Ein Zug mehr">+</button></div>
+      </div>
+      <div class="row">
+        <div class="t"><strong>Virtueller Gegner</strong><span>Ein KI-Team spielt dasselbe Brett. Wer braucht weniger Züge?</span></div>
+        <label class="switch"><input type="checkbox" id="rival-on" aria-label="Virtueller Gegner"><span></span></label>
+      </div>
+      <div class="seg" role="group" aria-label="Stärke des Gegners" id="rival-level">
+        <button type="button" data-l="1" aria-pressed="false">Leicht</button>
+        <button type="button" data-l="2" aria-pressed="true">Mittel</button>
+        <button type="button" data-l="3" aria-pressed="false">Stark</button>
+      </div>
+      <p class="note" id="join-note" hidden>Züge und Gegner übernimmt dein Handy aus dem Spiel-Code.</p>
+    </div>
+
+    <p class="err" id="setup-err" role="alert" hidden></p>
+    <button type="button" class="btn primary wide" id="start">Spiel starten</button>
+    <button type="button" class="linkish" id="rules-open">So wird gespielt</button>
+  </div>
+</main>
+
+<!-- ============ Spiel ============ -->
+<div class="game" id="game" hidden>
+  <header class="bar">
+    <div class="top"><h1>Duett</h1><span class="eyebrow mode" id="mode-label"></span></div>
+    <button type="button" class="btn-s" id="menu-btn" aria-haspopup="dialog">Menü</button>
+    <div class="stats">
+      <span><span class="tokens" id="tokens" aria-hidden="true"></span> <span id="turn-txt"></span></span>
+      <span id="found-txt"></span>
+      <span id="rival-txt" hidden></span>
+      <span id="net-txt" hidden></span>
+    </div>
+  </header>
+  <section class="banner" id="banner" aria-live="polite">
+    <p class="eyebrow" id="b-eye"></p>
+    <p class="main" id="b-main"></p>
+    <p class="sub" id="b-sub"></p>
+  </section>
+  <div class="board-wrap"><div class="board" id="board" role="grid" aria-label="Spielbrett"></div></div>
+  <section class="panel" id="panel"></section>
+</div>
+<div class="toast" id="toast" role="status" aria-live="assertive"></div>
+
+<div class="handoff" id="handoff" hidden>
+  <div class="in">
+    <p class="eyebrow" id="ho-eye">Übergabe</p>
+    <h2 id="ho-title"></h2>
+    <p id="ho-text"></p>
+    <button type="button" class="btn" id="ho-go"></button>
+    <button type="button" class="linkish" id="ho-menu">Menü</button>
+  </div>
+</div>
+
+<div class="overlay" id="sheet" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title" id="sheet-body"></div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var $ = function (s) { return document.querySelector(s); };
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+
+  /* ================= Wörter und Assoziationen ================= */
+  // Wörter mit · an möglichen Trennstellen (werden zu weichen Trennstrichen).
+  var WORDS_RAW = "Ab·satz Adler Affe Afrika Agent Alpen Ama·zonas Ampel Anker Ant·ark·tis Apfel Arm Arzt Astro·naut Atlan·tis Atlas Auge Auto Bach Bahn Ball Ballon Band Bank Bar Bart Batte·rie Bauer Baum Becken Bein Berg Berlin Bett Biene Bier Birne Blatt Blitz Blume Blut Bogen Bohne Bombe Boot Bot·schaft Brand Bremse Brille Brücke Buch Burg Bus Butter Bär Börse Chips Chor Clown Code Com·puter Dach Dame Daumen Decke Delfin Dia·mant Dino·sau·rier Doktor Drache Dra·chen Dros·sel Dschun·gel Echo Ei Eis Ele·fant Engel England Ente Erde Esel Eule Fab·rik Fahne Falle Fall·schirm Fass Feder Fee Feld Fenster Feuer Film Finger Fisch Flamme Flasche Fliege Flug·hafen Flöte Flügel Frosch Fuchs Fuß·ball Gabel Gang Gans Garten Gas Geist Geld Gericht Gift Gipfel Gi·tarre Glas Glocke Gold Golf Gras Gummi Gür·tel Hafen Hahn Hai Hammer Hand Harfe Hase Haus Heft Held Helm Herz Hexe Himmel Hirsch Hof Holly·wood Honig Horn Hose Hotel Hund Hut Hütte Igel Iglu Insel Jacke Jet Jäger Kabel Kaiser Kak·tus Kamel Kame·ra Kamin Kanal Kapi·tän Karte Kas·sette Kater Katze Kegel Keller Kerze Kette Kiefer Kino Kirche Kissen Kiwi Kla·vier Knochen Knopf Koch Koffer Kohle Komet Koralle Korb Krake Kran Kranken·haus Krebs Kreide Kreuz Krieg Kroko·dil Krone Kuchen Kugel Kuh Kunst Kurve Kän·guru Käse Köni·gin Küche Labor Lager Lampe Laser Laster Laus Lava Leben Leiter Licht Linie Luft Löffel Löwe Löwen·zahn Magnet Mais Mam·mut Mantel Mars Maske Mast Mat·rose Maus Medail·le Meer Mehl Messe Mes·ser Mikro·skop Milch Mine Mond Motor Mumie Mund Muschel Musik Mutter Mönch Mühle Nadel Nagel Nest Netz Nil Ninja Note Nuss Oase Ofen Olymp Oper Orange Ozean Palme Panzer Papa·gei Papier Paris Pass Pfanne Pfeffer Pfeife Pferd Pflas·ter Pfote Pilot Pilz Pin·guin Pirat Pizza Planet Platte Pol Poli·zei Post Prin·zes·sin Prä·si·dent Puppe Pyra·mide Quelle Rad Radio Rakete Rasen Ratte Raupe Regen Riese Ring Ritter Roboter Rock Rolle Rom Rose Rost Rätsel Rücken Salz Sand Satel·lit Schach Schal·tung Schat·ten Schaum Schei·be Sche·re Schiff Schild Schim·mel Schirm Schlan·ge Schlit·ten Schloss Schlüs·sel Schna·bel Schnee Schrank Schuh Schule Schwamm Schwan Schwanz Schwert Segel Seife Seil Sekt Sire·ne Socke Sonne Spie·gel Spinne Spion Spritze Sta·dion Stall Stamm Star Staub Stecker Stempel Stern Steuer Stie·fel Stier Stift Strand Strauß Strom Stuhl Sturm Sumpf Säge Säule Tafel Tanz Tasche Tau·cher Taxi Tee Tele·skop Tempel Tep·pich Thea·ter Tiger Tinte Tisch Toast Tokio Ton Tor Trom·mel Tropfen Tunnel Turm Ufo Uhr Vam·pir Vulkan Waage Wagen Wal Wald Wand Wasser Wecker Weide Welle Welt Wetter Wien Wikin·ger Wind Wolf Wolke Wurm Wurst Wüste Zahn Zange Zauber Zaun Zebra Zelle Zelt Zen·trum Ziege Zirkus Zit·rone Zoll Zucker Zug Zunge Zwerg";
+  var ASSOC_RAW = "Absatz:Text,Schuh,Paragraph,Zeile,Kapitel,Abschnitt,Stöckelschuh,Ferse,hoch,Kleidung,Treppe,Stufe,Verkauf,Wirtschaft,Papier,Brief,Einrückung,Gesetz|Adler:Vogel,Wappen,Deutschland,fliegen,Raubvogel,Krallen,Schnabel,Federn,Tier,Amerika,Horst,Flügel,Freiheit,König,Felsen,Beute,Lüfte|Affe:Banane,Zoo,Dschungel,klettern,Tier,Schimpanse,Gorilla,Baum,Urwald,Afrika,Asien,Evolution,Darwin,Mensch,Pavian,Lianen,Primat,Zirkus|Afrika:Kontinent,Savanne,Wüste,Safari,Löwe,Elefant,heiß,Sahara,Ägypten,Kenia,Nil,Giraffe,Zebra,Kilimandscharo,Mandela,Reise,Tier|Agent:Spion,Geheimdienst,Bond,geheim,Mission,Waffe,CIA,FBI,Tarnung,Undercover,Film,Verbrechen,Krimi,Smoking,Makler,Vermittler,Sport,Computer|Alpen:Berg,Gebirge,Schnee,Ski,Schweiz,Österreich,Gipfel,Wandern,Bayern,Alm,Zugspitze,Gletscher,Edelweiß,Heidi,Winter,Urlaub,hoch,Deutschland|Amazonas:Fluss,Regenwald,Brasilien,Dschungel,Südamerika,Urwald,Piranha,Anakonda,Natur,Wasser,Amerika,Wald,Papagei,Abholzung,Expedition,Kaiman,Lunge,Ureinwohner|Ampel:rot,grün,gelb,Verkehr,Kreuzung,Straße,Auto,Fußgänger,warten,Stopp,Signal,Leuchte,Zebrastreifen,Koalition,Politik,Regierung|Anker:Schiff,Boot,Meer,Hafen,Kette,Matrose,Seemann,Tattoo,Kapitän,Metall,schwer,Grund,Halt,Wasser,Symbol,Hoffnung,Popeye,Sicherheit|Antarktis:Südpol,Eis,kalt,Pinguin,Schnee,Kontinent,Eisberg,Expedition,Forschung,Gletscher,Robbe,Amundsen,Wal,Winter,Meer,weiß,Wissenschaft,Station|Apfel:Obst,rot,Baum,grün,Saft,Frucht,Kuchen,süß,gesund,Apple,Computer,Schneewittchen,Eva,Paradies,Newton,Kern,Wurm,Birne|Arm:Hand,Körper,Ellenbogen,Muskel,Schulter,Bein,Finger,Bizeps,Gelenk,Knochen,Gips,Medizin,Achsel,Krake,pleite,Bettler,reich,Geld|Arzt:Doktor,Krankenhaus,Medizin,Patient,Praxis,krank,Kittel,Stethoskop,Spritze,Rezept,Diagnose,Pflege,Beruf,Gesundheit,Medikament,weiß,Körper,Arbeit|Astronaut:Weltraum,Rakete,Mond,NASA,Raumanzug,Schwerelosigkeit,All,Raumstation,ISS,Armstrong,Helm,Sterne,Gerst,Mars,Wissenschaft,Technik,Held,Beruf|Atlantis:versunken,Insel,Legende,Meer,Mythologie,Untergang,Ozean,Platon,Antike,Poseidon,Unterwasser,Hochkultur,Geheimnis,Utopie,Spaceshuttle,NASA,Weltraum|Atlas:Karte,Welt,Buch,Geografie,Länder,Globus,Schule,Titan,Mythologie,Himmel,tragen,Schultern,Riese,Antike,Gebirge,Marokko,Wirbel,Hals|Auge:sehen,Blick,Brille,Wimper,Pupille,Iris,Lid,Körper,Träne,blind,blau,Optiker,zwinkern,Medizin,Licht,Zyklop,Sturm,Würfel|Auto:fahren,Straße,Verkehr,Motor,Reifen,Fahrzeug,Lenkrad,Benzin,Führerschein,Stau,Parkplatz,Garage,Tankstelle,Unfall,schnell,Hupe,Werkstatt,Technik|Bach:Fluss,Wasser,Komponist,Musik,plätschern,Natur,Quelle,Ufer,Wald,Forelle,Barock,Orgel,Johann,Sebastian,Fuge,Klassik,Leipzig,Kirche|Bahn:Zug,Gleis,Schiene,Verkehr,Verspätung,Reise,Fahrkarte,ICE,Schaffner,Lokführer,Streik,Pendler,Waggon,Deutschland,Fahrzeug,Rennen,Schwimmen,Orbit|Ball:rund,Spiel,Sport,werfen,Tor,Kugel,fangen,Tennis,Leder,kicken,Hund,Tanz,Kleid,Walzer,Aschenputtel,Prinz,Maske,Party|Ballon:Luft,Helium,Geburtstag,Party,platzen,aufblasen,bunt,fliegen,Gas,Kinder,rund,Korb,Zeppelin,Himmel,schweben,Nadel,Jahrmarkt,Clown|Band:Musik,Konzert,Gruppe,Rock,Gitarre,Bühne,Sänger,Schlagzeug,Tour,Fan,Instrument,Schleife,Geschenk,Stoff,Haar,Buch,Knie,Körper|Bank:Geld,Sitz,Konto,Park,sitzen,Kredit,Zinsen,Sparkasse,Tresor,Überfall,Schalter,Euro,Holz,Möbel,Wirtschaft,Garten,Lehne|Bar:Theke,Cocktail,Kneipe,Alkohol,Getränk,Tresen,Nacht,Party,Hocker,Whisky,Bier,Geld,Münzen,Scheine,Kasse,Druck,Luftdruck,Wetter|Bart:Haare,Mann,Rasur,Kinn,Rasierer,Gesicht,Hipster,Weihnachtsmann,Zauberer,Gandalf,Zwerg,Pirat,Opa,Körper,alt,Fantasy,Simpson,Schlüssel|Batterie:Strom,Energie,Akku,Handy,aufladen,leer,Plus,Minus,Volt,Lithium,Fernbedienung,Taschenlampe,Technik,Elektroauto,Militär,Kanone,Geschütz,Artillerie|Bauer:Landwirt,Traktor,Feld,Hof,Kuh,Ernte,Stall,Acker,Dorf,Mist,Gummistiefel,Schwein,Beruf,Arbeit,Schach,Figur,Spiel,Käfig|Baum:Wald,Holz,Blatt,Ast,Wurzel,Stamm,Rinde,Laub,Natur,Pflanze,Krone,Eiche,Tanne,Weihnachten,Schatten,Jahresringe,klettern,Apfel|Becken:Wasser,Hüfte,Schlagzeug,Schwimmbad,Knochen,Körper,Pool,Musik,Instrument,Bad,Spüle,Wanne,Brunnen,Skelett,Bauch,Tusch,Messing,Senke|Bein:Körper,Knie,Fuß,laufen,Oberschenkel,Wade,Knochen,Hose,Muskel,Arm,Gips,Medizin,Tisch,Stuhl,Möbel,Spinne,Strumpf,Sport|Berg:Gipfel,Gebirge,hoch,Alpen,wandern,klettern,Schnee,Tal,Fels,Stein,Natur,Everest,Zugspitze,Hütte,Lawine,Ski,Winter,Aussicht|Berlin:Hauptstadt,Deutschland,Mauer,Stadt,Spree,Reichstag,Bundestag,Fernsehturm,Brandenburger,Currywurst,Bär,Kreuzberg,Politik,Geschichte,Döner,Techno,Kennedy,Alexanderplatz|Bett:schlafen,Kissen,Decke,Matratze,Nacht,müde,Schlafzimmer,Traum,Laken,Möbel,Haus,kuscheln,Ruhe,Krankenhaus,Liebe,Fluss,Ufer,Kies|Biene:Honig,Insekt,summen,Stachel,Blume,Maja,Imker,gelb,Wabe,Nektar,Königin,Pollen,fleißig,stechen,Schwarm,schwarz,Natur,Tier|Bier:Alkohol,Getränk,Oktoberfest,Brauerei,Hopfen,Malz,Bayern,Deutschland,Schaum,Kneipe,Bar,Maß,Krug,Pils,Fass,Party,prost,Flasche|Birne:Obst,Frucht,süß,Lampe,Licht,Baum,gelb,saftig,Strom,Apfel,Helene,Kompott,Williams,Schnaps,Kopf,Kohl,Edison,Glühfaden|Blatt:Baum,grün,Herbst,Papier,Laub,Pflanze,Natur,Ast,Zeitung,Seite,Zettel,Notiz,Karten,Spiel,Fotosynthese,Stiel,Klee,Säge|Blitz:Donner,Gewitter,Wetter,Strom,Licht,schnell,Kamera,Foto,Wolke,Regen,Zeus,Thor,Harry,Potter,Narbe,hell,Energie,Mythologie|Blume:Rose,Pflanze,Garten,Blüte,Strauß,Natur,Duft,Tulpe,Wiese,bunt,Frühling,Vase,Biene,gießen,Liebe,Farbe,Aroma,Wein|Blut:rot,Vampir,Körper,Wunde,Ader,Herz,Verletzung,Medizin,Spende,Krimi,Verbrechen,Dracula,Plasma,Pflaster,Arzt,Familie,Verwandtschaft,Kreislauf|Bogen:Pfeil,Waffe,schießen,Sehne,Robin,Hood,Jagd,Mittelalter,Legolas,Amor,Geige,Instrument,Musik,Papier,Blatt,Kurve,Krümmung,Brücke|Bohne:Kaffee,Gemüse,grün,Essen,Hülse,Erbse,Chili,Soja,Pflanze,Ranke,Eintopf,Linse,Espresso,Blähung,Bean,Märchen,Jack,Kidney|Bombe:Explosion,Krieg,Waffe,Sprengstoff,Knall,Terror,Zünder,Atom,Gefahr,Militär,Feuer,Countdown,Entschärfung,Draht,Granate,Detonation,Hiroshima,Rakete|Boot:Wasser,Meer,See,Schiff,Segel,Ruder,Fluss,Hafen,Anker,paddeln,Kapitän,Kanu,Motor,Steg,Fischer,kentern,Urlaub,Fahrzeug|Botschaft:Nachricht,Diplomat,Mitteilung,Brief,Ausland,Kommunikation,Politik,Visum,Konsulat,Pass,Flagge,Reise,Bote,Flaschenpost,Engel,Weihnachten,Religion,Evangelium|Brand:Feuer,Flamme,Feuerwehr,Rauch,heiß,Asche,löschen,Gefahr,Hitze,Alarm,Sirene,Ruine,Wald,Marke,Logo,Marketing,Wirtschaft,Durst|Bremse:Auto,Fahrrad,stoppen,Pedal,Verkehr,Halt,Fahrzeug,Reifen,Unfall,quietschen,langsam,Zug,Scheibe,ABS,Insekt,Stich,Pferd,Sommer|Brille:Augen,sehen,Glas,Optiker,Gestell,lesen,Linse,kurzsichtig,Bügel,Nerd,Harry,Potter,Kontaktlinse,Medizin,Sonne,Sommer,Toilette,Klo|Brücke:Fluss,Wasser,überqueren,Pfeiler,Straße,Verkehr,Stadt,Bogen,Bauwerk,Geländer,Brooklyn,London,Stahl,Troll,Zahn,Zahnarzt,Schiff,Kapitän|Buch:lesen,Seite,Bibliothek,Autor,Roman,Geschichte,Papier,Kapitel,Schule,Regal,Wissen,Literatur,Verlag,Bestseller,Leser,Lesezeichen,Einband,Märchen|Burg:Ritter,Mittelalter,Schloss,Turm,Mauer,Festung,König,Graben,Zugbrücke,Prinzessin,Adel,Stein,Geschichte,Zinnen,Verlies,Belagerung,Drache,Rhein|Bus:Haltestelle,Verkehr,Fahrer,Fahrzeug,Linie,Schule,Fahrkarte,Ticket,Stadt,Reise,Doppeldecker,London,Pendler,Bahn,Straße,warten,Sitzplatz,öffentlich|Butter:Brot,Milch,Fett,gelb,Frühstück,Margarine,Küche,Essen,Kuh,Messer,streichen,schmelzen,Käse,Sahne,Croissant,Brezel,Bauernhof,Kuchen|Bär:Tier,Honig,Wald,Teddy,Raubtier,Grizzly,braun,Höhle,Winterschlaf,Pelz,stark,Lachs,Balu,Paddington,Winnie,Berlin,Kanada,Natur|Börse:Aktien,Geld,Wirtschaft,Frankfurt,Handel,Dax,Kurs,Händler,Bulle,Bär,Crash,Spekulation,Anleger,Gold,Wallstreet,Portemonnaie,Geldbeutel,Tasche|Chips:Kartoffel,Snack,Tüte,Paprika,salzig,knusprig,Party,Fernsehen,Essen,Fett,Dip,Nachos,Computer,Technik,Prozessor,Casino,Poker,Spiel|Chor:singen,Gesang,Musik,Kirche,Stimme,Sopran,Tenor,Bass,Dirigent,Lied,Gruppe,Konzert,Religion,Kanon,Gospel,Noten,Antike,Theater|Clown:Zirkus,lustig,Nase,rot,lachen,Schminke,Manege,Witz,Kinder,Party,Angst,Horror,Pennywise,Joker,bunt,Perücke,Schuhe,Narr|Code:Computer,Programm,geheim,Passwort,Zahlen,Schlüssel,Software,Hacker,programmieren,Verschlüsselung,Spion,Agent,Morse,Enigma,PIN,Technik,Kommunikation,Regeln|Computer:Laptop,Bildschirm,Tastatur,Maus,Internet,Technik,Strom,Software,Programm,Rechner,Prozessor,Daten,Monitor,Festplatte,Arbeit,Spiel,Büro,Hacker|Dach:Haus,Ziegel,oben,Regen,Schornstein,Giebel,hoch,Kamin,Speicher,Antenne,Schutz,Rinne,Schindel,Solar,Taube,Katze,Wetter,Weihnachtsmann|Dame:Frau,Schach,Spiel,Königin,elegant,Herr,Lady,Brettspiel,Steine,Karte,Adel,König,vornehm,Kleid,Hut,Toilette,Tanz,Gentleman|Daumen:Finger,Hand,hoch,drücken,Glück,Like,Körper,Nagel,gut,trampen,lutschen,Baby,grün,Garten,Gladiator,Rom,Antike|Decke:Bett,warm,kuscheln,Zimmer,oben,Kissen,schlafen,Wolle,Sofa,Winter,kalt,Lampe,Wand,Raum,Stuck,Kronleuchter,Haus,Picknick|Delfin:Meer,Wasser,Tier,Flipper,klug,Säugetier,Wal,Flosse,springen,Ozean,Fisch,Sonar,grau,Schwimmen,Urlaub,Sport,Schmetterling,Show|Diamant:Edelstein,Schmuck,Ring,hart,glitzern,teuer,Brillant,Karat,Juwelier,Kohlenstoff,Geld,Verlobung,Liebe,Hochzeit,Kristall,Mine,Afrika,Raub|Dinosaurier:Fossil,ausgestorben,Urzeit,Tyrannosaurus,Jurassic,Knochen,Meteorit,Museum,Skelett,Echse,groß,Monster,alt,Tier,Raubtier,Vulkan,Kreidezeit,Paläontologe|Doktor:Arzt,Medizin,Krankenhaus,Titel,Patient,Universität,Promotion,Dissertation,Professor,Wissenschaft,Kittel,Stethoskop,Praxis,krank,Tardis,Frankenstein,Beruf,weiß|Drache:Feuer,Fantasy,Märchen,Ritter,Monster,Mythologie,Flügel,Schuppen,Höhle,Schatz,Prinzessin,Burg,China,Smaug,Siegfried,Lindwurm,Echse,Schwiegermutter|Drachen:Wind,Herbst,Schnur,Himmel,steigen,Kinder,Wiese,Luft,Spielzeug,Schwanz,fliegen,Strand,Kite,Hängegleiter,Papier,Fantasy,Ungeheuer,feuerspeiend|Drossel:Vogel,Amsel,singen,Singvogel,Gesang,Garten,Natur,Tier,Lied,Nest,braun,Beeren,Motor,Technik,langsam,Ventil,Internet,Tempo|Dschungel:Urwald,Regenwald,Affe,Tiger,Lianen,grün,Natur,Tarzan,Mowgli,Abenteuer,heiß,feucht,Amazonas,Afrika,Asien,Schlange,Papagei,Camp|Echo:Hall,Ruf,Berg,Schall,Stimme,Wiederholung,Höhle,Tal,laut,Gebirge,Antwort,Fledermaus,Sonar,Nymphe,Narziss,Mythologie,Alexa,Resonanz|Ei:Huhn,Ostern,Frühstück,Dotter,Schale,Henne,Küken,Nest,gelb,rund,Hase,Omelett,Vogel,Bauernhof,kochen,brüten,Pfanne,Kolumbus|Eis:kalt,Winter,Sommer,Kugel,Waffel,Schnee,gefroren,Vanille,Schokolade,süß,Gletscher,Pinguin,Schlittschuh,Hockey,Becher,Frost,glatt,Wasser|Elefant:Rüssel,groß,grau,Afrika,Zoo,Tier,Stoßzahn,Elfenbein,Indien,Zirkus,Dumbo,Benjamin,Herde,Ohren,schwer,Gedächtnis,Porzellan,Savanne|Engel:Himmel,Flügel,Religion,Heiligenschein,Weihnachten,weiß,Gott,Teufel,Harfe,Paradies,Gabriel,Bibel,Kirche,Feder,Wolke,Bote,gut,Unschuld|England:London,Queen,Königin,Tee,Insel,Großbritannien,Fußball,Regen,Brexit,Pfund,Linksverkehr,Themse,Beatles,Shakespeare,König,Nebel,Europa,Wetter|Ente:Vogel,Teich,quaken,Wasser,Donald,Schnabel,Federn,Tier,Bauernhof,watscheln,Badewanne,Erpel,Braten,Peking,Zeitung,Falschmeldung,Lüge,Auto|Erde:Planet,Welt,Boden,Weltraum,rund,Mond,Sonne,Globus,blau,Natur,Garten,Dreck,Humus,Wurm,Kontinent,Element,braun,Kompost|Esel:Tier,grau,störrisch,stur,Bauernhof,Ohren,Lasttier,Iah,Shrek,Bremer,Stadtmusikanten,Märchen,Maultier,Pferd,Krippe,Weihnachten,Möhre,dumm|Eule:Vogel,Nacht,weise,klug,Uhu,Hedwig,Federn,Augen,Wald,Tier,Kauz,Harry,Potter,dunkel,Athene,Maus,Weisheit,Raubvogel|Fabrik:Arbeit,Produktion,Industrie,Maschine,Schornstein,Fließband,Arbeiter,Halle,Werk,Wirtschaft,Rauch,Lager,Technik,Schicht,Wonka,Schokolade,laut,Stahl|Fahne:Flagge,Wind,Mast,Land,Nation,Stoff,Deutschland,Farbe,wehen,Fußball,Symbol,Militär,hissen,Alkohol,Mundgeruch,betrunken,Bier,Kater|Falle:Maus,Köder,Jagd,gefangen,Trick,Hinterhalt,Käse,Gefahr,Netz,Jäger,Schlinge,List,Tier,Polizei,Angst,Bett,schlafen,müde|Fallschirm:springen,Sprung,Flugzeug,Luft,Himmel,Höhe,Reißleine,Adrenalin,Militär,Soldat,Landung,Pilot,Gurt,Seide,Sport,Gefahr,Wind,hoch|Fass:Wein,Bier,Holz,Keller,Tonne,rund,Whisky,Rum,Eiche,Brauerei,Pirat,Öl,Getränk,Diogenes,Tropfen,überlaufen,Reifen,Küfer|Feder:Vogel,leicht,Flügel,Kissen,schreiben,Tinte,Daune,weich,Hut,Pfau,Gans,kitzeln,Füller,Spirale,Metall,Technik,Matratze,Uhr|Fee:Märchen,Zauberstab,Flügel,Magie,Wunsch,Elfe,Fantasy,Kobold,Tinkerbell,Zahn,Kinder,Glitzer,Wald,Dornröschen,Pinocchio,Hexe,Prinzessin,gut|Feld:Acker,Wiese,Bauer,Getreide,Ernte,Weizen,Traktor,Mais,Natur,grün,Bauernhof,Fußball,Rasen,Schlacht,Krieg,Physik,Formular,Schach|Fenster:Glas,Scheibe,Aussicht,Haus,Licht,Rahmen,putzen,Vorhang,Gardine,öffnen,Luft,lüften,Blick,Rollladen,Sims,Zimmer,Windows,Computer|Feuer:Flamme,heiß,Rauch,brennen,Holz,Kamin,Glut,Asche,rot,Gefahr,Wärme,Licht,Drache,Element,Streichholz,Schuss,Kanone,Leidenschaft|Film:Kino,Hollywood,Popcorn,Schauspieler,Regisseur,Oscar,Kamera,Leinwand,Szene,Drehbuch,Held,Star,Komödie,Kunst,Theater,Folie,Schicht,Negativ|Finger:Hand,Daumen,Nagel,Ring,zeigen,Körper,Abdruck,Handschuh,tippen,Knöchel,Gelenk,Klavier,fünf,Spur,Gold,Bond,zählen,Schmuck|Fisch:Meer,Wasser,schwimmen,Flosse,Schuppen,Kiemen,Angel,Aquarium,Tier,Essen,Lachs,Forelle,Hering,Hai,Nemo,Sternzeichen,Gräte,Fluss|Flamme:Feuer,Kerze,heiß,brennen,Licht,Hitze,Glut,Gas,Herd,rot,Fackel,Olympia,Streichholz,Rauch,Liebe,Ex,Leidenschaft,Freundin|Flasche:Glas,Wein,Bier,Wasser,Pfand,trinken,Korken,Getränk,Plastik,Hals,Etikett,Baby,Milch,Verlierer,Versager,Niete,Geist,Sekt|Fliege:Insekt,summen,nervig,Mist,Sommer,Fenster,Spinne,Netz,Mücke,Frosch,Facettenauge,Krawatte,Anzug,Smoking,Hemd,Hals,Kleidung,elegant|Flughafen:Reise,Pilot,Koffer,Terminal,Urlaub,Jet,Landebahn,Gepäck,Passagier,Gate,Ticket,Bordkarte,Verspätung,Zoll,Tower,Lufthansa,Verkehr,Frankfurt|Flöte:Musik,Instrument,blasen,Ton,Holz,Schule,Melodie,Rattenfänger,Hameln,Mozart,Pfeife,Orchester,Löcher,Pan,Noten,Hirte,Sekt,Glas|Flügel:Vogel,fliegen,Feder,Engel,Flugzeug,flattern,Schmetterling,Insekt,Klavier,Instrument,Musik,Tragfläche,Trakt,Gebäude,Politik,Partei,Fenster,Spannweite|Frosch:grün,Teich,quaken,Prinz,springen,Tier,Kröte,Kaulquappe,Märchen,Kuss,König,Seerose,Fliege,Kermit,Amphibie,Laich,Wasser,Hals|Fuchs:rot,schlau,Wald,Tier,listig,Raubtier,Schwanz,Bau,Huhn,Gans,Jäger,Fabel,Märchen,Reineke,Fell,Tollwut,orange,Pelz|Fußball:Tor,Sport,Spiel,Stadion,Bundesliga,Mannschaft,Weltmeisterschaft,Elfmeter,Schiedsrichter,Fan,Trikot,Rasen,Torwart,Messi,Deutschland,Pokal,Abseits,Bayern|Gabel:Messer,Löffel,Besteck,Essen,Teller,spitz,Küche,Zinken,Tisch,Heu,Bauernhof,Werkzeug,Teufel,Dreizack,Abzweigung,Fahrrad,Musik|Gang:Flur,Korridor,Schaltung,Getriebe,Bande,Kupplung,Auto,Verbrechen,Mafia,Menü,Vorspeise,Schritt,gehen,Haus,Fahrzeug,Weg,Essen,Tür|Gans:Vogel,Braten,Weihnachten,Federn,schnattern,Bauernhof,Ente,Tier,Martinstag,weiß,Daunen,Rotkohl,Klöße,Schwan,dumm,Märchen,Gold,Essen|Garten:Blumen,Rasen,Beet,Pflanze,grün,Natur,Gärtner,Zaun,Hecke,Gemüse,Sommer,Gießkanne,Schaufel,Zwerg,Laube,Eden,Paradies,Haus|Gas:Luft,Herd,Heizung,Pedal,Flamme,Feuer,Explosion,Methan,Sauerstoff,Ballon,Maske,Krieg,Wissenschaft,schnell,Auto,Leitung,Russland,Küche|Geist:Gespenst,Spuk,Halloween,Seele,Verstand,Schloss,weiß,Tod,Angst,Nacht,Laken,Monster,Religion,heilig,Flasche,Lampe,Intelligenz,Schnaps|Geld:Bank,Euro,Münze,Schein,reich,Konto,Portemonnaie,Gold,Wirtschaft,Arbeit,sparen,Dollar,Lohn,Kasse,Zinsen,Kohle,Steuer|Gericht:Richter,Urteil,Anwalt,Gesetz,Essen,Prozess,Hammer,Zeuge,Verbrechen,Strafe,Justiz,Saal,Mahlzeit,Speise,Küche,Rezept,Teller,Koch|Gift:Schlange,tödlich,Tod,Gefahr,Pilz,Spinne,Hexe,Apfel,Mord,Verbrechen,Arsen,Skorpion,Totenkopf,Medizin,Märchen,Frosch,grün,Flasche|Gipfel:Berg,Gebirge,hoch,Kreuz,Spitze,Alpen,Schnee,Bergsteiger,klettern,Everest,Aussicht,Wanderung,Höhepunkt,Treffen,Konferenz,Politik,Croissant,Winter|Gitarre:Musik,Instrument,Saiten,Rock,Band,Akkord,Lagerfeuer,Verstärker,Plektrum,Bass,Konzert,Holz,Hendrix,Lied,Flamenco,laut,Strom|Glas:Fenster,durchsichtig,zerbrechlich,Scheibe,Wasser,Getränk,Flasche,Wein,Scherben,Spiegel,Brille,Sand,Vase,Marmelade,Kristall,Lupe,Becher,Küche|Glocke:Kirche,läuten,Turm,Klang,laut,Glöckner,Quasimodo,Religion,Weihnachten,Hochzeit,Metall,Bronze,Kuh,Alpen,Sonntag,Schiller,Zeit,Ostern|Gold:Schmuck,Geld,gelb,Schatz,Barren,Medaille,Ring,reich,Metall,glänzen,Karat,Krone,König,Pirat,Olympia,Sieg,Ägypten,Mine|Golf:Schläger,Ball,Loch,Sport,Rasen,Caddy,grün,Abschlag,Handicap,Tiger,reich,VW,Auto,Fahrzeug,Meer,Bucht,Krieg,Mexiko|Gras:grün,Wiese,Rasen,Kuh,Natur,Pflanze,Halm,mähen,Sense,Garten,Heu,Weide,Sommer,Schaf,Marihuana,kiffen,Joint,Hanf|Gummi:Reifen,elastisch,Kautschuk,Bärchen,Haribo,süß,Latex,Kondom,Stiefel,Radierer,Ente,Ball,Schlauch,dehnbar,Baum,Handschuh,Gelatine,Kinder|Gürtel:Hose,Schnalle,Leder,Kleidung,Taille,Bauch,Loch,Gurt,Mode,Judo,Karate,schwarz,Sport,sparen,Asteroid,Weltraum,Orion,Hosenträger|Hafen:Schiff,Meer,Boot,Hamburg,Wasser,Container,Kran,Anker,Matrose,Kai,Leuchtturm,Möwe,Fischer,Zoll,Stadt,Reise,Ehe|Hahn:Huhn,Henne,krähen,Bauernhof,Vogel,Morgen,Kamm,Kikeriki,Feder,Ei,Frankreich,Tier,Wetter,Wasser,Leitung,tropfen,Pistole,Waffe|Hai:Meer,Zähne,Flosse,Fisch,Raubtier,Gefahr,Wasser,Ozean,weiß,Film,Spielberg,Blut,Surfer,Strand,Angriff,Tier,Gebiss,Aquarium|Hammer:Nagel,Werkzeug,Schlag,Werkstatt,Thor,Amboss,Schmied,Handwerker,Metall,Holz,Sichel,Kommunismus,Richter,Gericht,Auktion,Mythologie,Daumen,toll|Hand:Finger,Daumen,Arm,Körper,Faust,greifen,winken,schütteln,Ring,Nagel,Gelenk,fünf,links,rechts,Arbeit,Hilfe,klatschen,Gruß|Harfe:Instrument,Saiten,Musik,Engel,Himmel,zupfen,Orchester,Irland,Klang,Klassik,Lyra,Antike,David,König,Religion,Gold,Konzert,Guinness|Hase:Ostern,Ohren,Karotte,Kaninchen,Tier,hoppeln,schnell,Haustier,Fell,Feld,Igel,Märchen,Haken,Jäger,Wald,Bunny,Playboy,Angst|Haus:Dach,Wohnung,Tür,Fenster,Familie,Heim,wohnen,Garten,Keller,Zimmer,Möbel,Mauer,Stein,Stadt,Miete,Schornstein,Adel,Theater|Heft:Schule,Papier,schreiben,Hausaufgaben,Stift,Seiten,Kästchen,Lehrer,Kinder,Notiz,Mathe,Umschlag,Zeitschrift,Comic,Griff,Messer,Dolch,Waffe|Held:Retter,mutig,Mut,Superman,Batman,Comic,Umhang,Rettung,Film,Bösewicht,Ritter,Drache,Märchen,Fantasy,Herkules,Mythologie,Feuerwehr,Krieg|Helm:Kopf,Schutz,Motorrad,Fahrrad,Bauarbeiter,Ritter,Soldat,Militär,Krieg,Feuerwehr,Visier,Sicherheit,Astronaut,Wikinger,Hörner,Rüstung,Mittelalter,Ski|Herz:Liebe,rot,Blut,Körper,Organ,Puls,pochen,Valentinstag,Amor,Gefühl,Brust,Infarkt,Medizin,Pumpe,Spiel,Kreuz,Pik,Karo|Hexe:Besen,Zauber,Halloween,Märchen,Hut,Kessel,Magie,Katze,schwarz,Hänsel,Gretel,Blocksberg,Bibi,Walpurgisnacht,Mittelalter,Fantasy,Warze,Gift|Himmel:blau,Wolken,Engel,Sonne,Sterne,Gott,Paradies,Religion,Hölle,Wetter,Luft,oben,Regenbogen,Vogel,Petrus,Flugzeug,Weltraum,Nacht|Hirsch:Geweih,Wald,Reh,Tier,Jäger,Jagd,Bambi,röhren,Brunft,Wild,Elch,Natur,Trophäe,Rentier,Weihnachten,Lichtung,Jägermeister,braun|Hof:Bauer,Stall,Scheune,Traktor,Tier,Haus,Tor,Mauer,Garten,Kuh,König,Adel,Schloss,Narr,Mittelalter,Bayern,Mond,Liebe|Hollywood:Film,Kino,Schauspieler,Stars,Oscar,Amerika,Kalifornien,Regisseur,Studio,Glamour,Ruhm,Teppich,Kamera,Traumfabrik,Bollywood,Gold,Party,Schaukel|Honig:Biene,süß,Imker,gelb,Wabe,klebrig,Bär,Brot,Frühstück,Glas,Tee,Nektar,Blüte,Insekt,Gold,Maja,Milch,Essen|Horn:Stier,Kuh,Tier,Instrument,Musik,spitz,Teufel,Geweih,Ziege,blasen,Jagd,Trompete,Wikinger,Afrika,Fantasy,Hupe,Met,Signal|Hose:Jeans,Beine,Kleidung,Gürtel,Hemd,anziehen,Tasche,Shorts,kurz,Leder,Bayern,Stoff,Mode,Knie,Reißverschluss,Rock,Bund,Schlüpfer|Hotel:Urlaub,Zimmer,Reise,Rezeption,Übernachtung,Bett,Gast,Sterne,Koffer,Frühstück,Pool,Lobby,Portier,Schlüssel,Buchung,Hilton,Monopoly,Stadt|Hund:bellen,Haustier,Gassi,Leine,Knochen,Katze,Welpe,treu,Freund,Pfote,Schwanz,Wolf,Fell,Dackel,Napf,Tier,Polizei,Lassie|Hut:Kopf,Kleidung,Mütze,Zylinder,Krempe,Cowboy,Zauberer,Hexe,Kaninchen,Stroh,Feder,Sonne,Sommer,Mode,Alice,Pilz,Zirkus,Magie|Hütte:Holz,Berg,Alpen,Alm,Wald,klein,Ski,Haus,Schnee,Winter,Gebirge,Kamin,Wandern,Bude,Unterschlupf,Stahl,Hochofen,Metall|Igel:Stacheln,spitz,Tier,Herbst,Laub,Garten,klein,Winterschlaf,Hase,Sonic,Wald,Natur,Nacht,Kugel,Apfel,Märchen,Schnecke|Iglu:Eis,Schnee,Eskimo,kalt,Inuit,Winter,Haus,Arktis,Nordpol,rund,Kuppel,Grönland,Hütte,Block,Eisbär,Alaska,weiß|Insel:Meer,Wasser,Strand,Palme,Urlaub,Robinson,einsam,Schatz,Pirat,Karibik,Sylt,Mallorca,Sommer,Sand,Schiffbruch,Atoll,Hawaii,Reise|Jacke:Kleidung,Mantel,Winter,kalt,Reißverschluss,Leder,anziehen,Ärmel,Kapuze,Regen,Knopf,Tasche,Wetter,Mode,warm,Weste,Daunen,Sakko|Jet:Flugzeug,schnell,fliegen,Pilot,Düse,Turbine,Himmel,Luft,Reise,Urlaub,reich,Militär,laut,Kondensstreifen,Fahrzeug,Verkehr,Strahl,Lärm|Jäger:Jagd,Gewehr,Wald,Hirsch,Waffe,Hochsitz,Wild,Reh,grün,Hund,Beute,Förster,Rotkäppchen,Märchen,Sammler,Schnitzel,Schütze,Tier|Kabel:Strom,Stecker,Draht,Steckdose,Leitung,Technik,Computer,Kupfer,Internet,Fernsehen,Telefon,Netzwerk,Ladegerät,Verlängerung,Elektriker,Metall,Salat,Isolierung|Kaiser:König,Krone,Thron,Rom,Reich,Herrscher,Adel,Geschichte,Napoleon,Wilhelm,Cäsar,Sisi,Österreich,China,Beckenbauer,Märchen,Kleider,Schmarrn|Kaktus:Wüste,Stacheln,spitz,Pflanze,grün,Mexiko,trocken,heiß,Sonne,Sand,Topf,Blüte,Sombrero,Cowboy,Western,Amerika,pieksen|Kamel:Wüste,Höcker,Dromedar,Tier,Karawane,Sand,Oase,Ägypten,Afrika,spucken,Wasser,Durst,Beduine,Arabien,Pyramide,Zoo,Zigarette,dumm|Kamera:Foto,Film,Bild,Objektiv,Linse,Fotograf,Blitz,Video,Handy,Kino,Technik,Überwachung,Selfie,Stativ,Hollywood,Urlaub,Aufnahme,Kunst|Kamin:Feuer,Holz,warm,Schornstein,Rauch,Winter,Weihnachtsmann,Wohnzimmer,Glut,Flamme,Asche,Ruß,gemütlich,heiß,Haus,Weihnachten,Kohle,Strümpfe|Kanal:Wasser,Schiff,Fernsehen,Sender,Venedig,YouTube,Boot,Panama,Suez,Schleuse,Fluss,Gondel,Abwasser,Ratte,Programm,Video,England,Ägypten|Kapitän:Schiff,Meer,Mütze,Matrose,Mannschaft,Pirat,Hook,Hafen,Steuerrad,Kommando,Pilot,Flugzeug,Fußball,Binde,Sport,Titanic,Bart,Uniform|Karte:Spiel,Atlas,Poker,Ticket,Menü,Kompass,Ass,Joker,Skat,Stadtplan,Reise,Weg,Kino,Restaurant,Urlaub,Papier,Geld,Bank|Kassette:Musik,Walkman,Tonband,Rekorder,Hörspiel,alt,Retro,Bleistift,Band,Spule,Video,VHS,Mixtape,Kinder,Aufnahme,Geld,Schatulle,Technik|Kater:Katze,Alkohol,Kopfschmerzen,Haustier,Tier,Party,miauen,Maus,Fell,Garfield,Stiefel,Märchen,Morgen,Bier,Übelkeit,Rausch,Muskel,Sport|Katze:Maus,miauen,Haustier,schnurren,Fell,Kater,Hund,Pfote,Krallen,Milch,Tier,Raubtier,Löwe,Tiger,schwarz,Hexe,Kratzbaum,Leben|Kegel:Bowling,Kugel,Bahn,umwerfen,Neun,Verein,Sport,Spiel,Geometrie,spitz,rund,Form,Mathe,Kreis,Waffel,Pylone,Verkehr,Licht|Keller:dunkel,unten,Treppe,Haus,Wein,Lager,Vorräte,feucht,kalt,Spinnen,Angst,Gewölbe,Kartoffeln,Heizung,Waschmaschine,Gerümpel,Bunker,Party|Kerze:Licht,Flamme,Wachs,Docht,Feuer,Advent,Weihnachten,Kranz,Geburtstag,Kuchen,Leuchter,Kirche,romantisch,dunkel,Stromausfall,Abend,Liebe,Nacht|Kette:Schmuck,Hals,Gold,Perlen,Anhänger,Silber,Glied,Fahrrad,Metall,Anker,Schloss,Fessel,Gefängnis,Ring,Restaurant,Filiale,Reaktion,Säge|Kiefer:Baum,Knochen,Wald,Zähne,Nadelbaum,Holz,Zapfen,Mund,Gebiss,kauen,Nadeln,Harz,Pflanze,Natur,Gesicht,Körper,Zahnarzt,Medizin|Kino:Film,Popcorn,Leinwand,Hollywood,Ticket,Saal,dunkel,Sessel,Cola,Nachos,Projektor,Premiere,Blockbuster,Schauspieler,Date,Abend,Werbung,Kamera|Kirche:Gott,Religion,Kreuz,Glocke,Pfarrer,Turm,beten,Altar,Orgel,Gottesdienst,Bibel,Hochzeit,Taufe,Sonntag,Papst,Priester,Weihnachten,Ostern|Kissen:Bett,schlafen,weich,Kopf,Decke,Sofa,Federn,Bezug,Nacht,Traum,Daunen,Schlacht,Möbel,Airbag,Nadel,Couch,bequem,Haus|Kiwi:Obst,grün,Neuseeland,Vogel,Frucht,pelzig,braun,sauer,Vitamin,Kerne,exotisch,Löffel,Tier,Essen,Neuseeländer,Insel,Smoothie|Klavier:Tasten,Musik,Instrument,Flügel,Pianist,schwarz,weiß,Noten,Pedal,Konzert,Beethoven,Mozart,Chopin,Klassik,Unterricht,Holz,Möbel,Bar|Knochen:Skelett,Hund,Körper,Schädel,Bruch,Röntgen,Medizin,Tod,Gelenk,Kalzium,Dinosaurier,weiß,Halloween,Grab,Mark,hart,Arzt,Archäologie|Knopf:Hemd,Jacke,nähen,Loch,Kleidung,Faden,Nadel,rund,klein,drücken,Taste,Klingel,Schalter,Technik,Computer,Jim,Lokomotive,Teddy|Koch:Küche,Essen,Mütze,Restaurant,Herd,Topf,Rezept,Beruf,Schürze,Pfanne,Gericht,Löffel,Sterne,Kellner,Brei,Robert,Bakterien,Medizin|Koffer:Reise,Urlaub,packen,Gepäck,Flughafen,Rollen,Hotel,Tasche,Kleidung,Griff,Schloss,Bahnhof,Zug,Geld,Aktentasche,Leder,Verkehr,Gepäckband|Kohle:schwarz,Feuer,Grill,Bergbau,Geld,Ruß,heizen,Ofen,Kraftwerk,Strom,Zeche,Bergmann,Ruhrgebiet,Brikett,Dampflok,Knete,Moneten,Erde|Komet:Weltraum,Schweif,Stern,Himmel,Halley,Asteroid,Meteor,Einschlag,Dinosaurier,Eis,Sonne,Planet,Teleskop,Astronom,Nacht,Licht,schnell,Wissenschaft|Koralle:Riff,Meer,tauchen,Fisch,bunt,Wasser,Australien,Nemo,rot,Kalk,Schmuck,Kette,Polyp,Tropen,Karibik,Bleiche,Natur,Insel|Korb:Weide,Picknick,Einkauf,flechten,Henkel,Basketball,Wäsche,Obst,Brot,Eier,Ostern,Sport,Abfuhr,Absage,Liebe,Ballon,Rotkäppchen,Holz|Krake:Tentakel,Meer,Tintenfisch,Tinte,acht,Arme,Saugnäpfe,Oktopus,Wasser,Tier,Monster,Ungeheuer,Paul,Fußball,intelligent,Pirat,Mythologie,Kalmar|Kran:Baustelle,Hafen,heben,Haken,hoch,Container,Seil,Last,Bau,Turm,Stahl,Maschine,Technik,Arbeit,Gerüst,Fahrzeug,Ausleger|Krankenhaus:Arzt,Medizin,Operation,Patient,Klinik,Notaufnahme,Pfleger,Station,Bett,Spritze,Rettungswagen,Chirurg,Röntgen,Visite,weiß,Geburt,Tod,Körper|Krebs:Krankheit,Tumor,Schere,Meer,Sternzeichen,Tier,Chemotherapie,Medizin,Krabbe,Hummer,rot,Strand,seitwärts,Horoskop,Tod,Wasser,Juli,Arzt|Kreide:Tafel,Schule,weiß,Lehrer,schreiben,Staub,Schwamm,Klassenzimmer,malen,Kinder,Straße,Kalk,Felsen,Rügen,Dinosaurier,Billard,Wolf,Märchen|Kreuz:Kirche,Jesus,Religion,Grab,Tod,Ostern,Friedhof,Gipfel,Symbol,Rücken,Schmerzen,Karo,Pik,Herz,Spiel,rot,Schweiz,Mittelalter|Krieg:Soldat,Waffe,Militär,Tod,Schlacht,Frieden,Kampf,Armee,Panzer,Bombe,Geschichte,Gewehr,Front,Flucht,Angst,Sieg,Gefahr,Napoleon|Krokodil:Zähne,Reptil,Fluss,grün,Alligator,Nil,Afrika,Sumpf,Raubtier,Tier,Maul,Schuppen,Tränen,Ägypten,Kasper,Leder,Wasser,Gefahr|Krone:König,Königin,Gold,Thron,Adel,Juwelen,Prinzessin,Kaiser,Macht,Zacken,Diamant,Märchen,Zahn,Zahnarzt,Baum,Geld,Dänemark,Währung|Kuchen:backen,Torte,süß,Geburtstag,Kaffee,Sahne,Teig,Ofen,Mehl,Zucker,Oma,Schokolade,Stück,Kerze,Bäcker,Essen,Apfel,Sonntag|Kugel:rund,Ball,Waffe,Pistole,Schuss,Patrone,Eis,Murmel,Billard,Kegel,Weihnachtsbaum,Kristall,Wahrsager,Glas,Erde,Sport,Geometrie,Metall|Kuh:Milch,Bauernhof,muhen,Tier,Weide,Stall,Kalb,Gras,Euter,melken,Stier,Rind,Glocke,Alpen,Käse,Indien,heilig,Fleisch|Kunst:Maler,Bild,Museum,Gemälde,Galerie,Farbe,malen,Pinsel,Leinwand,Skulptur,Ausstellung,Picasso,Künstler,kreativ,Kultur,Musik,Theater,modern|Kurve:Straße,Biegung,Auto,Verkehr,Rennen,Motorrad,Serpentinen,Gebirge,bremsen,Diagramm,Mathe,Funktion,Graph,Statistik,Figur,Stadion,Fan,rund|Känguru:Australien,Beutel,hüpfen,springen,Tier,Junges,Boxen,Schwanz,Koala,Outback,Zoo,Beuteltier,Sprung,Wüste,Chroniken,Kommunist,Natur|Käse:Milch,Gouda,Löcher,Maus,Schweiz,Holland,Kuh,gelb,Brot,Pizza,Fondue,Camembert,Raclette,Frankreich,stinken,Reibe,Essen,Quatsch|Königin:Krone,Thron,Elizabeth,England,Adel,Palast,Majestät,Prinzessin,Zepter,Insekt,Biene,Ameise,Schach,Dame,Märchen,Schneewittchen,Spiegel,Queen|Küche:kochen,Herd,Kühlschrank,Essen,Ofen,Topf,Pfanne,Spüle,Koch,Geschirr,Tisch,Besteck,Rezept,Mikrowelle,backen,Haus,Möbel,Italien|Labor:Wissenschaft,Chemie,Experiment,Kittel,Reagenzglas,Mikroskop,Forscher,Forschung,Probe,Test,Blut,Medizin,weiß,Ratte,Maus,Brille,Formel,Arzt|Lager:Halle,Regal,Vorrat,Ware,Gabelstapler,Paket,Logistik,Keller,Arbeit,Zelt,Camp,Pfadfinder,Feuer,Bier,Pils,Gefangene,Krieg,Militär|Lampe:Licht,Glühbirne,hell,Strom,Schalter,Schirm,Leuchte,Tisch,Nacht,dunkel,Kabel,Decke,Möbel,Öl,Aladdin,Geist,Stecker,Haus|Laser:Licht,Strahl,rot,Technik,Physik,Wissenschaft,Zeiger,Schwert,Waffe,Weltraum,Drucker,schneiden,Operation,Augen,Medizin,Show,Party,Katze|Laster:LKW,Fahrzeug,Autobahn,Verkehr,Fahrer,Ladung,Anhänger,Brummi,Diesel,Lieferung,Sünde,Rauchen,Sucht,Gewohnheit,Alkohol,Zigarette,Tugend,schlecht|Laus:Kopf,jucken,Haare,Insekt,Kamm,Kinder,Schule,Parasit,Nissen,Floh,klein,Shampoo,Kita,Ekel,Pflanze,Leber,Affe,Tier|Lava:Vulkan,heiß,Magma,Feuer,Ausbruch,rot,flüssig,Gestein,Stein,Erde,Asche,Glut,Hawaii,Island,Ätna,Pompeji,Gefahr,Lampe|Leben:Tod,Geburt,Liebe,Zeit,Alter,atmen,Familie,Glück,Herz,Seele,Sinn,Natur,Biologie,Zelle,Existenz,Spiel,Katze,Welt|Leiter:Sprosse,klettern,hoch,Stufe,Feuerwehr,Dach,Höhe,Maler,Werkzeug,Holz,Chef,Boss,Abteilung,Direktor,Arbeit,Strom,Kupfer,Metall|Licht:hell,Lampe,Sonne,dunkel,Schatten,Schalter,Glühbirne,Kerze,Strom,Tag,Strahl,Laser,Physik,Geschwindigkeit,Farbe,Leuchtturm,Blitz,Feuer|Linie:Strich,gerade,Lineal,zeichnen,Punkt,Grenze,Bus,Bahn,Straßenbahn,Haltestelle,Verkehr,Strecke,Mathe,Geometrie,Kurve,Figur,Diät,Papier|Luft:atmen,Sauerstoff,Wind,Himmel,Lunge,Atmosphäre,frisch,unsichtbar,Ballon,Gas,Wetter,Flugzeug,Vogel,Element,Reifen,Blase,Wasser,Feuer|Löffel:Suppe,Gabel,Besteck,Messer,Essen,Küche,Tee,Eis,Joghurt,Müsli,Brei,Metall,Holz,Silber,Tod,abgeben,Hase,Ohr|Löwe:Mähne,König,Afrika,Raubtier,Savanne,Tier,brüllen,Katze,Zoo,Simba,Sternzeichen,Zirkus,Rudel,Jagd,Mut,stark,Narnia,gelb|Löwenzahn:Pusteblume,Blume,gelb,Wiese,Unkraut,Pflanze,Garten,Natur,Frühling,Samen,pusten,Kaninchen,Peter,Fallschirm,Wurzel,Butterblume,Salat|Magnet:Eisen,anziehen,Kühlschrank,Metall,Pol,Kompass,Nord,Süd,Anziehung,Physik,Wissenschaft,Feld,Strom,Technik,Erde,Plus,Minus|Mais:Popcorn,gelb,Kolben,Feld,Gemüse,Getreide,Pflanze,Essen,Korn,Kino,Mexiko,Tortilla,Amerika,Bauernhof,Huhn,Labyrinth,Dose,Cornflakes|Mammut:Eiszeit,Elefant,Stoßzahn,ausgestorben,Fell,groß,Steinzeit,Tier,kalt,Winter,Rüssel,Manfred,Sibirien,Geschichte,Fossil,Jäger,riesig,Elfenbein|Mantel:Jacke,Winter,Kleidung,warm,kalt,Knopf,Kragen,Regen,Wolle,Pelz,Umhang,Garderobe,Martin,Reifen,Fahrrad,Gummi,Erde|Mars:Planet,rot,Weltraum,Schokolade,Riegel,Kriegsgott,Krieg,Mythologie,Rover,Rakete,Krater,Venus,Astronaut,Mission,süß,Karamell,Antike,Musk|Maske:Gesicht,Karneval,Fasching,Verkleidung,Corona,Halloween,Theater,Zorro,Batman,Held,Medizin,Schutz,Venedig,Taucher,Party,Gurke,Tarnung|Mast:Segel,Schiff,Boot,Fahne,Flagge,hoch,Holz,Meer,Pirat,Ausguck,Strom,Antenne,Funk,Schwein,Bauernhof,Futter,fett|Matrose:Seemann,Schiff,Meer,Marine,Anker,Kapitän,Hafen,Boot,Popeye,Mütze,Uniform,Deck,Knoten,Tattoo,Militär,Beruf,Wasser|Maus:Käse,Katze,Computer,klein,Tier,Mickey,Falle,Nagetier,grau,Haustier,Ratte,Klick,Jerry,Speck,Kabel,Technik,Loch|Medaille:Gold,Silber,Bronze,Olympia,Sieger,Sport,Preis,Podest,Auszeichnung,Orden,Wettkampf,Kehrseite,Metall,rund,Held,Militär,Ehre|Meer:Wasser,Strand,Welle,Ozean,Salz,blau,Urlaub,Fisch,Küste,Sand,Schiff,Insel,Sommer,Muschel,Hai,Ebbe,Flut,Natur|Mehl:backen,Brot,Kuchen,Weizen,Teig,Mühle,weiß,Bäcker,Küche,Essen,Pulver,Zucker,Ei,Staub,Korn,Getreide,Pizza|Messe:Kirche,Gottesdienst,Pfarrer,Religion,Sonntag,Priester,Gebet,Orgel,Ausstellung,Stand,Frankfurt,Halle,Besucher,Wirtschaft,Musik,Mozart,Schiff|Messer:Gabel,scharf,schneiden,Klinge,Küche,Besteck,Löffel,Waffe,spitz,Stahl,Metall,Werkzeug,Koch,Schneide,Brot,Gefahr,Verbrechen|Mikroskop:Labor,Linse,Zelle,klein,Wissenschaft,Biologie,Bakterien,Vergrößerung,Lupe,Forscher,Glas,Medizin,Schule,Objektiv,Präparat,Licht,Virus|Milch:Kuh,weiß,Kaffee,Getränk,Bauernhof,Käse,Butter,Müsli,Kakao,Joghurt,Sahne,Baby,Flasche,Laktose,Honig,Kalb,Glas|Mine:Bergwerk,Kohle,Gold,Bergbau,Erz,Explosion,Bombe,Krieg,Gefahr,Waffe,Militär,Bleistift,Kugelschreiber,Stollen,Diamant,Arbeit,dunkel|Mond:Nacht,Sonne,Stern,Weltraum,Erde,Krater,Astronaut,Armstrong,Sichel,Werwolf,Licht,Ebbe,Flut,Apollo,rund,dunkel,Monat|Motor:Auto,Benzin,Maschine,Diesel,Fahrzeug,PS,Zylinder,Kolben,Öl,Werkstatt,Technik,Mechaniker,Getriebe,Strom,laut,schnell,starten|Mumie:Ägypten,Pyramide,Pharao,Binden,Grab,Sarkophag,Tod,Halloween,Monster,Fluch,Tutanchamun,Museum,Antike,Wüste,alt,Leiche,Bandage|Mund:Lippen,Zunge,Zähne,Kuss,Gesicht,Körper,sprechen,Lächeln,Lippenstift,Essen,Atem,Kiefer,Gaumen,Maul,Kommunikation,schweigen,Zahnarzt|Muschel:Meer,Strand,Perle,Schale,Sand,Auster,Schnecke,Wasser,Rauschen,Urlaub,Tier,Essen,Venus,Sommer,Ohr,Telefon,Hörer|Musik:Lied,Konzert,Melodie,Instrument,Noten,hören,Band,singen,Radio,Rhythmus,Gitarre,Klavier,Takt,Tanz,Party,laut,Kunst,Oper|Mutter:Mama,Vater,Familie,Eltern,Liebe,Geburt,Kinder,Sohn,Tochter,Oma,Schraube,Gewinde,Werkzeug,Werkstatt,Natur,Teresa|Mönch:Kloster,Kutte,Religion,Gebet,Nonne,Abt,Mittelalter,Kirche,Bruder,Tonsur,Glatze,Schweigen,Bier,Buddhismus,Tibet,Shaolin,Asien|Mühle:Wind,Mehl,Müller,Flügel,Korn,mahlen,Getreide,Wasser,Holland,Rad,Brettspiel,Spiel,Stein,Kaffee,Pfeffer,Bauernhof,Quijote,Bürokratie|Nadel:Faden,nähen,spitz,Stich,Heuhaufen,Spritze,Öhr,Schneider,Stoff,Medizin,Impfung,Tanne,Baum,Wald,Kompass,Akupunktur,Kissen|Nagel:Hammer,Schraube,Finger,Werkzeug,Wand,Lack,Kopf,Metall,Holz,spitz,Feile,Werkstatt,Maniküre,Bild,Fakir,Kreuz,rosten|Nest:Vogel,Ei,Baum,brüten,Küken,Ast,Stroh,Zweig,Storch,Ostern,Feder,Wespe,Natur,Familie,Heim,Bett,Tier|Netz:Fisch,Internet,Spinne,Tor,Tennis,Fischer,Volleyball,Fußball,Sport,Masche,Knoten,Falle,Meer,Computer,WLAN,Kommunikation,Handy,Strom|Nil:Ägypten,Fluss,Afrika,Krokodil,Kairo,Pharao,Delta,Pyramide,Wüste,Wasser,Kleopatra,Antike,lang,Assuan,Quelle,Tod,Schiff,Sudan|Ninja:Japan,Kämpfer,schwarz,Schwert,Shuriken,Turtles,Kampfkunst,Samurai,unsichtbar,schleichen,Maske,Asien,Waffe,Nacht,Spion,schnell,Held|Note:Musik,Schule,Ton,Zeugnis,Eins,Sechs,Prüfung,Lehrer,Melodie,Klavier,Schlüssel,Takt,Instrument,Geld,Schein,Duft,Geschmack|Nuss:Eichhörnchen,knacken,Schale,Hasel,Baum,Herbst,Kern,Nutella,Nougat,Mandel,Kokos,hart,Allergie,Weihnachten,Essen,Aschenbrödel,Märchen|Oase:Wüste,Wasser,Palme,Kamel,Sand,Quelle,Sahara,Karawane,Brunnen,Dattel,grün,Afrika,heiß,Ruhe,Erholung,Paradies,Natur|Ofen:heiß,Feuer,backen,Küche,Pizza,Kuchen,Brot,Hitze,Kamin,Herd,Wärme,Holz,Kohle,Winter,Hexe,Märchen,Schornstein|Olymp:Zeus,Götter,Griechenland,Berg,Mythologie,Antike,Gipfel,Hera,Athene,Apollo,Gebirge,Himmel,hoch,Thron,Hermes,Sieg,Ruhm|Oper:Gesang,Arie,Theater,Bühne,Musik,Orchester,Sänger,Sopran,Tenor,Verdi,Wagner,Mozart,Italien,Diva,Phantom,Zauberflöte,Kunst,Sydney|Orange:Obst,Frucht,Saft,Farbe,Apfelsine,Vitamin,Mandarine,Zitrone,Schale,rund,süß,Spanien,Valencia,Holland,Frühstück,Getränk,Essen|Ozean:Meer,Wasser,Atlantik,Pazifik,Welle,blau,tief,Wal,Hai,Schiff,Insel,Salz,Fisch,Tiefsee,Strömung,Titanic,Kontinent,Natur|Palme:Strand,Insel,Kokosnuss,Urlaub,Baum,Karibik,Sommer,Sonne,Süden,Dattel,Oase,Pflanze,Wedel,heiß,Wüste,Wut,ärgern|Panzer:Krieg,Militär,Kanone,Armee,Soldat,Waffe,Fahrzeug,Kette,Leopard,Stahl,Schlacht,Rüstung,Ritter,Schildkröte,Schutz,Metall,Tiger|Papagei:Vogel,bunt,sprechen,Pirat,Feder,Ara,Dschungel,Regenwald,Tropen,Käfig,Schnabel,Haustier,nachplappern,grün,rot,Kakadu,Tier|Papier:Blatt,Stift,schreiben,Holz,Buch,weiß,Brief,Zeitung,Drucker,Schere,Stein,Origami,falten,Akte,Bürokratie,Baum,Recycling|Paris:Frankreich,Eiffelturm,Hauptstadt,Liebe,Louvre,Seine,Stadt,Mode,Croissant,Romantik,Montmartre,Kunst,Reise,Troja,Helena,Mythologie,Apfel|Pass:Ausweis,Reise,Grenze,Urlaub,Flughafen,Foto,Visum,Zoll,Stempel,Behörde,Bürokratie,Berg,Gebirge,Alpen,Straße,Fußball,Zuspiel,Sport|Pfanne:braten,Küche,Herd,Spiegelei,Öl,kochen,Topf,heiß,Wok,Fett,Stiel,Deckel,Bratkartoffeln,Schnitzel,Teflon,Essen,Metall|Pfeffer:Salz,scharf,Gewürz,schwarz,Mühle,Korn,Streuer,Chili,Paprika,Küche,Essen,würzen,niesen,Indien,Asien,heiß,Handel|Pfeife:Tabak,rauchen,Schiedsrichter,Rauch,Holz,Sherlock,Opa,Fußball,Sport,Signal,Ton,laut,Orgel,Instrument,Musik,Versager,Popeye|Pferd:reiten,Stall,Sattel,Huf,Mähne,Tier,Bauernhof,Pony,galoppieren,wiehern,Hufeisen,Kutsche,Heu,Ritter,Schach,Springer,Turnen,Sport|Pflaster:Wunde,Verletzung,Medizin,Verband,kleben,Blut,Haut,Knie,Heilung,Arzt,Kinder,Straße,Stein,Bürgersteig,Weg,Stadt,teuer|Pfote:Hund,Katze,Tier,Haustier,Krallen,Tatze,Fuß,Ballen,Spur,Abdruck,Bär,Fell,Hand,weich,Schnee,Raubtier,Löwe|Pilot:Flugzeug,Cockpit,fliegen,Flughafen,Kapitän,Himmel,Luft,Uniform,Beruf,Reise,Luftwaffe,Militär,Funk,Sonnenbrille,Rennfahrer,Formel,Test|Pilz:Wald,Champignon,giftig,sammeln,Herbst,Hut,Stiel,Pfifferling,Natur,Mario,Sporen,Lamellen,Schimmel,Gift,Essen,Zwerg,Märchen,Medizin|Pinguin:Antarktis,Eis,Frack,kalt,Vogel,watscheln,Kolonie,Tier,schwarz,weiß,Fisch,Südpol,Meer,Zoo,Linux,Batman,Winter|Pirat:Schiff,Schatz,Augenklappe,Meer,Säbel,Totenkopf,Holzbein,Papagei,Kapitän,Flagge,Insel,Karibik,Sparrow,Hook,Gold,Rum,Verbrechen,Waffe|Pizza:Italien,Käse,Tomate,Salami,Teig,Ofen,Essen,Margherita,Lieferdienst,rund,Neapel,Calzone,Pasta,Oregano,Party,Stück,Fastfood|Planet:Erde,Weltraum,Sonne,Mars,Jupiter,Saturn,Stern,Sonnensystem,Umlaufbahn,Universum,Mond,Venus,Pluto,Astronomie,rund,Kugel,Wissenschaft,Galaxie|Platte:Musik,Vinyl,DJ,Album,Glatze,flach,Teller,Käse,Wurst,Herd,Stein,Fliese,Holz,Reifen,Erde,Tektonik,Kopf|Pol:Nord,Süd,Arktis,Antarktis,Eis,kalt,Magnet,Pinguin,Eisbär,Kompass,Erde,Achse,Plus,Minus,Batterie,Strom,Winter,Expedition|Polizei:Blaulicht,Verbrechen,Sirene,Streife,Uniform,Handschellen,Gesetz,Kommissar,Tatort,Krimi,Dieb,Verhaftung,Notruf,Revier,Waffe,Ordnung,Beruf,Fahrzeug|Post:Brief,Paket,Briefträger,Briefmarke,gelb,Briefkasten,Adresse,Stempel,Bote,Zustellung,DHL,Kommunikation,Bürokratie,Beitrag,Instagram,Internet,Facebook|Prinzessin:Krone,Schloss,Märchen,König,Adel,Kleid,rosa,Königin,Disney,Erbse,Frosch,Kuss,Ritter,Diana,Drache,Hochzeit,Thron,Fantasy|Präsident:Politik,Wahl,Amerika,Regierung,Staat,Washington,Macht,Chef,Staatsoberhaupt,Obama,Trump,Kanzler,Republik,Amt,Rede,Frankreich,Wirtschaft,Vorsitz|Puppe:Spielzeug,Barbie,Kinder,spielen,Mädchen,Kleid,Haare,Porzellan,Marionette,Theater,Chucky,Horror,Raupe,Schmetterling,Kokon,Insekt,Spiel|Pyramide:Ägypten,Pharao,Wüste,Grab,Mumie,Sphinx,Gizeh,Stein,Dreieck,spitz,Antike,Kairo,Nil,Sand,Maya,Geometrie,Geschichte,Schatz|Quelle:Wasser,Ursprung,Fluss,Brunnen,Bach,Natur,frisch,Berg,Gebirge,sprudeln,Mineral,heiß,Information,Zitat,Wikipedia,Internet,Wissenschaft,Katalog|Rad:Reifen,Speiche,rund,Achse,drehen,Felge,Pedal,Lenker,Fahrzeug,Verkehr,Auto,Kreis,Erfindung,Mühle,schlagen,Turnen,Pfau,Sport|Radio:Musik,Sender,hören,Moderator,Nachrichten,Antenne,Frequenz,Rundfunk,Lautsprecher,Auto,UKW,Welle,Lied,Kommunikation,Technik,Strom,laut,Podcast|Rakete:Weltraum,Start,Astronaut,Countdown,NASA,Mond,Raumfahrt,Feuer,Silvester,Feuerwerk,schnell,Treibstoff,Waffe,Militär,Krieg,Mars,Technik,Explosion|Rasen:Gras,grün,Garten,mähen,Wiese,Fußball,Stadion,Golf,Park,Sprenger,Sommer,Natur,Sport,schnell,Geschwindigkeit,Blitzer,Verkehr,Auto|Ratte:Maus,Kanalisation,Nagetier,Pest,Tier,Schwanz,grau,Müll,Keller,Ratatouille,eklig,Haustier,Labor,Krankheit,Verräter,Hameln,Schiff|Raupe:Schmetterling,Insekt,grün,Kokon,Blatt,Nimmersatt,Puppe,Larve,kriechen,gefräßig,Tier,Garten,Natur,Seide,Bagger,Baustelle,Kette,Fahrzeug|Regen:Wasser,nass,Wolke,Schirm,Wetter,Tropfen,grau,Pfütze,Gewitter,Gummistiefel,Herbst,Schauer,Donner,Sturm,Pflanze,Natur,Jacke|Riese:groß,Zwerg,Märchen,Goliath,David,Gigant,Titan,hoch,stark,Fantasy,Monster,Troll,Mythologie,Bohnenranke,Rübezahl,Jack,Ungeheuer|Ring:Finger,Hochzeit,Gold,Schmuck,Verlobung,Ehe,Diamant,Liebe,rund,Kreis,Sauron,Frodo,Herr,Boxen,Kampf,Zirkus,Saturn,Olympia|Ritter:Rüstung,Burg,Schwert,Mittelalter,Pferd,Schild,Lanze,Turnier,Helm,König,Adel,Drache,Held,Knappe,Tafelrunde,Kreuzzug,Ehre,Prinzessin|Roboter:Maschine,Technik,Metall,Computer,Android,Terminator,Zukunft,Fabrik,Programm,künstlich,Intelligenz,Blech,Staubsauger,Film,Strom,Arbeit,Mensch|Rock:Kleidung,Musik,Kleid,Gitarre,Konzert,Band,Frau,Kilt,Schottland,Bluse,Hose,kurz,laut,Festival,Elvis,Schlagzeug,Tanz|Rolle:Film,Theater,Schauspieler,Figur,Drehbuch,Papier,Spule,rund,Zylinder,Toilettenpapier,Teig,Sushi,Turnen,Purzelbaum,Rad,Kabel,Bühne|Rom:Italien,Kolosseum,Papst,Vatikan,Antike,Hauptstadt,Cäsar,Gladiator,Tiber,Pizza,Petersdom,Stadt,Geschichte,Imperium,Wölfin,Reise,Kaiser,Wege|Rose:Blume,rot,Liebe,Dornen,Valentinstag,Strauß,Duft,Garten,Pflanze,Blüte,Romantik,Dornröschen,Märchen,Biest,Hochzeit,Stachel,Natur|Rost:Eisen,rot,braun,Metall,alt,Auto,Korrosion,Schrott,Wasser,Oxidation,Chemie,Verfall,Grill,Gitter,Feuer,Bratwurst,Bett,Matratze|Rätsel:Lösung,Frage,Geheimnis,knobeln,Puzzle,Antwort,Spiel,Denken,Zeitung,Sudoku,Logik,Sphinx,Detektiv,Hinweis,Mysterium,Krimi,Schule|Rücken:Wirbelsäule,Schmerzen,Körper,Schulter,Kreuz,Haltung,Massage,Muskel,Nacken,Bandscheibe,hinten,Rucksack,Medizin,Buch,Schwimmen,Berg,Gebirge|Salz:Pfeffer,Meer,weiß,Gewürz,Küche,Streuer,Essen,Kristall,Wasser,Natrium,Mineral,Chips,Brezel,Pommes,Suppe,Mine,Winter,Tränen|Sand:Strand,Wüste,Meer,Düne,Burg,Korn,Sahara,Kinder,Schaufel,Eimer,Urlaub,gelb,Kamel,Glas,Zeit,Schlaf,Beton,Sommer|Satellit:Weltraum,Umlaufbahn,Erde,Orbit,Mond,Antenne,Schüssel,GPS,Fernsehen,Signal,Navigation,Rakete,Sputnik,Raumfahrt,Kommunikation,Technik,Wetter,Spionage|Schach:Spiel,König,Dame,matt,Brett,Bauer,Springer,Turm,Läufer,Strategie,Figur,schwarz,weiß,Zug,Turnier,Kasparow,Denken,Remis|Schaltung:Strom,Elektronik,Kabel,Platine,Schalter,Stromkreis,Widerstand,Technik,Physik,Computer,Lampe,Diode,Kondensator,Gang,Fahrrad,Getriebe,Kupplung,Fernsehen|Schatten:dunkel,Licht,Sonne,schwarz,Silhouette,Umriss,Baum,Nacht,kühl,Sommer,Peter,Geist,Angst,Hand,Theater,Sonnenuhr,Figur|Schaum:Bier,Seife,Bad,Blasen,Milch,Cappuccino,weiß,Badewanne,Shampoo,Dusche,Welle,Meer,Gischt,Feuerlöscher,Rasur,Krone,Party,Mund|Scheibe:Fenster,Glas,Brot,Wurst,Käse,rund,flach,Auto,Erde,Salami,Ziel,Darts,Frisbee,Diskus,CD,Platte,Schnitt|Schere:schneiden,Papier,Stein,scharf,Friseur,Haare,basteln,Werkzeug,Klinge,spitz,Krebs,Hummer,Schneider,Stoff,Schule,Garten,Kinder,Messer|Schiff:Meer,Kapitän,Hafen,Boot,Wasser,Anker,Segel,Titanic,Matrose,Kreuzfahrt,Deck,Ozean,Mast,Pirat,Reise,Fahrzeug,Urlaub,Kirche|Schild:Schutz,Ritter,Schwert,Wappen,Straße,Verkehr,Zeichen,Warnung,Stopp,Hinweis,Name,Rüstung,Mittelalter,Waffe,Krieg,Metall,Held,Tafel|Schimmel:Pilz,Brot,grün,Pferd,weiß,feucht,Wand,Keller,Sporen,Käse,eklig,verdorben,Penicillin,Medizin,Reiter,Tier,Haus|Schirm:Regen,Sonne,Wetter,nass,Schutz,aufspannen,Stock,Griff,Strand,Sommer,Poppins,Monitor,Computer,Fernseher,Lampe,Mütze,Luft|Schlange:Gift,Tier,Reptil,Kobra,zischen,Python,Biss,Schuppen,Haut,Gefahr,Dschungel,Paradies,Eva,Apfel,Medusa,warten,anstehen,Kasse|Schlitten:Schnee,Winter,rodeln,Weihnachtsmann,Rentier,Kinder,Weihnachten,kalt,Hang,Kufen,Bob,Husky,Auto,Fahrzeug,Karre,Abfahrt|Schloss:Burg,König,Schlüssel,Tür,Prinzessin,Adel,Märchen,Neuschwanstein,Palast,Mittelalter,Riegel,Turm,knacken,Zylinder,Sicherheit,Versailles,abschließen|Schlüssel:Tür,Schloss,öffnen,Bund,Haus,Auto,Wohnung,verlieren,Anhänger,Tresor,Metall,Musik,Note,Code,Lösung,Passwort,Zugang,Bart|Schnabel:Vogel,Ente,picken,Specht,Tukan,Papagei,Feder,Storch,Tier,spitz,Pelikan,Mund,Klappe,reden,Nest,Horn,gelb|Schnee:weiß,Winter,kalt,Flocke,Ski,Eis,Schlitten,Wetter,Lawine,Frost,Weihnachten,Iglu,Pulver,schmelzen,Schaufel,Kokain|Schrank:Möbel,Kleidung,Tür,Ikea,Holz,Schublade,Regal,Kommode,Bügel,Spind,Garderobe,Narnia,Küche,groß,Kerl,Muskeln,Türsteher|Schuh:Fuß,Socke,Schnürsenkel,Stiefel,Sohle,Kleidung,laufen,Absatz,Sneaker,Leder,Paar,Sandale,Schuster,Aschenputtel,Größe,Märchen,Sport,Schuld|Schule:Lehrer,Schüler,Unterricht,Klasse,Tafel,Pause,Hausaufgaben,Zeugnis,Kinder,lernen,Ferien,Prüfung,Note,Ranzen,Abitur,Bildung,Arbeit,Papier|Schwamm:Wasser,Spongebob,putzen,Seife,nass,Küche,gelb,Tafel,Meer,weich,saugen,Dusche,Loch,spülen,Pilz,vergessen|Schwan:Vogel,weiß,See,Teich,Hals,elegant,Ballett,Tschaikowsky,Ente,Tier,Wasser,Feder,Gans,Lohengrin,Tanz,schwimmen|Schwanz:Hund,wedeln,Tier,Katze,Fell,Maus,Schweif,Haustier,Fuchs,Eidechse,Pfau,Affe,Körper,Ende,lang,Heck,Ratte,Penis|Schwert:Ritter,Klinge,Waffe,Mittelalter,Kampf,Excalibur,Scheide,Schild,Samurai,Krieg,scharf,Säbel,Degen,Schmied,Artus,Metall,Fantasy,Boot|Segel:Boot,Schiff,Wind,Meer,Mast,Wasser,Jacht,Regatta,Tuch,Matrose,Pirat,Hafen,See,Kapitän,Urlaub,Luft,weiß|Seife:waschen,Hände,Schaum,sauber,Dusche,Bad,Wasser,Hygiene,Duft,glitschig,Blase,Shampoo,Waschbecken,Lauge,Serie,Körper,Haus|Seil:Knoten,klettern,Strick,Tau,Schnur,Zirkus,Lasso,Bergsteiger,Gebirge,Faden,Tauziehen,Schiff,Gondel,Galgen,Sport,Turnhalle,hoch|Sekt:Champagner,anstoßen,Prost,Silvester,Alkohol,Party,Glas,Korken,Getränk,Hochzeit,Flasche,prickeln,Wein,Kohlensäure,Feier,Rotkäppchen,Frankreich,Empfang|Sirene:Alarm,Polizei,Feuerwehr,laut,Krankenwagen,Blaulicht,Notfall,heulen,Warnung,Gefahr,Odysseus,Gesang,Meerjungfrau,Mythologie,Meer,Insel,Nixe|Socke:Fuß,Strumpf,Schuh,Paar,Wolle,Loch,Kleidung,Waschmaschine,stricken,stinken,warm,Winter,Weihnachten,Sandale,Wäsche|Sonne:Sommer,Licht,heiß,gelb,Stern,Himmel,Strand,Wärme,Mond,Strahlen,Weltraum,Tag,Solar,Energie,Brille,Helios,Hitze,Planet|Spiegel:Reflexion,Glas,Bild,Bad,Schneewittchen,Märchen,eitel,Zeitung,Magazin,Nachrichten,Scherben,Pech,Narziss,Licht,Vampir,Friseur,Auto,Politik|Spinne:Netz,Beine,acht,Angst,Spiderman,Tarantel,Insekt,Gift,Ekel,Tier,Halloween,Fliege,Faden,krabbeln,Keller,Witwe,Phobie,Held|Spion:Agent,Bond,Geheimdienst,geheim,Tarnung,CIA,Wanze,Verrat,Kamera,Mission,Code,Krieg,Film,Politik,Tür,Guckloch,Martini,Verbrechen|Spritze:Nadel,Arzt,Impfung,Medizin,Schmerz,Angst,Krankenhaus,spitz,Blut,Injektion,Heroin,Krankenschwester,Pikser,Körper,Feuerwehr,Wasser,Schlauch|Stadion:Fußball,Sport,Fans,Zuschauer,Tribüne,Spiel,Arena,Rasen,Konzert,Tor,Olympia,Flutlicht,Bundesliga,laut,groß,Ticket,Wembley|Stall:Pferd,Kuh,Bauernhof,Tier,Stroh,Heu,Bauer,Schwein,Mist,Krippe,Weihnachten,Esel,Ochse,Scheune,Bethlehem,stinken,Holz,Team|Stamm:Baum,Holz,Rinde,Ast,Wald,Wurzel,Jahresringe,Familie,Volk,Indianer,Häuptling,Sippe,Clan,Kneipe,Gast,Afrika,Natur,Grammatik|Star:Promi,berühmt,Hollywood,Film,Ruhm,Fans,Bühne,Autogramm,Diva,Paparazzi,Stern,Musik,Vogel,Schwarm,Nistkasten,Auge,Medizin,grau|Staub:Dreck,Schmutz,putzen,Sauger,wischen,Wedel,Allergie,niesen,Wüste,Sand,Wolke,grau,Dachboden,alt,Milbe,Pollen,Luft,Weltraum|Stecker:Steckdose,Strom,Kabel,Adapter,Ladegerät,USB,Elektrizität,Technik,Computer,Netz,ziehen,Volt,Stift,Pol,Schuko,Gerät,Lampe,Licht|Stempel:Tinte,Bürokratie,Amt,Siegel,Pass,Formular,Papier,Abdruck,Briefmarke,Post,Datum,Behörde,Arbeit,Kissen,Blüte,Pflanze,Narbe,Fruchtknoten|Stern:Himmel,Nacht,Weltraum,Sonne,leuchten,funkeln,Galaxie,Astronomie,Teleskop,Weihnachten,Bethlehem,Licht,Wunsch,Zacken,Mercedes,Magazin,Star,Astrologie|Steuer:Finanzamt,Geld,Abgabe,Staat,Bürokratie,Politik,Einkommen,zahlen,Hinterziehung,Prozent,Wirtschaft,Lenkrad,Auto,lenken,Ruder,Schiff,Kapitän,Fahrer|Stiefel:Schuh,Leder,Regen,Gummi,Winter,Cowboy,Nikolaus,Kleidung,Italien,Militär,Kater,Märchen,Reiter,Pfütze,Absatz,Sporen,Bier,Soldat|Stier:Bulle,Hörner,Rind,Kuh,Torero,Matador,Spanien,rot,Arena,Tuch,Sternzeichen,Kraft,stark,Wut,Minotaurus,Mythologie,Bauernhof,Rodeo|Stift:Kuli,schreiben,Papier,malen,Mine,Schule,zeichnen,Füller,Spitzer,Kugelschreiber,Farbe,Federmappe,Azubi,Lehrling,Kloster,Kirche,Religion,Nagel|Strand:Meer,Sand,Sommer,Urlaub,Sonne,Muschel,baden,Welle,Insel,Sandburg,Liegestuhl,Bikini,Palme,Küste,Handtuch,Wasser,Sonnenschirm,Volleyball|Strauß:Vogel,Blumen,Afrika,Kopf,Sand,Ei,Rosen,Vase,Hochzeit,Feder,schnell,Emu,Walzer,Wien,Musik,Komponist,Geschenk,Steppe|Strom:Elektrizität,Steckdose,Kabel,Energie,Volt,Ampere,Blitz,Batterie,Kraftwerk,Leitung,Schlag,Licht,Technik,Fluss,Wasser,Rhein,fließen,Menge|Stuhl:sitzen,Tisch,Möbel,Lehne,Sessel,Holz,Bein,Hocker,Küche,Kissen,Thron,Hinrichtung,Tod,Kot,Toilette,Professor,Papst,Bank|Sturm:Wind,Regen,Orkan,Gewitter,Wetter,Hurrikan,Unwetter,Blitz,Böe,Welle,Meer,Gefahr,Angriff,Fußball,Tor,Krieg,Goethe,Federweißer|Sumpf:Moor,Schlamm,Frosch,Matsch,Morast,versinken,Mücke,Krokodil,Shrek,Nebel,Schilf,nass,Wasser,Natur,Gefahr,Alligator,Korruption,Monster|Säge:Holz,Werkzeug,Baum,Zähne,Werkstatt,Tischler,Schreiner,Späne,Blatt,Fuchsschwanz,Wald,Metall,scharf,Motor,fällen,Horror,schnarchen,Handwerker|Säule:Tempel,Antike,Stein,Marmor,Griechenland,Pfeiler,Stütze,Architektur,ionisch,Kapitell,Akropolis,hoch,Plakat,Werbung,Rücken,Körper,Diagramm,Statistik|Tafel:Schule,Kreide,Lehrer,Schwamm,Klasse,Unterricht,schreiben,Schokolade,süß,Tisch,Festessen,Bankett,Essen,Artus,Ritter,Spenden,Armut,Bedürftige|Tanz:Musik,Ballett,Walzer,Disco,Party,Tango,Salsa,Paar,Rhythmus,Ball,Bühne,Ballerina,Schritt,Choreografie,Hochzeit,Breakdance,Bewegung,Theater|Tasche:Rucksack,Tüte,Beutel,Einkauf,Hose,Kleidung,Geld,Portemonnaie,Leder,Koffer,tragen,Henkel,Reißverschluss,Reise,Mode,Känguru,Schlüssel,Handy|Taucher:Meer,Wasser,Sauerstoff,Flasche,Flossen,Maske,Schnorchel,Neopren,tief,Riff,Koralle,Fisch,Hai,Wrack,Schatz,Unterwasser,Vogel,See|Taxi:Fahrer,Auto,gelb,Stadt,Uber,Fahrgast,Fahrt,Trinkgeld,Verkehr,Fahrzeug,Flughafen,Bahnhof,Chauffeur,Taxameter,Zentrale,beige,Nacht,Rechnung|Tee:Tasse,Kanne,heiß,Getränk,Beutel,Kräuter,England,grün,schwarz,Kamille,Pfefferminz,China,Asien,Zeremonie,Zucker,Milch,Erkältung,Golf|Teleskop:Stern,Weltraum,Astronomie,Fernrohr,Linse,Planet,Himmel,Hubble,Galileo,Nacht,Sternwarte,Mond,Wissenschaft,Spiegel,Fernglas,Galaxie,Vergrößerung,Glas|Tempel:Religion,Gott,Buddha,Kirche,Säule,Antike,Priester,beten,Mönch,Heiligtum,Asien,Ägypten,Griechenland,Ruine,Maya,Jerusalem,Pagode,Opfer|Teppich:Boden,Perser,Aladin,rot,fliegen,weich,Wohnzimmer,Staubsauger,Läufer,Muster,Orient,Wolle,Märchen,Hollywood,knüpfen,Haus,Möbel,Stoff|Theater:Bühne,Schauspieler,Vorhang,Drama,Applaus,Publikum,Shakespeare,Kostüm,Rolle,Oper,Kunst,Premiere,Komödie,Film,Maske,Kulisse,Aufregung,Zirkus|Tiger:Raubtier,Streifen,Katze,Dschungel,Indien,Asien,orange,Tier,Zoo,Krallen,Dschungelbuch,Gefahr,brüllen,Jäger,Fell,Panzer,Militär,Golf|Tinte:Füller,Feder,schreiben,Patrone,Fleck,Klecks,Papier,blau,schwarz,Drucker,Tattoo,Oktopus,Krake,Kalligrafie,Schule,Brief,Stempel,Farbe|Tisch:Stuhl,Möbel,Essen,Holz,Platte,Bein,Küche,Teller,Decke,Besteck,Tafel,Mahlzeit,rund,Runde,Pingpong,Kicker,Billard,Schublade|Toast:Brot,Frühstück,Butter,Scheibe,knusprig,Marmelade,Weißbrot,Essen,Sandwich,Käse,Schinken,Hawaii,Küche,Trinkspruch,Rede,Prost,anstoßen,Hochzeit|Tokio:Japan,Asien,Hauptstadt,Stadt,Sushi,Metropole,Anime,Manga,Fuji,Godzilla,Olympia,Neon,Erdbeben,Kaiser,Kirschblüte,Hotel,Musik,Technik|Ton:Klang,Musik,Geräusch,Lautsprecher,laut,Note,Stimme,Melodie,Frequenz,Mikrofon,Lehm,Töpfern,Keramik,Erde,Vase,Ziegel,Kunst,Krug|Tor:Fußball,Treffer,Netz,Pfosten,Latte,Elfmeter,Jubel,Sport,Stadion,Spiel,Tür,Eingang,Burg,Garage,Brandenburger,Berlin,Mittelalter,Narr|Trommel:Musik,Schlagzeug,Instrument,Rhythmus,laut,Stöcke,Fell,Pauke,Takt,Band,Afrika,Marsch,Militär,Bongo,Waschmaschine,Revolver,Grass,Ohr|Tropfen:Wasser,Regen,nass,Träne,Wasserhahn,Flüssigkeit,Tau,Schweiß,Pipette,Medizin,Auge,Nase,Wein,Stein,Höhle,Infusion,Wetter,Getränk|Tunnel:dunkel,Berg,Zug,Licht,Röhre,Auto,Verkehr,Gotthard,Maulwurf,graben,Gebirge,Durchgang,Höhle,Stau,Unterführung,Flucht,Gefängnis,Bahn|Turm:hoch,Burg,Kirche,Glocke,Rapunzel,Schach,Pisa,schief,Babel,Aussicht,Mittelalter,Zinnen,Spitze,Treppe,Wolkenkratzer,Stadt,Märchen,Uhr|Ufo:Alien,Außerirdischer,Weltraum,Untertasse,fliegen,Raumschiff,Roswell,Sichtung,Mars,Invasion,Entführung,Himmel,Licht,grün,Männchen,Verschwörung,Film,unbekannt|Uhr:Zeit,Zeiger,Stunde,Minute,ticken,Wecker,Sekunde,Armband,Handgelenk,Pendel,Ziffernblatt,Kuckuck,Schweiz,Rolex,pünktlich,rund,Schmuck,Turm|Vampir:Dracula,Blut,Zähne,Fledermaus,Knoblauch,Sarg,Nacht,Biss,Halloween,Transsilvanien,Pflock,Graf,untot,Monster,Umhang,Horror,Twilight,Fantasy|Vulkan:Lava,Ausbruch,Magma,Krater,Asche,Berg,Feuer,heiß,Ätna,Vesuv,Pompeji,Island,Rauch,Erde,Gefahr,Erdbeben,Spock,Mythologie|Waage:Gewicht,wiegen,Kilo,Gramm,Gleichgewicht,Küche,Diät,abnehmen,Sternzeichen,Justitia,Gerechtigkeit,Gesetz,Badezimmer,Balance,Libelle,Werkzeug,Körper|Wagen:Auto,Fahrzeug,Räder,Kutsche,Pferd,Verkehr,Waggon,Zug,Anhänger,Kinder,Einkauf,Sternbild,Stern,Bär,Himmel,Mut,riskieren,Gefahr|Wal:Meer,groß,Ozean,Fisch,Säugetier,Fontäne,Delfin,Plankton,Tier,Harpune,Riese,Ahab,Jona,Orca,Gesang,Flosse,blau,Wasser|Wald:Baum,Natur,grün,Förster,Pilz,Reh,Hirsch,Jäger,wandern,Moos,Holz,Laub,Tanne,Lichtung,Märchen,Rotkäppchen,Wolf,dunkel|Wand:Mauer,Haus,Zimmer,Tapete,Farbe,streichen,Bild,Stein,Ziegel,Nagel,Putz,Regal,Fenster,Graffiti,klettern,Berg,Dübel,Bohrer|Wasser:nass,trinken,Meer,Fluss,See,Regen,blau,Durst,flüssig,schwimmen,Getränk,Tropfen,Welle,Eis,Quelle,Dampf,Natur,Element|Wecker:Uhr,klingeln,Morgen,aufwachen,aufstehen,Bett,Schlaf,Zeit,laut,früh,Alarm,Snooze,Nachttisch,müde,Montag,nerven,Handy,Arbeit|Weide:Kuh,Wiese,Gras,Pferd,Schaf,Bauernhof,Zaun,grün,Herde,Alm,Baum,Kätzchen,Korb,flechten,Ufer,Fluss,Natur,Rute|Welle:Meer,Wasser,surfen,Strand,Ozean,Brandung,Wind,Tsunami,Gischt,Radio,Frequenz,Schall,Licht,Physik,Wissenschaft,Locken,Laola,Stadion|Welt:Erde,Globus,Planet,rund,Kontinent,Land,Karte,Atlas,Kugel,Menschheit,Reise,global,international,Universum,Ozean,Zeitung,Krieg,Natur|Wetter:Regen,Sonne,Wind,Wolke,Temperatur,Vorhersage,Gewitter,Schnee,Sturm,Klima,Meteorologe,Himmel,Nachrichten,Hoch,Tief,Luft,kalt,heiß|Wien:Österreich,Hauptstadt,Walzer,Schnitzel,Stephansdom,Prater,Riesenrad,Donau,Sachertorte,Kaffeehaus,Mozart,Sisi,Oper,Kaiser,Habsburger,Musik,Tanz,Adel|Wikinger:Norwegen,Skandinavien,Helm,Hörner,Schiff,Axt,Krieger,Wickie,Odin,Thor,Walhalla,Met,Bart,Mittelalter,Mythologie,Meer,Krieg,Geschichte|Wind:Sturm,Luft,wehen,Wetter,Brise,Böe,Orkan,blasen,Drachen,Segel,Energie,Fahne,Mühle,Rotor,Pusteblume,kalt,Hauch,Herbst|Wolf:Rudel,heulen,Mond,Rotkäppchen,Märchen,Raubtier,Wald,Hund,grau,Tier,Schaf,Fell,Jäger,Isegrim,Zähne,Hackfleisch,Fleisch,Küche|Wolke:Himmel,Regen,weiß,grau,Wetter,Gewitter,Watte,Nebel,flauschig,Schäfchen,Dampf,Luft,Computer,Daten,Speicher,Liebe,Flugzeug,Engel|Wurm:Erde,Apfel,Angel,Köder,Vogel,Garten,Boden,kriechen,Made,Raupe,Schnecke,Kompost,Tier,schleimig,Regen,Computer,Virus,Lied|Wurst:Fleisch,Metzger,Grill,Senf,Brot,Salami,Schwein,Essen,Aufschnitt,Pelle,Darm,Wiener,Hotdog,Ketchup,Deutschland,egal,gleichgültig,Küche|Wüste:Sand,Sahara,heiß,Kamel,Düne,trocken,Oase,Durst,Kaktus,Sonne,Hitze,Karawane,Afrika,Skorpion,Beduine,Ägypten,Luftspiegelung,Gobi|Zahn:Mund,Karies,putzen,beißen,Bürste,weiß,Gebiss,Kiefer,Krone,Plombe,Bohrer,Schmerz,Fee,Hai,Körper,Medizin,Getriebe,Rad|Zange:Werkzeug,Draht,Werkstatt,greifen,Hammer,kneifen,Schraubenzieher,Metall,Nagel,Klemme,Handwerker,Krebs,Hummer,Schere,Grill,Geburt,Küche,Zahnarzt|Zauber:Magie,Hexe,Spruch,Potter,Trick,Magier,Hokuspokus,Abrakadabra,Merlin,Märchen,Fantasy,Fluch,Hut,Kaninchen,Zirkus,Trank,verwandeln,Gandalf|Zaun:Garten,Grenze,Holz,Latte,Draht,Pfosten,Tor,Nachbar,Gatter,Hecke,Mauer,Grundstück,Stacheldraht,Weide,Bauernhof,Strom,streichen,Haus|Zebra:Streifen,schwarz,weiß,Afrika,Pferd,Savanne,Tier,gestreift,Herde,Zoo,Safari,Löwe,Gnu,Steppe,Fußgänger,Straße,Verkehr,Madagascar|Zelle:Gefängnis,Gitter,Häftling,Biologie,Kern,Mikroskop,Teilung,Körper,Membran,Organismus,Wissenschaft,Telefon,Kloster,Mönch,Wabe,Tabelle,Solar,Verbrechen|Zelt:Camping,Schlafsack,Hering,Lager,Plane,Festival,Natur,Zirkus,Urlaub,Pfadfinder,Tipi,Indianer,Stange,Oktoberfest,draußen,Lagerfeuer,Wald,Wüste|Zentrum:Mitte,Stadt,Innenstadt,Mittelpunkt,Kern,Kreis,Punkt,City,Altstadt,Fußgängerzone,Rathaus,Markt,Herz,rund,Politik,Achse,Fokus,Verkehr|Ziege:Bock,Milch,Käse,meckern,Bauernhof,Hörner,Bart,Tier,Heidi,Alm,Berg,Schaf,Gebirge,Wolf,Märchen,Geißlein,Zicke,Weide|Zirkus:Clown,Manege,Zelt,Akrobat,Artist,Löwe,Dompteur,Elefant,Jongleur,Trapez,Seiltänzer,Roncalli,Show,Popcorn,Theater,Chaos,Tier,Kinder|Zitrone:sauer,gelb,Obst,Frucht,Saft,Limonade,Vitamin,Limette,Tee,Schale,Säure,Zitrus,Kuchen,Italien,Presse,Cocktail,Sommer,Getränk|Zoll:Grenze,Kontrolle,Flughafen,Schmuggel,Steuer,Abgabe,Pass,Einfuhr,Gebühr,Reise,Bürokratie,Wirtschaft,Inch,Maß,Länge,Bildschirm,Fernseher,Daumen|Zucker:süß,Kuchen,Kaffee,Würfel,Bonbon,Karies,Diabetes,Insulin,Schokolade,Kalorien,backen,Honig,Rübe,Kristall,Watte,Glukose,weiß,Küche|Zug:Bahn,Gleis,Bahnhof,Lokomotive,Schiene,Waggon,Fahrkarte,Schaffner,Reise,Verspätung,ICE,Abteil,Verkehr,Fahrzeug,Schach,Spiel,Zigarette,Luft|Zunge:Mund,schmecken,Geschmack,lecken,Kuss,Speichel,Muskel,Zähne,Körper,Lippe,Sprache,Piercing,rot,Chamäleon,Frosch,Schlange,Hund,Liebe|Zwerg:Schneewittchen,sieben,klein,Märchen,Garten,Bart,Mütze,Bergwerk,Fantasy,Gimli,Tolkien,Axt,Riese,Kobold,Wichtel,Gold,Pluto,Stern";
+  var WORDS = WORDS_RAW.split(" ").map(function (s) { return { w: s.replace(/·/g, ""), d: s.replace(/·/g, "­") }; });
+
+  /* ================= Zufall ================= */
+  var u32 = new Uint32Array(1);
+  function randInt(n) {
+    if (!(window.crypto && crypto.getRandomValues)) return Math.floor(Math.random() * n);
+    var limit = Math.floor(0x100000000 / n) * n;
+    do { crypto.getRandomValues(u32); } while (u32[0] >= limit);
+    return u32[0] % n;
+  }
+  function hashStr(s) {
+    var h1 = 1779033703, h2 = 3144134277, h3 = 1013904242, h4 = 2773480762;
+    for (var i = 0, k; i < s.length; i++) {
+      k = s.charCodeAt(i);
+      h1 = h2 ^ Math.imul(h1 ^ k, 597399067); h2 = h3 ^ Math.imul(h2 ^ k, 2869860233);
+      h3 = h4 ^ Math.imul(h3 ^ k, 951274213); h4 = h1 ^ Math.imul(h4 ^ k, 2716044179);
+    }
+    h1 = Math.imul(h3 ^ (h1 >>> 18), 597399067); h2 = Math.imul(h4 ^ (h2 >>> 22), 2869860233);
+    h3 = Math.imul(h1 ^ (h3 >>> 17), 951274213); h4 = Math.imul(h2 ^ (h4 >>> 19), 2716044179);
+    return [(h1 ^ h2 ^ h3 ^ h4) >>> 0, (h2 ^ h1) >>> 0, (h3 ^ h1) >>> 0, (h4 ^ h1) >>> 0];
+  }
+  // Seed-Zufall: beide Handys erzeugen aus demselben Code dasselbe Brett.
+  function rngFrom(seed) {
+    var h = hashStr(seed), a = h[0], b = h[1], c = h[2], d = h[3];
+    function r() {
+      a >>>= 0; b >>>= 0; c >>>= 0; d >>>= 0;
+      var t = (a + b) | 0; a = b ^ (b >>> 9); b = (c + (c << 3)) | 0; c = (c << 21) | (c >>> 11);
+      d = (d + 1) | 0; t = (t + d) | 0; c = (c + t) | 0; return (t >>> 0) / 4294967296;
+    }
+    for (var i = 0; i < 15; i++) r();
+    return r;
+  }
+  function shuffleR(a, r) { for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(r() * (i + 1)), t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+
+  /* ================= Spiel-Code ================= */
+  // 5 Zufallszeichen + 1 Zeichen für Einstellungen (Züge, Gegner). Ohne I, O, 0, 1.
+  var ALPH = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  function makeCode(turns, rival) {
+    var s = ""; for (var i = 0; i < 5; i++) s += ALPH[randInt(32)];
+    return s + ALPH[(turns - 6) * 4 + rival];
+  }
+  function parseCode(input) {
+    var s = String(input || "").toUpperCase().replace(/[\s\-·.]/g, "");
+    if (s.length !== 6) return null;
+    for (var i = 0; i < 6; i++) if (ALPH.indexOf(s[i]) < 0) return null;
+    var v = ALPH.indexOf(s[5]), turns = 6 + Math.floor(v / 4), rival = v % 4;
+    if (turns > 12) return null;
+    return { code: s, turns: turns, rival: rival };
+  }
+  function showCode(c) { return c.slice(0, 3) + "-" + c.slice(3); }
+
+  /* ================= Regeln ================= */
+  // Schlüsselverteilung wie im Original: 3 Agenten auf beiden Seiten, 15 insgesamt.
+  var PAIRS = [["G", "G", 3], ["G", "N", 5], ["G", "X", 1], ["N", "G", 5], ["X", "G", 1], ["X", "X", 1], ["X", "N", 1], ["N", "X", 1], ["N", "N", 7]];
+  function deal(code) {
+    var r = rngFrom("duett1|" + code);
+    var idx = shuffleR(WORDS.map(function (_, i) { return i; }), r).slice(0, 25);
+    var types = [];
+    PAIRS.forEach(function (p) { for (var j = 0; j < p[2]; j++) types.push([p[0], p[1]]); });
+    shuffleR(types, r);
+    return {
+      words: idx.map(function (i) { return WORDS[i]; }),
+      A: types.map(function (t) { return t[0]; }),
+      B: types.map(function (t) { return t[1]; }),
+      first: r() < 0.5 ? "A" : "B"
+    };
+  }
+  function other(s) { return s === "A" ? "B" : "A"; }
+  function fill(v) { var a = []; for (var i = 0; i < 25; i++) a.push(v); return a; }
+  function newState(deck, max, first) {
+    return {
+      deck: deck, max: max, found: fill(false), neu: { A: fill(false), B: fill(false) },
+      turn: 1, used: 0, giver: first, phase: "play", guesses: 0, clue: null,
+      turns: [{ k: 1, giver: first, clue: null, g: [], end: null }], sudden: [], lost: null, last: null
+    };
+  }
+  function remaining(S, side) { var n = 0; for (var i = 0; i < 25; i++) if (S.deck[side][i] === "G" && !S.found[i]) n++; return n; }
+  function foundCount(S) { var n = 0; for (var i = 0; i < 25; i++) if (S.found[i]) n++; return n; }
+  // Darf "by" Karte i jetzt raten? Im normalen Zug gilt der Schlüssel des Hinweisgebers,
+  // im plötzlichen Tod der Schlüssel der anderen Person.
+  function canGuess(S, by, i) {
+    if (S.found[i]) return false;
+    if (S.phase === "play") return by === other(S.giver) && !S.neu[S.giver][i];
+    if (S.phase === "sudden") { var key = other(by); return !S.neu[key][i] && remaining(S, key) > 0; }
+    return false;
+  }
+  function endTurn(S, why) {
+    S.turns[S.turns.length - 1].end = why;
+    S.used++; S.guesses = 0; S.clue = null; S.turn++;
+    if (S.used >= S.max) { S.phase = "sudden"; return; }
+    var g = other(S.giver);
+    if (remaining(S, g) === 0) g = S.giver;
+    S.giver = g;
+    S.turns.push({ k: S.turn, giver: g, clue: null, g: [], end: null });
+  }
+  function apply(S, a) {
+    if (S.phase === "won" || S.phase === "lost") return false;
+    if (a.k !== S.turn) return false;
+    var cur = S.turns[S.turns.length - 1];
+    if (a.t === "clue") {
+      if (S.phase !== "play" || a.by !== S.giver || S.clue) return false;
+      S.clue = { w: String(a.w || "").slice(0, 30), n: Math.max(0, Math.min(9, a.n | 0)), tg: a.tg || null, ai: !!a.ai };
+      cur.clue = S.clue; S.last = { t: "clue" }; return true;
+    }
+    if (a.t === "guess") {
+      var i = a.i;
+      if (!(i >= 0 && i < 25) || (a.by !== "A" && a.by !== "B") || !canGuess(S, a.by, i)) return false;
+      var key = S.phase === "play" ? S.giver : other(a.by), r = S.deck[key][i];
+      var rec = { i: i, by: a.by, key: key, r: r };
+      if (S.phase === "sudden") S.sudden.push(rec); else cur.g.push(rec);
+      S.last = { t: "guess", rec: rec };
+      if (r === "G") {
+        S.found[i] = true; S.guesses++;
+        if (foundCount(S) === 15) { S.phase = "won"; if (S.phase === "play") cur.end = "won"; return true; }
+        if (S.phase === "play" && remaining(S, S.giver) === 0) endTurn(S, "done");
+        return true;
+      }
+      if (r === "X") { S.phase = "lost"; S.lost = rec; cur.end = cur.end || "lost"; return true; }
+      S.neu[key][i] = true;
+      if (S.phase === "sudden") { S.phase = "lost"; S.lost = rec; return true; }
+      endTurn(S, "neutral"); return true;
+    }
+    if (a.t === "end") {
+      if (S.phase !== "play" || a.by !== other(S.giver) || S.guesses < 1) return false;
+      S.last = { t: "end" }; endTurn(S, "stop"); return true;
+    }
+    return false;
+  }
+  function effective(log) {
+    var undone = {};
+    log.forEach(function (a) { if (a.t === "undo") undone[a.target] = 1; });
+    return log.filter(function (a) { return a.t !== "undo" && !undone[a.id]; });
+  }
+  function fold(game) {
+    var deck = deal(game.code), first = game.first || deck.first;
+    var S = newState(deck, game.turns, first);
+    S.lastId = null;
+    effective(game.log).forEach(function (a) { if (apply(S, a)) S.lastId = a.id; });
+    return S;
+  }
+
+  /* ================= KI: Assoziationen ================= */
+  var AI = (function () {
+    var LW = {}, VOC = {};
+    function norm(s) { return String(s).trim().toLowerCase().replace(/ä/g, "ae").replace(/ö/g, "oe").replace(/ü/g, "ue").replace(/ß/g, "ss"); }
+    function strength(r) { return r < 5 ? 1 - 0.04 * r : Math.max(0.35, 0.75 - 0.025 * (r - 5)); }
+    ASSOC_RAW.split("|").forEach(function (entry) {
+      var p = entry.split(":"), w = p[0], wn = norm(w), t = {};
+      (p[1] || "").split(",").forEach(function (term, r) {
+        var tn = norm(term); if (!tn || tn === wn || t[tn]) return;
+        t[tn] = strength(r); if (!VOC[tn]) VOC[tn] = term;
+      });
+      LW[wn] = { w: w, t: t };
+      VOC[wn] = w;
+    });
+    var VOCKEYS = Object.keys(VOC).sort();
+    var SUFFIX = ["en", "n", "e", "s", "er", "es", "in", "innen"];
+
+    // Freie Eingabe in einen bekannten Begriff übersetzen. Gewicht < 1 bei unsicherer Zuordnung.
+    function resolve(input) {
+      var n = norm(input);
+      if (!n) return null;
+      if (VOC[n]) return { k: n, wt: 1 };
+      var i, s;
+      for (i = 0; i < SUFFIX.length; i++) {
+        s = SUFFIX[i];
+        if (n.length > s.length + 2 && n.slice(-s.length) === s && VOC[n.slice(0, -s.length)]) return { k: n.slice(0, -s.length), wt: 0.95 };
+        if (VOC[n + s]) return { k: n + s, wt: 0.95 };
+      }
+      // Zusammengesetzte Wörter: hinterer oder vorderer Teil
+      var best = null;
+      for (i = 0; i < VOCKEYS.length; i++) {
+        var k = VOCKEYS[i];
+        if (k.length < 4 || k.length >= n.length) continue;
+        if (n.slice(-k.length) === k && (!best || k.length > best.k.length)) best = { k: k, wt: 0.75 };
+        else if (n.indexOf(k) === 0 && (!best || k.length > best.k.length + 1)) best = { k: k, wt: 0.6 };
+      }
+      return best;
+    }
+    function score(cn, wn) {
+      var W = LW[wn]; if (!W) return 0;
+      var s = W.t[cn] || 0, C = LW[cn];
+      if (C) {
+        s += 0.9 * (C.t[wn] || 0);
+        var ov = 0; for (var t in C.t) if (W.t[t]) ov += C.t[t] * W.t[t];
+        s += Math.min(0.4, 0.15 * ov);
+      }
+      return s;
+    }
+    function illegal(cn, bn) {
+      for (var i = 0; i < bn.length; i++) {
+        var b = bn[i];
+        if (b === cn || (b.length >= 3 && cn.indexOf(b) >= 0) || (cn.length >= 3 && b.indexOf(cn) >= 0)) return true;
+      }
+      return false;
+    }
+    function boardNorms(S) { return S.deck.words.map(function (x) { return norm(x.w); }); }
+    function usedClues(S) {
+      var u = {}; S.turns.forEach(function (t) { if (t.clue && t.clue.w) u[norm(t.clue.w)] = 1; }); return u;
+    }
+    function suggest(prefix, S) {
+      var n = norm(prefix); if (n.length < 2) return [];
+      var bn = boardNorms(S), out = [];
+      for (var i = 0; i < VOCKEYS.length && out.length < 8; i++) {
+        var k = VOCKEYS[i];
+        if (k.indexOf(n) === 0 && !illegal(k, bn)) out.push(VOC[k]);
+      }
+      return out;
+    }
+
+    // Hinweis für die Seite "side" suchen. opts: maxN, noise, rng
+    function makeClue(S, side, opts) {
+      opts = opts || {};
+      var maxN = opts.maxN || 3, noise = opts.noise || 0, rng = opts.rng || Math.random;
+      var key = S.deck[side], bn = boardNorms(S), used = usedClues(S);
+      var avail = [], targets = [];
+      for (var i = 0; i < 25; i++) if (!S.found[i] && !S.neu[side][i]) { avail.push(i); if (key[i] === "G") targets.push(i); }
+      if (!targets.length) return null;
+      var cand = {};
+      targets.forEach(function (i) { var W = LW[bn[i]]; if (W) for (var t in W.t) cand[t] = 1; });
+      Object.keys(LW).forEach(function (k) {
+        var W = LW[k]; for (var j = 0; j < targets.length; j++) if (W.t[bn[targets[j]]]) { cand[k] = 1; break; }
+      });
+      var best = null;
+      Object.keys(cand).forEach(function (c) {
+        if (used[c] || illegal(c, bn)) return;
+        var sc = avail.map(function (i) { return { i: i, s: score(c, bn[i]) + (noise ? (rng() - 0.5) * noise : 0) }; });
+        sc.sort(function (a, b) { return b.s - a.s; });
+        var tg = [], ss = [], j;
+        for (j = 0; j < sc.length; j++) {
+          if (sc[j].s < 0.3) break;
+          if (key[sc[j].i] !== "G") break;
+          tg.push(sc[j].i); ss.push(sc[j].s);
+          if (tg.length >= maxN) break;
+        }
+        if (!tg.length) return;
+        var dX = 0, dN = 0;
+        sc.forEach(function (e) {
+          if (tg.indexOf(e.i) >= 0) return;
+          if (key[e.i] === "X") dX = Math.max(dX, e.s); else if (key[e.i] === "N") dN = Math.max(dN, e.s);
+        });
+        while (tg.length && (ss[ss.length - 1] - dX < 0.3)) { tg.pop(); ss.pop(); }
+        if (!tg.length) return;
+        var minT = ss[ss.length - 1];
+        var val = tg.length + 0.35 * minT - 0.6 * Math.max(0, dN - (minT - 0.15)) - 0.4 * Math.max(0, dX - 0.3) + (noise ? rng() * 0.05 : rng() * 0.01);
+        if (!best || val > best.val) best = { c: c, tg: tg, val: val };
+      });
+      if (!best) {
+        // Notlösung: irgendein erlaubter Begriff zu einem Zielwort
+        for (var q = 0; q < targets.length && !best; q++) {
+          var W = LW[bn[targets[q]]]; if (!W) continue;
+          for (var t2 in W.t) if (!used[t2] && !illegal(t2, bn)) { best = { c: t2, tg: [targets[q]] }; break; }
+        }
+        if (!best) return { w: "Spion", n: 1, tg: [S.deck.words[targets[0]].w] };
+      }
+      return { w: VOC[best.c] || best.c, n: best.tg.length, tg: best.tg.map(function (i) { return S.deck.words[i].w; }) };
+    }
+
+    function rankFor(S, clueWord, cands, noise, rng) {
+      var res = resolve(clueWord); if (!res) return null;
+      var bn = boardNorms(S);
+      return cands.map(function (i) { return { i: i, s: score(res.k, bn[i]) * res.wt + (noise ? (rng() - 0.5) * noise : 0) }; })
+        .sort(function (a, b) { return b.s - a.s; });
+    }
+    // Ältere Hinweise, zu denen noch Agenten fehlen
+    function pendingClues(S, giver) {
+      var out = [];
+      S.turns.forEach(function (t) {
+        if (t.giver !== giver || !t.clue || !t.clue.w || t === S.turns[S.turns.length - 1]) return;
+        var hits = t.g.filter(function (g) { return g.r === "G"; }).length;
+        if (t.clue.n - hits > 0) out.push(t.clue.w);
+      });
+      return out;
+    }
+    // Nächster Tipp der KI als Ratende (side). Liefert {i} oder {stop:true}.
+    function nextGuess(S, side, opts) {
+      opts = opts || {};
+      var noise = opts.noise || 0, rng = opts.rng || Math.random;
+      var giver = S.phase === "play" ? S.giver : other(side), cands = [];
+      for (var i = 0; i < 25; i++) if (canGuess(S, side, i)) cands.push(i);
+      if (!cands.length) return { stop: true };
+      var done = S.guesses;
+      if (S.phase === "play" && S.clue && S.clue.w) {
+        var r = rankFor(S, S.clue.w, cands, noise, rng);
+        if (r && r.length) {
+          if (done === 0) return { i: r[0].i, s: r[0].s };
+          if (done < S.clue.n && r[0].s >= (opts.thr || 0.4)) return { i: r[0].i, s: r[0].s };
+        }
+        if (done === 0) return { i: cands[Math.floor(rng() * cands.length)], s: 0 };
+      } else if (S.phase === "play" && done === 0) {
+        return { i: cands[Math.floor(rng() * cands.length)], s: 0 };
+      }
+      // Bonus: ein älterer Hinweis, der noch offen ist
+      var best = null;
+      pendingClues(S, giver).forEach(function (w) {
+        var rr = rankFor(S, w, cands, noise, rng);
+        if (rr && rr.length && (!best || rr[0].s > best.s)) best = rr[0];
+      });
+      var bonusThr = S.phase === "sudden" ? (opts.forced ? 0 : 0.6) : 0.8;
+      if (best && best.s >= bonusThr && (S.phase === "sudden" || !opts.noBonus)) return { i: best.i, s: best.s };
+      if (S.phase === "sudden" && opts.forced) return { i: cands[Math.floor(rng() * cands.length)], s: 0 };
+      return { stop: true };
+    }
+    return { score: score, norm: norm, resolve: resolve, illegal: illegal, boardNorms: boardNorms, suggest: suggest, makeClue: makeClue, nextGuess: nextGuess, known: function (w) { return !!resolve(w); } };
+  })();
+
+  /* ================= Virtueller Gegner ================= */
+  var LEVELS = {
+    1: { name: "Leicht", maxN: 2, gNoise: 0.1, noise: 0.45, stop: 0.3 },
+    2: { name: "Mittel", maxN: 3, gNoise: 0.05, noise: 0.25, stop: 0.12 },
+    3: { name: "Stark", maxN: 4, gNoise: 0.02, noise: 0.1, stop: 0.04 }
+  };
+  // Ein KI-Team spielt dasselbe Brett vorab durch. progress[z] = gefundene Agenten nach Zug z.
+  function simulateRival(code, turns, level) {
+    var P = LEVELS[level], deck = deal(code), S = newState(deck, turns, deck.first);
+    var r = rngFrom("rival|" + code + "|" + level), progress = [0], guard = 0;
+    while (S.phase === "play" && guard++ < 60) {
+      var giver = S.giver, gs = other(giver), k = S.turn;
+      var clue = AI.makeClue(S, giver, { maxN: P.maxN, noise: P.gNoise, rng: r });
+      apply(S, { t: "clue", by: giver, k: k, w: clue ? clue.w : "", n: clue ? clue.n : 1 });
+      var inner = 0;
+      while (S.phase === "play" && S.turn === k && inner++ < 30) {
+        var g = AI.nextGuess(S, gs, { noise: P.noise, rng: r, noBonus: level < 3 });
+        if (g.stop || (S.guesses > 0 && r() < P.stop)) { if (!apply(S, { t: "end", by: gs, k: k })) break; }
+        else apply(S, { t: "guess", by: gs, k: k, i: g.i });
+      }
+      progress.push(foundCount(S));
+    }
+    if (S.phase === "sudden") {
+      var tries = 0;
+      while (S.phase === "sudden" && tries++ < 15) {
+        var moved = false;
+        ["A", "B"].forEach(function (side) {
+          if (S.phase !== "sudden") return;
+          var g2 = AI.nextGuess(S, side, { rng: r });
+          if (!g2.stop && g2.s >= 0.75) { apply(S, { t: "guess", by: side, k: S.turn, i: g2.i }); moved = true; }
+        });
+        if (!moved) break;
+      }
+      if (S.phase === "sudden") S.phase = "lost";
+    }
+    return { progress: progress, won: S.phase === "won", turns: S.used, found: foundCount(S), boom: !!(S.lost && S.lost.r === "X") };
+  }
+
+  /* ================= Speicher ================= */
+  var KEY = "codenames-duett-v1";
+  var store = { prefs: { mode: "duo", me: "", partner: "", turns: 9, rival: false, level: 2, online: true }, game: null, cid: "" };
+  try {
+    var saved = JSON.parse(localStorage.getItem(KEY));
+    if (saved && saved.v === 1) { Object.assign(store.prefs, saved.prefs || {}); store.game = saved.game || null; store.cid = saved.cid || ""; }
+  } catch (e) {}
+  if (!store.cid) { store.cid = ""; for (var ci = 0; ci < 8; ci++) store.cid += ALPH[randInt(32)]; }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify({ v: 1, prefs: store.prefs, game: store.game, cid: store.cid })); } catch (e) {} }
+  var seq = 0;
+  function newId() { seq++; return store.cid + "." + Date.now().toString(36) + "." + seq; }
+
+  /* ================= Zustand der Oberfläche ================= */
+  var G = null, S = null, rival = null;
+  var sel = null, viewer = null, showKey = true, suddenAs = null, aiTimer = null, aiSays = "";
+  var revealAll = false, lastFlash = -1;
+
+  function names() {
+    if (!G) return { A: "A", B: "B" };
+    return { A: G.names.A || "A", B: G.names.B || "B" };
+  }
+  function mySide() { return G.mode === "duo" ? G.me : (G.mode === "ai" ? "A" : null); }
+
+  function startGame(g) {
+    G = g; store.game = g; sel = null; viewer = null; suddenAs = null; revealAll = false; aiSays = "";
+    showKey = true; rival = null;
+    if (G.rival) rival = simulateRival(G.code, G.turns, G.rival);
+    save(); refresh();
+    if (G.mode === "duo") Relay.start();
+  }
+
+  /* ---------- Aktionen ---------- */
+  function act(a, opts) {
+    opts = opts || {};
+    a.id = a.id || newId();
+    if (a.k == null) a.k = S.turn;
+    var T = fold(G);
+    if (a.t === "undo") {
+      if (!a.target || G.log.some(function (x) { return x.id === a.id; })) return false;
+      G.log.push(a);
+    } else {
+      if (!apply(T, a)) return false;
+      G.log.push(a);
+    }
+    save();
+    if (G.mode === "duo" && !opts.remote) Relay.send({ a: a });
+    var before = S;
+    refresh();
+    feedback(a, before);
+    return true;
+  }
+  function feedback(a, before) {
+    if (a.t === "guess" && S.last && S.last.t === "guess" && S.last.rec.i === a.i) {
+      var rec = S.last.rec, w = S.deck.words[rec.i].w, n = names();
+      lastFlash = rec.i;
+      var whose = n[rec.key];
+      if (rec.r === "G") toast(w + ": Agent gefunden", "G");
+      else if (rec.r === "X") toast(w + ": Attentäter", "X");
+      else toast(w + ": Passant bei " + whose + (before && before.phase === "sudden" ? "" : ". Zug vorbei"), "N");
+      vibrate(rec.r === "G" ? 20 : rec.r === "X" ? [80, 60, 120] : 40);
+    } else if (a.t === "end") toast("Zug beendet", "N");
+  }
+  function vibrate(p) { try { if (navigator.vibrate) navigator.vibrate(p); } catch (e) {} }
+  var toastTimer = null;
+  function toast(msg, cls) {
+    var t = $("#toast"); t.textContent = msg; t.className = "toast show " + (cls || "");
+    clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.className = "toast " + (cls || ""); }, 2200);
+  }
+
+  // Empfangene Aktion vom anderen Handy. Aktionen für spätere Züge warten, bis der Zug da ist.
+  var pending = [];
+  function receive(a) {
+    if (!G || !a || !a.id) return;
+    if (G.log.some(function (x) { return x.id === a.id; })) return;
+    pending.push(a);
+    drain();
+  }
+  function drain() {
+    var changed = true, guard = 0;
+    while (changed && guard++ < 50) {
+      changed = false;
+      for (var i = 0; i < pending.length; i++) {
+        var a = pending[i];
+        if (G.log.some(function (x) { return x.id === a.id; })) { pending.splice(i, 1); i--; continue; }
+        if (a.t !== "undo" && a.k > S.turn) continue;
+        pending.splice(i, 1); i--;
+        act(a, { remote: true });
+        changed = true;
+      }
+    }
+  }
+
+  function undo() {
+    if (!S.lastId) { toast("Nichts zum Zurücknehmen", "N"); return; }
+    clearAI();
+    act({ t: "undo", target: S.lastId, k: 0 });
+    toast("Letzter Schritt zurückgenommen", "N");
+  }
+
+  /* ================= KI-Partner ================= */
+  function clearAI() { if (aiTimer) { clearTimeout(aiTimer); aiTimer = null; } }
+  function maybeAI() {
+    clearAI();
+    if (!G || G.mode !== "ai" || S.phase !== "play") return;
+    var aiSide = "B";
+    if (S.giver === aiSide && !S.clue) {
+      aiSays = "überlegt sich einen Hinweis";
+      aiTimer = setTimeout(function () {
+        aiTimer = null;
+        var r = rngFrom("ai|" + G.code + "|" + S.turn);
+        var c = AI.makeClue(S, aiSide, { maxN: 4, rng: r });
+        if (c) act({ t: "clue", by: aiSide, w: c.w, n: c.n, tg: c.tg, ai: true });
+      }, 1300);
+    } else if (S.giver !== aiSide && S.clue) {
+      aiTimer = setTimeout(function () {
+        aiTimer = null;
+        var r = rngFrom("aig|" + G.code + "|" + S.turn + "|" + S.guesses);
+        var g = AI.nextGuess(S, aiSide, { rng: r });
+        if (g.stop) { aiSays = "hört auf"; act({ t: "end", by: aiSide }); }
+        else { aiSays = "rät " + S.deck.words[g.i].w; act({ t: "guess", by: aiSide, i: g.i }); }
+      }, S.guesses === 0 ? 1400 : 1700);
+    }
+  }
+
+  /* ================= Online: Relay über ntfy.sh ================= */
+  // Züge werden mit dem Spiel-Code verschlüsselt (AES-GCM) und über einen öffentlichen Kanal geschickt.
+  // Der Kanalname ist ein Hash des Codes. Ohne Internet läuft alles lokal weiter.
+  var Relay = (function () {
+    var params = new URLSearchParams(location.search);
+    var BASE = params.get("relay") || "https://ntfy.sh";
+    var es = null, key = null, topic = null, forCode = null, state = "off", retry = 0, retryTimer = null;
+    var lastMsgId = null, partnerSeen = false, partnerName = "", partnerSide = null, acked = {}, flushTimer = null;
+    var te = new TextEncoder(), td = new TextDecoder();
+    function b64(buf) { var s = "", b = new Uint8Array(buf); for (var i = 0; i < b.length; i++) s += String.fromCharCode(b[i]); return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); }
+    function unb64(s) { s = s.replace(/-/g, "+").replace(/_/g, "/"); while (s.length % 4) s += "="; var bin = atob(s), b = new Uint8Array(bin.length); for (var i = 0; i < bin.length; i++) b[i] = bin.charCodeAt(i); return b; }
+    function available() { return !!(window.crypto && crypto.subtle && window.EventSource && window.fetch); }
+    function setState(s) { state = s; renderNet(); }
+    function prepare(code) {
+      if (forCode === code && key) return Promise.resolve();
+      return crypto.subtle.digest("SHA-256", te.encode("duett-kanal|" + code)).then(function (h) {
+        topic = "duett_" + Array.prototype.map.call(new Uint8Array(h).slice(0, 12), function (x) { return ("0" + x.toString(16)).slice(-2); }).join("");
+        return crypto.subtle.importKey("raw", te.encode(code), "PBKDF2", false, ["deriveKey"]);
+      }).then(function (base) {
+        return crypto.subtle.deriveKey({ name: "PBKDF2", salt: te.encode("codenames-duett"), iterations: 60000, hash: "SHA-256" }, base, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
+      }).then(function (k) { key = k; forCode = code; });
+    }
+    function encrypt(obj) {
+      var iv = crypto.getRandomValues(new Uint8Array(12));
+      return crypto.subtle.encrypt({ name: "AES-GCM", iv: iv }, key, te.encode(JSON.stringify(obj))).then(function (ct) {
+        var all = new Uint8Array(12 + ct.byteLength); all.set(iv, 0); all.set(new Uint8Array(ct), 12);
+        return "d1." + b64(all);
+      });
+    }
+    function decrypt(text) {
+      if (typeof text !== "string" || text.indexOf("d1.") !== 0) return Promise.reject();
+      var all = unb64(text.slice(3));
+      return crypto.subtle.decrypt({ name: "AES-GCM", iv: all.slice(0, 12) }, key, all.slice(12)).then(function (pt) { return JSON.parse(td.decode(pt)); });
+    }
+    function start() {
+      stop();
+      if (!G || G.mode !== "duo" || !G.online) { setState("off"); return; }
+      if (!available()) { setState("unsupported"); return; }
+      partnerSeen = false;
+      setState("connecting");
+      prepare(G.code).then(connect, function () { setState("unsupported"); });
+    }
+    function connect() {
+      if (!G || G.mode !== "duo" || !G.online || forCode !== G.code) return;
+      if (es) { es.close(); es = null; }
+      var since = lastMsgId || "all";
+      es = new EventSource(BASE + "/" + topic + "/sse?since=" + encodeURIComponent(since));
+      es.onopen = function () {
+        retry = 0; setState("live");
+        send({ hello: { name: G.names[G.me] || "", ask: true } });
+        clearTimeout(flushTimer); flushTimer = setTimeout(flush, 2500);
+      };
+      es.onmessage = function (e) {
+        var m; try { m = JSON.parse(e.data); } catch (err) { return; }
+        if (!m || (m.event && m.event !== "message") || typeof m.message !== "string") return;
+        if (m.id) lastMsgId = m.id;
+        var fresh = !m.time || m.time * 1000 > Date.now() - 15 * 60 * 1000;
+        decrypt(m.message).then(function (p) { handle(p, fresh); }, function () {});
+      };
+      es.onerror = function () {
+        if (es) { es.close(); es = null; }
+        setState(navigator.onLine === false ? "offline" : "connecting");
+        clearTimeout(retryTimer);
+        retry = Math.min(retry + 1, 6);
+        retryTimer = setTimeout(connect, 1500 * retry);
+      };
+    }
+    function stop() {
+      clearTimeout(retryTimer); clearTimeout(flushTimer);
+      if (es) { es.close(); es = null; }
+      lastMsgId = null; acked = {};
+    }
+    function handle(p, fresh) {
+      if (!p || typeof p !== "object" || !G) return;
+      if (p.from === store.cid) { if (p.a && p.a.id) acked[p.a.id] = 1; return; }
+      if (p.side && p.side === G.me) { toast("Beide Handys haben Seite " + G.me + " gewählt", "X"); return; }
+      if (fresh) partnerSeen = true;
+      partnerSide = p.side || null;
+      if (p.hello) {
+        var nm = String(p.hello.name || "").slice(0, 14);
+        if (nm && G.names[other(G.me)] !== nm) { G.names[other(G.me)] = nm; save(); }
+        partnerName = nm;
+        if (p.hello.ask && fresh) send({ hello: { name: G.names[G.me] || "", ask: false } });
+        refresh();
+      }
+      if (p.a && typeof p.a === "object") receive(sanitize(p.a));
+      renderNet();
+    }
+    function sanitize(a) {
+      var o = { id: String(a.id || "").slice(0, 60), t: String(a.t || ""), by: a.by === "A" || a.by === "B" ? a.by : null, k: a.k | 0 };
+      if (a.t === "guess") o.i = a.i | 0;
+      if (a.t === "clue") { o.w = String(a.w || "").slice(0, 30); o.n = a.n | 0; }
+      if (a.t === "undo") o.target = String(a.target || "").slice(0, 60);
+      return o;
+    }
+    function send(obj) {
+      if (!key || !G || G.mode !== "duo" || !G.online) return;
+      obj.from = store.cid; obj.side = G.me; obj.v = 1;
+      encrypt(obj).then(function (body) {
+        return fetch(BASE + "/" + topic, { method: "POST", body: body });
+      }).catch(function () {});
+    }
+    // Eigene Züge, die noch nicht bestätigt zurückkamen, erneut senden (z. B. nach Funkloch).
+    function flush() {
+      if (!G || state !== "live") return;
+      var mine = G.log.filter(function (a) { return a.id.indexOf(store.cid + ".") === 0 && !acked[a.id]; });
+      mine.slice(-40).forEach(function (a) { send({ a: a }); });
+    }
+    window.addEventListener("online", function () { if (G && G.mode === "duo" && G.online && state !== "live") { retry = 0; connect(); } });
+    return {
+      start: start, stop: stop, send: function (o) { send(o); },
+      state: function () { return state; },
+      live: function () { return state === "live" && partnerSeen; },
+      partnerSeen: function () { return partnerSeen; }
+    };
+  })();
+
+  /* ================= Darstellung ================= */
+  function refresh() {
+    if (!G) { $("#game").hidden = true; $("#setup").hidden = false; renderSetup(); return; }
+    S = fold(G);
+    $("#setup").hidden = true; $("#game").hidden = false;
+    if (S.phase !== "sudden") suddenAs = null;
+    render();
+    maybeAI();
+    if (pending.length) setTimeout(drain, 0);
+  }
+
+  // Was darf dieses Gerät gerade? keySide: welcher Schlüssel sichtbar; tapAs: als wer getippt wird.
+  function viewState() {
+    var n = names(), v = { keySide: null, tapAs: null, need: null, panel: "", mirror: false };
+    var me = mySide();
+    if (S.phase === "won" || S.phase === "lost") { v.panel = "end"; v.keySide = me; return v; }
+    if (G.mode === "ai") {
+      v.keySide = showKey ? "A" : null;
+      if (S.phase === "sudden") { v.tapAs = "A"; v.panel = "sudden-ai"; }
+      else if (S.giver === "A") { v.panel = S.clue ? "ai-guess" : "clue"; }
+      else { v.panel = S.clue ? "guess" : "ai-clue"; if (S.clue) v.tapAs = "A"; }
+      return v;
+    }
+    if (G.mode === "local") {
+      if (S.phase === "sudden") { v.panel = "sudden-local"; v.tapAs = suddenAs; return v; }
+      if (!S.clue) { v.need = S.giver; v.keySide = S.giver; v.panel = "clue"; }
+      else { v.need = other(S.giver); v.tapAs = other(S.giver); v.panel = "guess"; }
+      return v;
+    }
+    // duo
+    v.keySide = showKey ? me : null;
+    if (S.phase === "sudden") {
+      v.panel = "sudden-duo";
+      v.tapAs = suddenAs || me;
+      if (Relay.live() && v.tapAs !== me) v.tapAs = me;
+      return v;
+    }
+    if (S.giver === me) {
+      if (!Relay.live()) { v.tapAs = other(me); v.mirror = true; }
+      v.panel = S.clue || (v.mirror && (sel != null || S.guesses > 0)) ? "watch" : "clue";
+    } else { v.panel = "guess"; v.tapAs = me; }
+    return v;
+  }
+
+  function render() {
+    var n = names(), V = viewState();
+    // Kopf
+    var modeTxt = G.mode === "ai" ? "Mit KI-Partner" : G.mode === "local" ? "Ein Handy" : "Zwei Handys · Seite " + G.me;
+    $("#mode-label").textContent = modeTxt;
+    var tk = $("#tokens"); tk.innerHTML = "";
+    tk.className = "tokens" + (S.phase === "sudden" ? " sudden" : "");
+    for (var t = 0; t < G.turns; t++) { var i = document.createElement("i"); if (t < S.used) i.className = "used"; tk.appendChild(i); }
+    var left = Math.max(0, G.turns - S.used);
+    $("#turn-txt").innerHTML = S.phase === "sudden" ? "<b>Plötzlicher Tod</b>" : (S.phase === "play" ? "Zug <b>" + S.turn + "</b> von " + G.turns : "<b>" + S.used + "</b> Züge");
+    $("#turn-txt").setAttribute("aria-label", S.phase === "sudden" ? "Plötzlicher Tod" : left + " Züge übrig");
+    $("#found-txt").innerHTML = "Agenten <b>" + foundCount(S) + "</b>/15";
+    var rt = $("#rival-txt");
+    if (rival) {
+      rt.hidden = false;
+      var p = rival.progress, at = Math.min(S.used, p.length - 1), done = S.used >= p.length - 1 || S.phase === "won" || S.phase === "lost";
+      if (done && rival.won) rt.innerHTML = "Gegner <b>fertig</b> in " + rival.turns;
+      else if (done && !rival.won) rt.innerHTML = "Gegner <b>gescheitert</b> · " + rival.found + "/15";
+      else rt.innerHTML = "Gegner <b>" + p[at] + "</b>/15";
+    } else rt.hidden = true;
+    renderNet();
+
+    // Banner
+    var eye = "", main = "", sub = "", cls = "main", bcls = "banner";
+    if (S.phase === "sudden") {
+      bcls += " sudden"; eye = "Keine Züge mehr"; main = "Plötzlicher Tod"; cls += " small";
+      sub = "Keine Hinweise mehr. Tippt Agenten der anderen Seite an. Jeder Fehler beendet das Spiel.";
+    } else if (S.phase === "won") {
+      eye = "Geschafft"; main = "Alle 15 Agenten gefunden"; cls += " small";
+    } else if (S.phase === "lost") {
+      eye = "Verloren"; main = S.lost && S.lost.r === "X" ? "Attentäter getroffen" : "Fehler im plötzlichen Tod"; cls += " small";
+    } else if (S.clue) {
+      eye = G.mode === "ai" ? (S.giver === "B" ? "Hinweis der KI" : "Dein Hinweis für die KI") : "Hinweis von " + n[S.giver] + " für " + n[other(S.giver)];
+      main = (S.clue.w ? S.clue.w : "Laut gesagt") + " · " + S.clue.n; cls += " clue";
+      var g = S.guesses;
+      sub = g ? g + (g === 1 ? " Treffer" : " Treffer") + " in diesem Zug" : "Noch kein Tipp";
+    } else {
+      eye = "Zug " + S.turn + " · " + n[S.giver] + " gibt den Hinweis";
+      main = n[S.giver] + " denkt nach"; cls += " small";
+      if (G.mode === "duo" && S.giver === G.me) main = "Dein Hinweis";
+      if (G.mode === "duo" && S.giver !== G.me) sub = Relay.live() ? "Der Hinweis erscheint hier." : "Hör zu und tippe danach deine Tipps an.";
+      if (G.mode === "local") main = "Hinweis von " + n[S.giver];
+      if (G.mode === "ai" && S.giver === "A") main = "Dein Hinweis";
+    }
+    $("#banner").className = bcls;
+    $("#b-eye").textContent = eye;
+    var bm = $("#b-main"); bm.className = cls; bm.textContent = main;
+    $("#b-sub").textContent = sub;
+
+    renderBoard(V);
+    renderPanel(V);
+    renderHandoff(V);
+    if ((S.phase === "won" || S.phase === "lost") && !endShown) { endShown = true; setTimeout(openEnd, 900); }
+    if (S.phase !== "won" && S.phase !== "lost") endShown = false;
+  }
+  var endShown = false;
+
+  function renderNet() {
+    var el = $("#net-txt"); if (!el) return;
+    if (!G || G.mode !== "duo") { el.hidden = true; return; }
+    el.hidden = false;
+    var st = Relay.state(), n = names(), p = n[other(G.me)];
+    var txt = st === "off" ? "Offline-Modus" : st === "unsupported" ? "Online nicht möglich" : st === "connecting" ? "Verbinde …" : st === "offline" ? "Kein Netz" : (Relay.partnerSeen() ? "Live mit " + p : "Online · warte auf " + p);
+    el.innerHTML = "<b>" + esc(txt) + "</b>" + (Relay.live() ? "" : " · Stand " + syncCode()) + " · Code " + esc(showCode(G.code));
+  }
+
+  function renderBoard(V) {
+    var b = $("#board"), n = names();
+    var reveal = revealAll && (S.phase === "won" || S.phase === "lost");
+    var html = "";
+    for (var i = 0; i < 25; i++) {
+      var w = S.deck.words[i], c = "card", marks = "", label = w.w;
+      var tappable = !!V.tapAs && canGuess(S, V.tapAs, i) && !(G.mode === "local" && V.need && viewer !== V.need);
+      if (S.found[i]) { c += " found"; label += ", Agent gefunden"; }
+      else if (S.lost && S.lost.i === i && S.lost.r === "X") { c += " boom"; label += ", Attentäter"; }
+      else if (S.neu.A[i] && S.neu.B[i]) { c += " neutral-both"; label += ", Passant für beide"; }
+      if (reveal) {
+        c += " rv"; marks += km(S.deck.A[i], "", "A") + km(S.deck.B[i], " r", "B");
+      } else if (V.keySide && !S.found[i]) {
+        var kt = S.deck[V.keySide][i];
+        if (kt === "G") { c += " k-G"; marks += '<span class="km G" aria-hidden="true">●</span>'; label += ", auf deinem Schlüssel Agent"; }
+        if (kt === "X") { c += " k-X"; marks += '<span class="km X" aria-hidden="true">✕</span>'; label += ", auf deinem Schlüssel Attentäter"; }
+      }
+      if (!S.found[i] && !(S.neu.A[i] && S.neu.B[i])) {
+        if (S.neu.A[i]) { marks += '<span class="nm l" aria-hidden="true">' + esc(initial(n.A)) + "</span>"; label += ", Passant bei " + n.A; }
+        if (S.neu.B[i]) { marks += '<span class="nm r" aria-hidden="true">' + esc(initial(n.B)) + "</span>"; label += ", Passant bei " + n.B; }
+      }
+      if (V.tapAs && !tappable && !S.found[i] && S.phase !== "won" && S.phase !== "lost") c += " off";
+      if (tappable) c += " tap";
+      if (sel === i && tappable) c += " sel";
+      if (lastFlash === i) c += " flash";
+      html += '<button type="button" role="gridcell" class="' + c + '" data-i="' + i + '"' + (tappable ? "" : " disabled") +
+        ' aria-label="' + esc(label) + '">' + marks + '<span class="w" aria-hidden="true">' + esc(w.d) + "</span></button>";
+    }
+    b.innerHTML = html;
+    lastFlash = -1;
+    if (sel != null && !(V.tapAs && canGuess(S, V.tapAs, sel))) sel = null;
+  }
+  function km(t, extra, side) {
+    var sym = t === "G" ? "●" : t === "X" ? "✕" : "·";
+    return '<span class="km ' + t + extra + '" aria-hidden="true">' + side + sym + "</span>";
+  }
+  // Kurzer Prüfwert über alle Züge: zeigen beide Handys denselben Stand, sind sie synchron.
+  function syncCode() {
+    var s = effective(G.log).map(function (a) { return a.t + a.by + a.k + (a.i == null ? "" : a.i); }).join("|");
+    var h = hashStr("stand|" + s)[0];
+    return foundCount(S) + ALPH[h % 32] + ALPH[(h >>> 5) % 32];
+  }
+  function initial(name) { var m = /^Seite ([AB])$/.exec(name); if (m) return m[1]; return (String(name).trim()[0] || "?").toUpperCase(); }
+
+  $("#board").addEventListener("click", function (e) {
+    var btn = e.target.closest(".card"); if (!btn || btn.disabled) return;
+    var i = +btn.dataset.i, V = viewState();
+    if (!V.tapAs || !canGuess(S, V.tapAs, i)) return;
+    if (sel === i) { commitGuess(); return; }
+    sel = i; render();
+  });
+  function commitGuess() {
+    var V = viewState();
+    if (sel == null || !V.tapAs) return;
+    var i = sel; sel = null;
+    clearAI();
+    act({ t: "guess", by: V.tapAs, i: i });
+  }
+
+  /* ---------- Panel unten ---------- */
+  var panelKey = "", clueN = 2;
+  function renderPanel(V) {
+    var p = $("#panel"), n = names(), key = V.panel + "|" + S.turn + "|" + (V.tapAs || "") + "|" + V.mirror;
+    var html = "";
+    var selTxt = sel != null ? "„" + esc(S.deck.words[sel].w) + "“ raten" : "Wort antippen";
+    if (V.panel === "clue") {
+      if (panelKey === key && $("#clue-w")) return; // Eingabe nicht neu aufbauen
+      var who = G.mode === "local" ? n[S.giver] + ", dein Hinweis" : "Dein Hinweis für " + n[other(S.giver)];
+      var optional = G.mode !== "ai";
+      html = '<form class="clue-form" id="clue-form" autocomplete="off" style="display:grid;gap:10px">' +
+        '<label class="eyebrow" for="clue-w">' + esc(who) + "</label>" +
+        '<div class="clue-row"><input class="text" id="clue-w" maxlength="24" autocomplete="off" autocapitalize="words" spellcheck="false" enterkeyhint="done" placeholder="' + (optional ? "Wort (optional)" : "Ein Wort") + '">' +
+        '<div class="stepper"><button type="button" data-n="-1" aria-label="Zahl kleiner">−</button><output id="clue-n" aria-label="Anzahl">' + clueN + '</output><button type="button" data-n="1" aria-label="Zahl größer">+</button></div></div>' +
+        (G.mode === "ai" ? '<div class="sugg" id="sugg" aria-label="Vorschläge"></div>' : "") +
+        '<p class="err" id="clue-msg" role="alert" hidden></p>' +
+        (V.mirror ? '<p class="hint">Ohne Verbindung: Tippt ' + esc(n[other(S.giver)]) + " ein Wort, tippst du es hier auch an.</p>" : "") +
+        '<button type="submit" class="btn primary wide">Hinweis geben</button></form>';
+      p.innerHTML = html; panelKey = key;
+      wireClueForm();
+      return;
+    }
+    panelKey = key;
+    if (V.panel === "guess" || V.panel === "watch" && V.mirror) {
+      var asWho = V.tapAs, mirrorNote = V.panel === "watch" || (G.mode === "duo" && asWho !== G.me);
+      html = (mirrorNote
+        ? '<p class="hint"><b>' + esc(n[asWho]) + " rät.</b> Ohne Verbindung tippst du hier mit, was " + esc(n[asWho]) + " antippt.</p>"
+        : '<p class="hint">' + (G.mode === "local" ? "<b>" + esc(n[asWho]) + "</b>, tippe" : "Tippe") + " ein Wort an und bestätige. Bei einem Agenten darfst du weiter raten.</p>") +
+        '<div class="actions"><button type="button" class="btn primary" id="confirm"' + (sel == null ? " disabled" : "") + ">" + selTxt + "</button>" +
+        '<button type="button" class="btn" id="end-turn"' + (S.guesses < 1 ? " disabled" : "") + ">Zug beenden</button></div>";
+    } else if (V.panel === "watch") {
+      html = '<div class="think"><i></i><i></i><i></i><span>' + esc(n[other(G.me)]) + " rät gerade</span></div>";
+    } else if (V.panel === "ai-clue" || V.panel === "ai-guess") {
+      html = '<div class="think"><i></i><i></i><i></i><span>KI ' + esc(aiSays || (V.panel === "ai-clue" ? "überlegt sich einen Hinweis" : "denkt nach")) + "</span></div>";
+    } else if (V.panel === "sudden-ai") {
+      html = '<p class="hint">Tippe einen Agenten der KI an oder lass die KI einen von deinen raten.</p>' +
+        '<div class="actions"><button type="button" class="btn primary" id="confirm"' + (sel == null ? " disabled" : "") + ">" + selTxt + "</button>" +
+        '<button type="button" class="btn" id="ai-sudden"' + (remaining(S, "A") ? "" : " disabled") + ">KI raten lassen</button></div>";
+    } else if (V.panel === "sudden-local" || V.panel === "sudden-duo") {
+      var who2 = V.panel === "sudden-local" ? suddenAs : V.tapAs;
+      var opts = ["A", "B"].map(function (s) {
+        var lab = G.mode === "duo" ? (s === G.me ? "Ich rate" : esc(n[s]) + " rät") : esc(n[s]) + " rät";
+        return '<button type="button" data-as="' + s + '" aria-pressed="' + (who2 === s) + '"' + (remaining(S, other(s)) ? "" : " disabled") + ">" + lab + "</button>";
+      }).join("");
+      var showSeg = V.panel === "sudden-local" || !Relay.live();
+      html = (showSeg ? '<div class="seg" role="group" aria-label="Wer rät" id="as-seg">' + opts + "</div>" : "") +
+        '<div class="actions one"><button type="button" class="btn primary" id="confirm"' + (sel == null || !who2 ? " disabled" : "") + ">" + (who2 ? selTxt : "Erst wählen, wer rät") + "</button></div>";
+    } else if (V.panel === "end") {
+      html = '<div class="actions"><button type="button" class="btn primary" id="end-open">Ergebnis</button><button type="button" class="btn" id="new-game">Neues Spiel</button></div>';
+    }
+    p.innerHTML = html;
+    var c = $("#confirm"); if (c) c.addEventListener("click", commitGuess);
+    var et = $("#end-turn"); if (et) et.addEventListener("click", function () { act({ t: "end", by: V.tapAs }); });
+    var as = $("#as-seg"); if (as) as.addEventListener("click", function (e) { var b = e.target.closest("button[data-as]"); if (!b) return; suddenAs = b.dataset.as; sel = null; render(); });
+    var ais = $("#ai-sudden"); if (ais) ais.addEventListener("click", function () {
+      var g = AI.nextGuess(S, "B", { forced: true, rng: rngFrom("aisd|" + G.code + "|" + S.sudden.length) });
+      if (!g.stop) act({ t: "guess", by: "B", i: g.i });
+    });
+    var eo = $("#end-open"); if (eo) eo.addEventListener("click", openEnd);
+    var ng = $("#new-game"); if (ng) ng.addEventListener("click", newGame);
+  }
+
+  function wireClueForm() {
+    var f = $("#clue-form"), inp = $("#clue-w"), out = $("#clue-n"), msg = $("#clue-msg"), sg = $("#sugg");
+    f.addEventListener("click", function (e) {
+      var b = e.target.closest("button[data-n]"); if (!b) return;
+      clueN = Math.max(1, Math.min(9, clueN + (+b.dataset.n))); out.textContent = clueN;
+    });
+    function showMsg(t) { msg.textContent = t; msg.hidden = !t; }
+    inp.addEventListener("input", function () {
+      showMsg("");
+      if (!sg) return;
+      var list = AI.suggest(inp.value, S);
+      sg.innerHTML = list.map(function (w) { return '<button type="button" data-w="' + esc(w) + '">' + esc(w) + "</button>"; }).join("");
+    });
+    if (sg) sg.addEventListener("click", function (e) { var b = e.target.closest("button[data-w]"); if (!b) return; inp.value = b.dataset.w; sg.innerHTML = ""; inp.focus(); });
+    f.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var w = inp.value.trim();
+      if (/\s/.test(w)) { showMsg("Nur ein Wort, ohne Leerzeichen."); return; }
+      if (w) {
+        if (AI.illegal(AI.norm(w), AI.boardNorms(S))) { showMsg("Das Wort liegt auf dem Brett oder steckt in einem Wort vom Brett."); return; }
+      }
+      if (G.mode === "ai") {
+        if (!w) { showMsg("Die KI braucht den Hinweis geschrieben."); return; }
+        if (!AI.known(w)) { showMsg("„" + w + "“ kennt die KI nicht. Probier ein anderes Wort oder einen Vorschlag."); return; }
+      }
+      inp.blur();
+      act({ t: "clue", by: S.giver, w: w, n: clueN });
+    });
+  }
+
+  /* ---------- Übergabe (ein Handy) ---------- */
+  function renderHandoff(V) {
+    var h = $("#handoff"), n = names();
+    if (G.mode !== "local" || !V.need || viewer === V.need || S.phase === "won" || S.phase === "lost") { h.hidden = true; return; }
+    var giving = !S.clue;
+    $("#ho-eye").textContent = "Zug " + S.turn + " von " + G.turns;
+    $("#ho-title").textContent = "Handy an " + n[V.need];
+    $("#ho-text").textContent = giving
+      ? n[V.need] + " sieht gleich den eigenen Schlüssel und gibt einen Hinweis. Nur " + n[V.need] + " schaut hin."
+      : n[V.need] + " rät jetzt. Der Schlüssel bleibt verdeckt.";
+    $("#ho-go").textContent = "Ich bin " + n[V.need];
+    h.hidden = false;
+    $("#ho-go").focus();
+  }
+  $("#ho-go").addEventListener("click", function () { viewer = viewState().need; render(); });
+  $("#ho-menu").addEventListener("click", openMenu);
+
+  /* ---------- Blätter: Menü, Verlauf, Regeln, Ergebnis ---------- */
+  function openSheet(html, after) {
+    var o = $("#sheet"); $("#sheet-body").innerHTML = html; o.hidden = false;
+    if (after) after();
+    var f = $("#sheet-body").querySelector("button"); if (f) f.focus();
+  }
+  function closeSheet() { $("#sheet").hidden = true; }
+  $("#sheet").addEventListener("click", function (e) { if (e.target === $("#sheet")) closeSheet(); });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !$("#sheet").hidden) closeSheet(); });
+
+  function openMenu() {
+    var items = [];
+    if (G.mode === "duo") items.push('<p class="eyebrow">Spiel-Code</p><p class="code-big">' + esc(showCode(G.code)) + '</p><p>Dein Partner wählt „Zwei Handys“, dann „Mit Code beitreten“. Du bist Seite ' + G.me + ".</p>");
+    var btns = [];
+    if (G.mode === "duo" && navigator.share) btns.push('<button type="button" class="btn" data-m="share">Code teilen</button>');
+    btns.push('<button type="button" class="btn" data-m="log">Verlauf</button>');
+    if (G.mode !== "local") btns.push('<button type="button" class="btn" data-m="key">' + (showKey ? "Schlüssel ausblenden" : "Schlüssel einblenden") + "</button>");
+    if (G.mode === "local" && S.phase === "play") btns.push('<button type="button" class="btn" data-m="cover">Schlüssel verdecken</button>');
+    if (G.mode === "duo") btns.push('<button type="button" class="btn" data-m="online">' + (G.online ? "Online-Verbindung trennen" : "Online verbinden") + "</button>");
+    btns.push('<button type="button" class="btn" data-m="undo"' + (S.lastId ? "" : " disabled") + ">Letzten Schritt zurücknehmen</button>");
+    btns.push('<button type="button" class="btn" data-m="rules">So wird gespielt</button>');
+    btns.push('<button type="button" class="btn" data-m="new">Neues Spiel</button>');
+    btns.push('<button type="button" class="btn primary" data-m="close">Schließen</button>');
+    openSheet('<h2 id="sheet-title">Menü</h2>' + items.join("") + '<div class="menu">' + btns.join("") + "</div>", function () {
+      $("#sheet-body").querySelector(".menu").addEventListener("click", function (e) {
+        var b = e.target.closest("button[data-m]"); if (!b) return;
+        var m = b.dataset.m;
+        if (m === "close") closeSheet();
+        else if (m === "log") openLog();
+        else if (m === "rules") openRules();
+        else if (m === "key") { showKey = !showKey; closeSheet(); render(); }
+        else if (m === "cover") { viewer = null; closeSheet(); render(); }
+        else if (m === "online") { G.online = !G.online; save(); closeSheet(); Relay.start(); render(); }
+        else if (m === "undo") { closeSheet(); undo(); }
+        else if (m === "new") { closeSheet(); newGame(); }
+        else if (m === "share") navigator.share({ title: "Codenames Duett", text: "Spiel-Code für Codenames Duett: " + showCode(G.code) + " (Zwei Handys → Mit Code beitreten)", url: location.href.split("?")[0] }).catch(function () {});
+      });
+    });
+  }
+  $("#menu-btn").addEventListener("click", openMenu);
+
+  function resultTxt(r) { return r === "G" ? "Agent" : r === "X" ? "Attentäter" : "Passant"; }
+  function openLog() {
+    var n = names(), html = '<h2 id="sheet-title">Verlauf</h2><div class="log">';
+    S.turns.slice().reverse().forEach(function (t) {
+      if (!t.clue && !t.g.length && !t.end) return;
+      html += '<div class="turn"><span class="h">Zug ' + t.k + " · " + esc(n[t.giver]) + " → " + esc(n[other(t.giver)]) + "</span>";
+      html += '<span class="c">' + (t.clue ? esc(t.clue.w || "Laut gesagt") + " · " + t.clue.n : "Ohne Eingabe") + "</span>";
+      if (t.g.length) html += '<span class="g">' + t.g.map(function (g) { return esc(S.deck.words[g.i].w) + " " + (g.r === "G" ? "✓" : g.r === "X" ? "✕ Attentäter" : "– Passant"); }).join(" · ") + "</span>";
+      if (t.clue && t.clue.tg && (t.end || S.phase === "won" || S.phase === "lost")) html += '<span class="m">Gemeint waren: ' + esc(t.clue.tg.join(", ")) + "</span>";
+      html += "</div>";
+    });
+    if (S.sudden.length) html += '<div class="turn"><span class="h">Plötzlicher Tod</span><span class="g">' + S.sudden.map(function (g) { return esc(n[g.by]) + ": " + esc(S.deck.words[g.i].w) + " " + (g.r === "G" ? "✓" : "✕ " + resultTxt(g.r)); }).join(" · ") + "</span></div>";
+    html += '</div><button type="button" class="btn primary" id="sheet-close">Schließen</button>';
+    openSheet(html, function () { $("#sheet-close").addEventListener("click", closeSheet); });
+  }
+  function rulesHtml() {
+    return '<h2 id="sheet-title">So wird gespielt</h2>' +
+      "<p>Ihr seid ein Team. Auf dem Brett liegen 25 Wörter. Jeder hat einen eigenen Schlüssel mit 9 Agenten, 3 Attentätern und 13 Passanten. Was bei dir Agent ist, kann beim anderen etwas anderes sein. Zusammen gibt es 15 Agenten.</p>" +
+      "<h3>Ein Zug</h3><ul>" +
+      "<li>Eine Person gibt einen Hinweis: ein Wort und eine Zahl. Das Wort darf nicht auf dem Brett liegen.</li>" +
+      "<li>Die andere Person tippt Wörter an. Entscheidend ist der Schlüssel der Person mit dem Hinweis.</li>" +
+      "<li>Agent: weiter raten, so oft du willst. Passant: der Zug ist vorbei. Attentäter: ihr habt verloren.</li>" +
+      "<li>Danach wechselt ihr. Wer keine Agenten mehr auf dem Schlüssel hat, rät nur noch.</li></ul>" +
+      "<h3>Zeit</h3><ul><li>Jeder Zug kostet einen der 9 Züge. Sind alle verbraucht, beginnt der plötzliche Tod: keine Hinweise mehr, jeder Fehler verliert.</li></ul>" +
+      '<h3>Zeichen auf den Karten</h3><div class="legend">' +
+      '<div><span class="card k-G"><span class="km G">●</span><span class="w">Wort</span></span><span>Dein Schlüssel: Agent</span></div>' +
+      '<div><span class="card k-X"><span class="km X">✕</span><span class="w">Wort</span></span><span>Dein Schlüssel: Attentäter</span></div>' +
+      '<div><span class="card found"><span class="w">Wort</span></span><span>Gefundener Agent</span></div>' +
+      '<div><span class="card"><span class="nm l">J</span><span class="w">Wort</span></span><span>Passant bei J. Bei Hinweisen von J nicht mehr ratbar, bei der anderen Person schon.</span></div></div>' +
+      "<h3>Spielarten</h3><ul>" +
+      "<li><b>Zwei Handys:</b> Ein Handy erstellt das Spiel, das andere tritt mit dem Code bei. Mit Internet laufen die Züge live und verschlüsselt über den freien Dienst ntfy.sh. Ohne Internet erzeugt der Code auf beiden Handys dasselbe Brett, und ihr tippt jeden Tipp auf beiden Handys an. Der „Stand“ oben muss auf beiden Handys gleich sein. Sonst nehmt den letzten Schritt im Menü zurück.</li>" +
+      "<li><b>Ein Handy:</b> Vor jedem Wechsel verdeckt ein Sichtschutz den Schlüssel.</li>" +
+      "<li><b>KI-Partner:</b> Die KI kennt rund 400 Wörter mit je 15 Assoziationen. Sie versteht Hinweise, die sie kennt, und schlägt beim Tippen Wörter vor.</li>" +
+      "<li><b>Virtueller Gegner:</b> Ein KI-Team spielt dasselbe Brett. Oben siehst du, wie weit es nach gleich vielen Zügen war. Wer weniger Züge braucht, gewinnt das Duell.</li></ul>" +
+      '<button type="button" class="btn primary" id="sheet-close">Schließen</button>';
+  }
+  function openRules() { openSheet(rulesHtml(), function () { $("#sheet-close").addEventListener("click", closeSheet); }); }
+  $("#rules-open").addEventListener("click", openRules);
+
+  function openEnd() {
+    if (!G || (S.phase !== "won" && S.phase !== "lost")) return;
+    var won = S.phase === "won", f = foundCount(S);
+    var html = '<p class="eyebrow">' + (won ? "Geschafft" : "Verloren") + '</p><h2 id="sheet-title" class="end-title ' + (won ? "win" : "lose") + '">' +
+      (won ? "Alle 15 Agenten in " + S.used + (S.used === 1 ? " Zug" : " Zügen") + (S.used >= G.turns ? " plus plötzlichem Tod" : "") : (S.lost && S.lost.r === "X" ? "Attentäter: " + esc(S.deck.words[S.lost.i].w) : "Fehler im plötzlichen Tod")) + "</h2>";
+    html += "<p>" + f + " von 15 Agenten gefunden.</p>";
+    if (rival) {
+      var you = { won: won, turns: S.used + (won && S.used >= G.turns ? 0.5 : 0), found: f };
+      var rv = { won: rival.won, turns: rival.turns, found: rival.found };
+      var verdict, best = 0;
+      if (you.won && !rv.won) { verdict = "Ihr gewinnt das Duell."; best = 1; }
+      else if (!you.won && rv.won) { verdict = "Der Gegner gewinnt das Duell."; best = 2; }
+      else if (you.won && rv.won) {
+        if (you.turns < rv.turns) { verdict = "Ihr wart schneller und gewinnt das Duell."; best = 1; }
+        else if (you.turns > rv.turns) { verdict = "Der Gegner war schneller."; best = 2; }
+        else verdict = "Gleichstand.";
+      } else {
+        if (you.found > rv.found) { verdict = "Beide gescheitert, aber ihr hattet mehr Agenten."; best = 1; }
+        else if (you.found < rv.found) { verdict = "Beide gescheitert, der Gegner hatte mehr Agenten."; best = 2; }
+        else verdict = "Gleichstand.";
+      }
+      html += '<div class="vs"><div class="' + (best === 1 ? "best" : "") + '"><span class="eyebrow">Ihr</span><b>' + f + "/15</b><span>" + (won ? "in " + S.used + " Zügen" : "gescheitert") + "</span></div>" +
+        '<div class="' + (best === 2 ? "best" : "") + '"><span class="eyebrow">Gegner · ' + LEVELS[G.rival].name + "</span><b>" + rival.found + "/15</b><span>" + (rival.won ? "in " + rival.turns + " Zügen" : rival.boom ? "Attentäter" : "Zeit abgelaufen") + "</span></div></div>";
+      html += "<p><b>" + verdict + "</b></p>";
+    }
+    html += '<div class="menu"><button type="button" class="btn" id="end-reveal">Beide Schlüssel zeigen</button><button type="button" class="btn" id="end-log">Verlauf</button>' +
+      '<button type="button" class="btn primary" id="end-new">Neues Spiel</button><button type="button" class="linkish" id="end-close">Brett ansehen</button></div>';
+    openSheet(html, function () {
+      $("#end-reveal").addEventListener("click", function () { revealAll = true; closeSheet(); render(); });
+      $("#end-log").addEventListener("click", openLog);
+      $("#end-new").addEventListener("click", function () { closeSheet(); newGame(); });
+      $("#end-close").addEventListener("click", closeSheet);
+    });
+  }
+
+  function newGame() {
+    clearAI();
+    Relay.stop();
+    G = null; S = null; rival = null; pending = [];
+    store.game = null; save();
+    refresh();
+    window.scrollTo(0, 0);
+  }
+
+  /* ================= Start-Bildschirm ================= */
+  var P = store.prefs, duoJoin = false;
+  function renderSetup() {
+    var mode = P.mode;
+    document.querySelectorAll('input[name="mode"]').forEach(function (r) { r.checked = r.value === mode; r.closest(".opt").classList.toggle("on", r.checked); });
+    $("#duo-box").hidden = mode !== "duo";
+    $("#duo-new").setAttribute("aria-pressed", String(!duoJoin));
+    $("#duo-join").setAttribute("aria-pressed", String(duoJoin));
+    $("#join-field").hidden = !(mode === "duo" && duoJoin);
+    $("#online").checked = P.online !== false;
+    $("#partner-field").hidden = mode === "ai" || (mode === "duo");
+    $("#name-me").value = P.me || "";
+    $("#name-partner").value = P.partner || "";
+    var joining = mode === "duo" && duoJoin;
+    $("#turns-row").hidden = joining;
+    $("#rival-on").closest(".row").hidden = joining;
+    $("#rival-level").hidden = joining || !P.rival;
+    $("#join-note").hidden = !joining;
+    $("#turns").textContent = P.turns;
+    $("#rival-on").checked = !!P.rival;
+    document.querySelectorAll("#rival-level button").forEach(function (b) { b.setAttribute("aria-pressed", String(+b.dataset.l === P.level)); });
+    $("#start").textContent = joining ? "Beitreten" : mode === "duo" ? "Spiel erstellen" : "Spiel starten";
+    $("#resume").hidden = true;
+  }
+  $("#modes").addEventListener("change", function (e) { if (e.target.name === "mode") { P.mode = e.target.value; save(); renderSetup(); } });
+  $("#duo-new").addEventListener("click", function () { duoJoin = false; renderSetup(); });
+  $("#duo-join").addEventListener("click", function () { duoJoin = true; renderSetup(); $("#join-code").focus(); });
+  $("#online").addEventListener("change", function (e) { P.online = e.target.checked; save(); });
+  $("#name-me").addEventListener("input", function (e) { P.me = e.target.value.trim(); save(); });
+  $("#name-partner").addEventListener("input", function (e) { P.partner = e.target.value.trim(); save(); });
+  $("#turns-minus").addEventListener("click", function () { P.turns = Math.max(6, P.turns - 1); save(); renderSetup(); });
+  $("#turns-plus").addEventListener("click", function () { P.turns = Math.min(12, P.turns + 1); save(); renderSetup(); });
+  $("#rival-on").addEventListener("change", function (e) { P.rival = e.target.checked; save(); renderSetup(); });
+  $("#rival-level").addEventListener("click", function (e) { var b = e.target.closest("button[data-l]"); if (!b) return; P.level = +b.dataset.l; save(); renderSetup(); });
+  $("#join-code").addEventListener("input", function () { $("#setup-err").hidden = true; });
+
+  $("#start").addEventListener("click", function () {
+    var err = $("#setup-err"); err.hidden = true;
+    var me = P.me, g;
+    if (P.mode === "duo" && duoJoin) {
+      var pc = parseCode($("#join-code").value);
+      if (!pc) { err.textContent = "Der Code hat 6 Zeichen, zum Beispiel KX7-P3M."; err.hidden = false; return; }
+      g = { v: 1, mode: "duo", code: pc.code, turns: pc.turns, rival: pc.rival, me: "B", online: P.online !== false, names: { A: "Seite A", B: me || "Seite B" }, log: [] };
+      startGame(g);
+      return;
+    }
+    var rv = P.rival ? P.level : 0, code = makeCode(P.turns, rv);
+    if (P.mode === "duo") {
+      g = { v: 1, mode: "duo", code: code, turns: P.turns, rival: rv, me: "A", online: P.online !== false, names: { A: me || "Seite A", B: "Seite B" }, log: [] };
+      startGame(g);
+      showCodeSheet();
+    } else if (P.mode === "local") {
+      g = { v: 1, mode: "local", code: code, turns: P.turns, rival: rv, names: { A: me || "Seite A", B: P.partner || "Seite B" }, log: [] };
+      startGame(g);
+    } else {
+      g = { v: 1, mode: "ai", code: code, turns: P.turns, rival: rv, first: "B", names: { A: me || "Du", B: "KI" }, log: [] };
+      startGame(g);
+    }
+  });
+  function showCodeSheet() {
+    openSheet('<p class="eyebrow">Zwei Handys</p><h2 id="sheet-title">Euer Spiel-Code</h2><p class="code-big">' + esc(showCode(G.code)) + "</p>" +
+      "<p>Auf dem zweiten Handy: Codenames Duett öffnen, „Zwei Handys“ wählen, dann „Mit Code beitreten“ und den Code eintippen. Du bist Seite A.</p>" +
+      "<p>Mit Internet verbinden sich die Handys von selbst. Ohne Internet bekommt ihr dasselbe Brett und tippt jeden Tipp auf beiden Handys an.</p>" +
+      '<div class="menu">' + (navigator.share ? '<button type="button" class="btn" id="cs-share">Code teilen</button>' : "") + '<button type="button" class="btn primary" id="cs-go">Los geht’s</button></div>', function () {
+      $("#cs-go").addEventListener("click", closeSheet);
+      var sh = $("#cs-share"); if (sh) sh.addEventListener("click", function () { navigator.share({ title: "Codenames Duett", text: "Spiel-Code für Codenames Duett: " + showCode(G.code), url: location.href.split("?")[0] }).catch(function () {}); });
+    });
+  }
+
+  /* ================= Los ================= */
+  if (store.game && store.game.v === 1) {
+    try { G = store.game; rival = G.rival ? simulateRival(G.code, G.turns, G.rival) : null; refresh(); if (G.mode === "duo") Relay.start(); }
+    catch (e) { G = null; store.game = null; save(); refresh(); }
+  } else refresh();
+
+  // Testzugang für automatische Prüfungen
+  window.__duett = { fold: fold, deal: deal, AI: AI, simulateRival: simulateRival, state: function () { return S; }, game: function () { return G; }, act: act, parseCode: parseCode };
+
+  // Offline-Speicher: lädt die App einmal komplett aufs Gerät.
+  if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
+    var hadController = !!navigator.serviceWorker.controller, reloaded = false;
+    navigator.serviceWorker.addEventListener("controllerchange", function () {
+      if (hadController && !reloaded) { reloaded = true; location.reload(); }
+    });
+    navigator.serviceWorker.register("sw.js").catch(function () {});
+  }
+})();
+</script>
+</body>
+</html>
