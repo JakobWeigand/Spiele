@@ -61,7 +61,7 @@ Technik: Die Handys finden sich über den kostenlosen Vermittlungsdienst von Pee
 
 ## Chooser
 
-Alle legen einen Finger aufs Display. Sobald keine Finger mehr dazukommen, läuft ein kurzer Countdown, dann wählt die App zufällig aus. Gewählte Finger werden grün, die anderen verblassen. Alle Finger loslassen startet die nächste Runde.
+Alle legen einen Finger aufs Display. Sobald keine Finger mehr dazukommen, pochen die Ringe dreimal im Sekundentakt, dann wählt die App zufällig aus. Gewählte Finger werden grün, die anderen verblassen. Bei genau einer gewählten Person flutet Grün den Bildschirm. Alle Finger loslassen startet die nächste Runde.
 
 - Oben in der Mitte stellst du ein, wie viele gewählt werden: mit −/+ oder indem du die Zahl antippst und eintippst. Keine Obergrenze.
 - Es braucht immer mindestens einen Finger mehr, als gewählt werden. Wie viele Finger gleichzeitig erkannt werden, begrenzt nur das Handy selbst.
