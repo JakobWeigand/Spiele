@@ -325,14 +325,13 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--focus); out
     do { crypto.getRandomValues(u32); } while (u32[0] >= limit);
     return u32[0] % n;
   }
-  function randBetween(a, b) { return a + randInt(b - a + 1); }
 
   /* ---------- Spielmaterial ---------- */
   var LETTERS = "ABCDEFGHIJKLMNOPRSTUVWYZ".split("");   // 24 Tasten, ohne Q und X
-  var TEMPO = {                                          // Sekunden, geheim gezogen
-    schnell:   { turn: [5, 8],   round: [30, 60] },
-    normal:    { turn: [8, 12],  round: [45, 90] },
-    entspannt: { turn: [12, 16], round: [60, 120] }
+  var TEMPO = {                                          // Sekunden, geheim gezogen, eher kurz als lang
+    schnell:   { turn: [3, 9],   round: [12, 50] },
+    normal:    { turn: [4, 13],  round: [18, 75] },
+    entspannt: { turn: [6, 18],  round: [28, 105] }
   };
   var CATEGORIES = [
     "Tiere", "Haustiere", "Tiere im Wasser", "Vögel", "Insekten", "Tiere im Zoo", "Tiere auf dem Bauernhof",
@@ -483,7 +482,13 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--focus); out
   resetAlive();
 
   var GRACE_MS = 1500;   // Mindestzeit für die nächste Person bei „Zeit pro Runde“
-  function secondsFor(kind) { var r = TEMPO[P.tempo][kind]; return randBetween(r[0], r[1]); }
+  // Zufällige Zeit auf die Zehntelsekunde, kurze Zeiten etwas häufiger als lange.
+  // Bei „Zeit pro Zug“ wird die Bombe mit jedem Buchstaben ungeduldiger: am Ende bleibt gut die Hälfte.
+  function secondsFor(kind) {
+    var r = TEMPO[P.tempo][kind], u = randInt(10001) / 10000, s = r[0] + (r[1] - r[0]) * Math.pow(u, 1.4);
+    if (kind === "turn") s = Math.max(2.5, s * (1 - 0.45 * Object.keys(R.used).length / LETTERS.length));
+    return Math.round(s * 10) / 10;
+  }
 
   /* ---------- Ton (wird erst nach dem ersten Tippen erzeugt) ---------- */
   var ac = null;
@@ -739,12 +744,10 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--focus); out
           '<button type="button" class="small-btn slim" data-act="disconnect">Verbindung trennen</button>';
       }
       if (side === "up") return catBlock + '<p class="line">Uhr antippen zum Starten</p><p class="score">' + scoreLine() + "</p>";
-      var m = modeNow();
+      // Spielweise steht in den Einstellungen, online sieht die zweite Person hier nur, was gilt
       var modeHtml = NET.role === "guest"
-        ? '<p class="line">' + (m === "turn" ? "Zeit pro Zug" : "Zeit pro Runde") + " · legt " + esc(names[0]) + " fest</p>"
-        : '<div class="mode" role="group" aria-label="Spielweise">' +
-            '<button type="button" data-act="mode-turn" aria-pressed="' + (m === "turn") + '">Zeit pro Zug</button>' +
-            '<button type="button" data-act="mode-round" aria-pressed="' + (m === "round") + '">Zeit pro Runde</button></div>';
+        ? '<p class="line">' + (modeNow() === "turn" ? "Zeit pro Zug" : "Zeit pro Runde") + " · legt " + esc(names[0]) + " fest</p>"
+        : "";
       return catBlock + modeHtml +
         '<div class="row"><button type="button" class="small-btn" data-act="cat">Andere Kategorie</button>' +
         '<button type="button" class="small-btn" data-act="settings">Einstellungen</button></div>' +
@@ -757,13 +760,14 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--focus); out
         '<button type="button" class="small-btn" data-act="reset-all">Alles auf 0</button></div>' +
         '<button type="button" class="small-btn slim" data-act="reset-cancel">Weiterspielen</button>';
     }
-    var pauseLine = R.phase === "pause" ? '<p class="line">Pause. Uhr antippen zum Weiterspielen.</p>' : "";
+    // Pause: gleiche Zeilen wie im Spiel, nur der Text wechselt. So springt nichts nach unten.
+    var paused = R.phase === "pause";
     if (two && mine !== R.cur) {
       if (!you) return '<p class="line"><strong>' + other + "</strong> wartet</p>" + '<p class="score">' + scoreLine() + "</p>";
-      return catBlock + '<p class="line"><strong>' + cur + "</strong> ist dran</p>" + pauseLine + meta;
+      return catBlock + '<p class="line">' + (paused ? "Pause · " : "") + "<strong>" + cur + "</strong> ist dran</p>" + meta;
     }
-    if (!you) return '<p class="label">Am Zug</p><p class="big">' + other + " ist dran</p>" + pauseLine;
-    return catBlock + '<p class="big">' + (two ? "Du bist dran" : cur + " ist dran") + "</p>" + pauseLine + meta;
+    if (!you) return '<p class="label">' + (paused ? "Pause" : "Am Zug") + '</p><p class="big">' + other + " ist dran</p>";
+    return catBlock + '<p class="big">' + (paused ? "Pause" : two ? "Du bist dran" : cur + " ist dran") + "</p>" + meta;
   }
   var centerEl = $("#center");
   function render() {
@@ -811,7 +815,6 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--focus); out
       newRound(); say("Alles zurückgesetzt.");
     }
     else if (type === "cat") { if (R.phase === "idle") { R.cat = nextCategory(); render(); } }
-    else if (type === "mode") { P.mode = v === "round" ? "round" : "turn"; save(); render(); }
     else if (type === "hide") pause();
   }
 
@@ -823,7 +826,6 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--focus); out
     if (a === "settings") openSettings();
     else if (a === "online") openOnline();
     else if (a === "disconnect") { leaveOnline(""); }
-    else if (a === "mode-turn" || a === "mode-round") act("mode", a === "mode-turn" ? "turn" : "round");
     else act(a);
   }
   up.addEventListener("click", onCenter);
@@ -979,8 +981,8 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--focus); out
   /* ---------- Einstellungen ---------- */
   var settings = $("#settings"), plist = $("#plist"), confirmBox = $("#confirm");
   var NOTES = {
-    turn: "Jeder gedrückte Buchstabe startet eine neue, geheime Zeit für die nächste Person.",
-    round: "Eine geheime Zeit für die ganze Runde. Wer beim Knall dran ist, verliert."
+    turn: "Jeder gedrückte Buchstabe startet eine neue, geheime Zeit für die nächste Person. Mit jedem Buchstaben wird sie im Schnitt kürzer.",
+    round: "Eine geheime Zeit für die ganze Runde, mal kurz, mal lang. Wer beim Knall dran ist, verliert."
   };
   function renderSettings() {
     document.querySelectorAll("#set-mode button").forEach(function (b) { b.setAttribute("aria-pressed", b.dataset.mode === P.mode); });

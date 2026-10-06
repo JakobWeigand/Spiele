@@ -4,7 +4,7 @@
 // Alle Spiele liegen auf derselben Domain und teilen sich den Cache-Speicher:
 // Deshalb räumt diese App nur Caches mit ihrem eigenen Präfix auf.
 const PREFIX = "wortbombe-";
-const CACHE = PREFIX + "v5";
+const CACHE = PREFIX + "v6";
 const FILES = ["./", "index.html", "manifest.webmanifest", "icon-180.png", "icon-192.png", "icon-512.png"];
 
 self.addEventListener("install", (event) => {

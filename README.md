@@ -43,10 +43,11 @@ Das Handy liegt flach zwischen den Spielern. Um den Rand liegen 24 Buchstaben (A
 - 427 Kategorien, darunter Satzanfänge wie „In der Dusche ist immer …“, die man mit einem Wort ergänzt.
 - Uhr antippen startet die Runde. Wer dran ist, nennt ein Wort zur Kategorie und drückt dessen Anfangsbuchstaben. Gedrückte Buchstaben werden durchsichtig.
 - Die Uhr zeigt keine Restzeit, sie tickt nur. Läuft sie ab, explodiert die Bombe: Wer dran war, verliert die Runde.
-- **Zeit pro Zug:** Jeder Buchstabe startet eine neue, geheime Zeit. **Zeit pro Runde:** Eine geheime Zeit für die ganze Runde.
+- **Zeit pro Zug:** Jeder Buchstabe startet eine neue, geheime Zeit, die im Lauf der Runde im Schnitt kürzer wird. **Zeit pro Runde:** Eine geheime Zeit für die ganze Runde. Beides stellst du unter „Einstellungen“ um.
+- Die Zeiten schwanken stark (bei „Normal“ 4 bis 13 Sekunden pro Zug, 18 bis 75 Sekunden pro Runde), kurze kommen etwas häufiger vor als lange.
 - Wer dran ist, hat die Hälfte in der Mitte dunkelblau hinterlegt; wer verliert, rot.
 - Bei „Zeit pro Runde“ hat die nächste Person nach dem Weitergeben immer noch mindestens 1,5 Sekunden.
-- Tempo, Ton, 2–5 Spieler und Punkte unter „Einstellungen“. Uhr antippen während der Runde pausiert, „Neustart“ setzt Runde oder Punkte zurück.
+- Spielweise, Tempo, Ton, 2–5 Spieler und Punkte unter „Einstellungen“. Uhr antippen während der Runde pausiert, „Neustart“ setzt Runde oder Punkte zurück.
 
 ### Wortbombe online (zwei Handys)
 
