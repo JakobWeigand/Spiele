@@ -14,7 +14,7 @@
 <link rel="icon" type="image/png" href="icon-192.png">
 <title>Chooser</title>
 <style>
-/* Navy Research: weißer Grund, ein Navy, Grün nur für „gewählt“. Oben eine schmale Leiste mit der Anzahl,
+/* Navy Research: weißer Grund, Blautöne; „gewählt“ ist Navy (im Dunkeln Blau). Oben eine schmale Leiste mit der Anzahl,
    darunter die ganze Fläche für Finger. Kreise sind die einzige runde Form (radius-dot). */
 :root {
   --sans: "Neue Montreal", "Helvetica Neue", Helvetica, Arial, sans-serif;
@@ -26,7 +26,8 @@
   --rule: #d6dce4;        /* line */
   --accent: #1a2c42;      /* navy */
   --on-accent: #ffffff;
-  --chosen: #2e8b6e;      /* green: gewählt */
+  --chosen: #1a2c42;      /* navy: gewählt */
+  --chosen-text: #1a2c42;
   --focus: #4a6fa5;
   /* Fingerfarben: Reihenfolge der Navy-Serien */
   --f1: #1a2c42; --f2: #4a6fa5; --f3: #6a7d93; --f4: #3a4a5c; --f5: #b8c4d4; --f6: #0d1b2a;
@@ -35,14 +36,14 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #0d1b2a; --surface: #1a2c42; --text: #ffffff; --small: #dde3ea; --muted: #b8c4d4;
-    --rule: #6a7d93; --accent: #ffffff; --on-accent: #0d1b2a; --chosen: #3fae8b; --focus: #b8c4d4;
+    --rule: #6a7d93; --accent: #ffffff; --on-accent: #0d1b2a; --chosen: #4a6fa5; --chosen-text: #b8c4d4; --focus: #b8c4d4;
     --f1: #ffffff; --f2: #b8c4d4; --f3: #4a6fa5; --f4: #dde3ea; --f5: #6a7d93; --f6: #e8eef6;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #0d1b2a; --surface: #1a2c42; --text: #ffffff; --small: #dde3ea; --muted: #b8c4d4;
-  --rule: #6a7d93; --accent: #ffffff; --on-accent: #0d1b2a; --chosen: #3fae8b; --focus: #b8c4d4;
+  --rule: #6a7d93; --accent: #ffffff; --on-accent: #0d1b2a; --chosen: #4a6fa5; --chosen-text: #b8c4d4; --focus: #b8c4d4;
   --f1: #ffffff; --f2: #b8c4d4; --f3: #4a6fa5; --f4: #dde3ea; --f5: #6a7d93; --f6: #e8eef6;
   color-scheme: dark;
 }
@@ -92,7 +93,7 @@ h1 { margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -.01em; }
 }
 .status .big { margin: 0; font-size: clamp(26px, 7vmin, 40px); font-weight: 700; line-height: 1.1; text-wrap: balance; }
 .status .line { margin: 0; font-size: 16px; color: var(--small); text-wrap: balance; max-width: 34ch; }
-.status.done .big { color: var(--chosen); }
+.status.done .big { color: var(--chosen-text); }
 .status.flood .big, .status.flood .line { color: #ffffff; }
 .status.center { top: 50%; transform: translateY(-50%); }
 
@@ -169,7 +170,7 @@ h1 { margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -.01em; }
 
   /* ---------- Finger ---------- */
   var stage = $("#stage"), cv = $("#cv"), ctx = cv.getContext("2d");
-  var palette = [], chosenColor = "#2e8b6e", textColor = "#0d1b2a", bgColor = "#ffffff";
+  var palette = [], chosenColor = "#1a2c42", textColor = "#0d1b2a", bgColor = "#ffffff";
   function readColors() {
     var cs = getComputedStyle(document.documentElement);
     palette = ["--f1", "--f2", "--f3", "--f4", "--f5", "--f6"].map(function (v) { return cs.getPropertyValue(v).trim(); });
@@ -346,7 +347,7 @@ h1 { margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -.01em; }
       beat = Math.pow(Math.sin(Math.PI * Math.min(1, p / 0.55)), 2);  // Schlag in der ersten Hälfte, dann Ruhe
     }
 
-    // Eine Person gewählt: Grün flutet vom Gewinnerfinger aus den Bildschirm
+    // Eine Person gewählt: Navy flutet vom Gewinnerfinger aus den Bildschirm
     if (done && flood) {
       var maxR = Math.hypot(Math.max(flood.x, W - flood.x), Math.max(flood.y, H - flood.y));
       ctx.fillStyle = chosenColor;
