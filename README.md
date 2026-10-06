@@ -6,6 +6,7 @@
 - **Quixx:** https://jakobweigand.github.io/Spiele/quixx/
 - **Wortbombe:** https://jakobweigand.github.io/Spiele/wortbombe/
 - **Chooser:** https://jakobweigand.github.io/Spiele/chooser/
+- **Heiß & Kalt:** https://jakobweigand.github.io/Spiele/heisskalt/
 - **Codenames Duett:** https://jakobweigand.github.io/Spiele/codenames/
 - **Startseite mit allen Spielen:** https://jakobweigand.github.io/Spiele/
 
@@ -13,7 +14,7 @@ Aufs iPhone: Link in Safari öffnen → Teilen → „Zum Home-Bildschirm“ →
 
 ---
 
-Fünf Spiele-Apps für das Handy, jede als eigene Web-App, die nach der Installation offline läuft.
+Sechs Spiele-Apps für das Handy, jede als eigene Web-App, die nach der Installation offline läuft.
 
 | App | Ordner | Adresse |
 |---|---|---|
@@ -58,6 +59,18 @@ Zum Spielen, wenn ihr nicht am selben Ort seid, zum Beispiel beim Telefonieren:
 Danach sehen beide dieselbe Kategorie. Wer dran ist, drückt den Buchstaben auf seinem Handy, beim anderen verschwindet er sofort. Uhr, Explosion und Punkte laufen auf beiden gleich; das Handy, das das Spiel erstellt hat, führt die geheime Uhr.
 
 Technik: Die Handys finden sich über den kostenlosen Vermittlungsdienst von PeerJS (die Bibliothek wird erst beim Tippen auf „Online spielen“ von jsDelivr geladen). Die Spieldaten gehen danach direkt von Handy zu Handy. Der Online-Modus braucht Internet, alles andere läuft weiter offline.
+
+## Heiß & Kalt
+
+Kooperatives Wortspiel: 16 Begriffe liegen aus, eines ist das Geheimwort. Nur der Hinweisgeber kennt es.
+
+1. Der Hinweisgeber wählt aus drei Gegensatzpaaren eines (zum Beispiel „heiß ↔ kalt“) und zeigt auf einer Skala mit vier Stufen, wo das Geheimwort liegt („eher heiß“).
+2. Die Rater streichen danach mindestens einen Begriff, der nicht passt.
+3. Nach 5 Hinweisen soll nur noch das Geheimwort übrig sein. Wird es gestrichen oder falsch getippt, habt ihr gemeinsam verloren. Mit „Ich weiß es“ kann man jederzeit direkt tippen.
+
+- **An einem Handy:** Die App verdeckt das Geheimwort, bis der Hinweisgeber es aufdeckt, und fordert danach zum Weitergeben auf.
+- **Online zu zweit:** wie bei der Wortbombe per vierstelligem Code. Das Geheimwort bekommt nur das Handy der Person, die die Hinweise gibt. Nach jedem Spiel werden die Rollen getauscht.
+- 313 Begriffe und 110 Gegensatzpaare.
 
 ## Chooser
 
