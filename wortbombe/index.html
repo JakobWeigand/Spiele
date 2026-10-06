@@ -222,6 +222,13 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--focus); out
 .confirm { background: var(--surface); padding: 12px; display: grid; gap: 10px; }
 .confirm p { margin: 0; font-weight: 700; }
 .two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+/* Online: jeder sieht alles richtig herum */
+.board.online .half.up { transform: none; }
+.code {
+  margin: 0; padding: 10px; background: var(--surface); text-align: center;
+  font-size: 44px; font-weight: 700; letter-spacing: .24em; font-variant-numeric: tabular-nums;
+}
+#join-code { text-transform: uppercase; letter-spacing: .2em; text-align: center; font-size: 26px; font-weight: 700; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 </style>
 </head>
@@ -273,6 +280,32 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--focus); out
       </div>
     </div>
     <button type="button" class="btn btn-primary" id="settings-done">Fertig</button>
+  </div>
+</div>
+
+<div class="overlay" id="online" hidden>
+  <div class="panel" role="dialog" aria-modal="true" aria-labelledby="online-title">
+    <h2 id="online-title">Online spielen</h2>
+    <p class="note">Zu zweit auf zwei Handys, zum Beispiel beim Telefonieren. Eine Person erstellt ein Spiel und sagt der anderen den Code.</p>
+    <p class="label">Dein Name</p>
+    <div class="prow"><input type="text" id="my-name" maxlength="14" autocomplete="off" aria-label="Dein Name"></div>
+    <div class="two" id="net-choose">
+      <button type="button" class="btn btn-primary" id="net-create">Spiel erstellen</button>
+      <button type="button" class="btn btn-secondary" id="net-join">Beitreten</button>
+    </div>
+    <div id="net-code-box" hidden>
+      <p class="label">Dein Code</p>
+      <p class="code" id="net-code">····</p>
+    </div>
+    <div id="net-join-box" hidden>
+      <p class="label">Code eingeben</p>
+      <div class="prow">
+        <input type="text" id="join-code" maxlength="4" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="Code des Spiels">
+        <button type="button" class="btn btn-primary" id="net-connect">Verbinden</button>
+      </div>
+    </div>
+    <p class="note" id="net-status" aria-live="polite"></p>
+    <button type="button" class="btn btn-secondary" id="net-close">Schließen</button>
   </div>
 </div>
 
@@ -422,6 +455,13 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--focus); out
   }
   function save() { try { localStorage.setItem(KEY, JSON.stringify(P)); } catch (e) {} }
   var P = load();
+  /* ---------- Online (zwei Handys) ----------
+     Wer das Spiel erstellt, führt die Runde (Uhr, Kategorie, Punkte) und schickt nach jeder Änderung den Stand.
+     Das andere Handy schickt nur Aktionen wie „Buchstabe F gedrückt“. */
+  var NET = { role: null, conn: null, peer: null, me: 0, names: [], scores: [0, 0], starter: 0, mode: "turn" };
+  function players() { return NET.role ? NET.names : P.players; }
+  function scoresArr() { return NET.role ? NET.scores : P.scores; }
+  function modeNow() { return NET.role === "guest" ? NET.mode : P.mode; }
   if (P.players.length > MAX_PLAYERS) { P.players = P.players.slice(0, MAX_PLAYERS); P.scores = P.scores.slice(0, MAX_PLAYERS); P.starter = 0; }
 
   // Kategorien als gemischter Stapel: keine Wiederholung, bis alle einmal dran waren
@@ -439,7 +479,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--focus); out
   /* ---------- Runde ---------- */
   // phase: idle (vor dem Start) · run · pause · boom (abgelaufen)
   var R = { phase: "idle", cat: nextCategory(), used: {}, cur: P.starter % P.players.length, alive: [], loser: -1, winner: -1, deadline: 0, left: 0, flash: "", confirm: false };
-  function resetAlive() { R.alive = P.players.map(function (_, i) { return i; }); }
+  function resetAlive() { R.alive = players().map(function (_, i) { return i; }); }
   resetAlive();
 
   var GRACE_MS = 1500;   // Mindestzeit für die nächste Person bei „Zeit pro Runde“
@@ -496,15 +536,15 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--focus); out
     timer = setTimeout(expire, seconds * 1000);
   }
   function startTicking() { clearInterval(ticker); tick(); ticker = setInterval(tick, 500); }
-  function stopClock() { clearTimeout(timer); clearInterval(ticker); }
+  function stopClock() { clearTimeout(timer); clearInterval(ticker); ticker = 0; }
 
   function start() {
     audio();
     R.phase = "run";
-    arm(secondsFor(P.mode === "turn" ? "turn" : "round"));
+    arm(secondsFor(modeNow() === "turn" ? "turn" : "round"));
     startTicking(); keepAwake(true);
     render();
-    say(P.players[R.cur] + " beginnt. Kategorie: " + R.cat + ".");
+    say(players()[R.cur] + " beginnt. Kategorie: " + R.cat + ".");
   }
   function pause() {
     if (R.phase !== "run") return;
@@ -522,12 +562,13 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--focus); out
   function nextAlive(from) {
     var i = R.alive.indexOf(from);
     if (i === -1) {  // from ist gerade ausgeschieden: nächster nach ihm in Sitzreihenfolge
-      for (var k = 1; k <= P.players.length; k++) { var c = (from + k) % P.players.length; if (R.alive.indexOf(c) !== -1) return c; }
+      for (var k = 1; k <= players().length; k++) { var c = (from + k) % players().length; if (R.alive.indexOf(c) !== -1) return c; }
     }
     return R.alive[(i + 1) % R.alive.length];
   }
 
-  function pressLetter(L, btn) {
+  function pressLetter(L) {
+    var btn = btnOf[L];
     if (R.phase === "pause") { resume(); return; }
     if (R.phase !== "run") { say(R.phase === "idle" ? "Erst die Uhr antippen, dann geht es los." : ""); return; }
     if (R.used[L]) return;
@@ -542,10 +583,10 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--focus); out
       letterBtns.forEach(function (b) { b.classList.remove("used"); b.setAttribute("aria-label", "Buchstabe " + b.dataset.l); });
       setTimeout(function () { R.flash = ""; render(); }, 3500);
     }
-    if (P.mode === "turn") arm(secondsFor("turn"));
+    if (modeNow() === "turn") arm(secondsFor("turn"));
     else if (R.deadline - Date.now() < GRACE_MS) arm(GRACE_MS / 1000);   // nie direkt nach dem Weitergeben
     render();
-    say(P.players[R.cur] + " ist dran.");
+    say(players()[R.cur] + " ist dran.");
   }
 
   function expire() {
@@ -554,22 +595,22 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--focus); out
     R.alive = R.alive.filter(function (i) { return i !== R.loser; });
     if (R.alive.length === 1) {
       R.winner = R.alive[0];
-      P.scores[R.winner]++;
-      P.starter = R.loser;        // wer verloren hat, beginnt die nächste Runde
-      save();
+      scoresArr()[R.winner]++;
+      if (NET.role) NET.starter = R.loser;   // wer verloren hat, beginnt die nächste Runde
+      else { P.starter = R.loser; save(); }
     } else {
       R.winner = -1;
     }
     explode();
     render();
-    say("Bumm! " + P.players[R.loser] + " war dran" + (R.winner >= 0 ? ". Punkt für " + P.players[R.winner] + "." : " und ist raus."));
+    say("Bumm! " + players()[R.loser] + " war dran" + (R.winner >= 0 ? ". Punkt für " + players()[R.winner] + "." : " und ist raus."));
   }
 
   function newRound() {
     stopClock(); keepAwake(false);
     R.phase = "idle"; R.used = {}; R.cat = nextCategory(); R.loser = -1; R.winner = -1; R.flash = ""; R.confirm = false;
     resetAlive();
-    R.cur = P.starter % P.players.length;
+    R.cur = (NET.role ? NET.starter : P.starter) % players().length;
     letterBtns.forEach(function (b) { b.classList.remove("used"); b.setAttribute("aria-label", "Buchstabe " + b.dataset.l); });
     render();
   }
@@ -629,13 +670,15 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--focus); out
   }
 
   /* ---------- Buchstaben-Rahmen ---------- */
+  var btnOf = {};
   var letterBtns = LETTERS.map(function (L) {
     var b = document.createElement("button");
     b.type = "button"; b.className = "letter"; b.dataset.l = L;
     b.innerHTML = "<span>" + L + "</span>";
     b.setAttribute("aria-label", "Buchstabe " + L);
-    b.addEventListener("click", function () { pressLetter(L, b); });
+    b.addEventListener("click", function () { act("press", L); });
     board.appendChild(b);
+    btnOf[L] = b;
     return b;
   });
   // Plätze im Uhrzeigersinn um den Rand: oben, rechts, unten, links
@@ -649,7 +692,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--focus); out
     board.style.setProperty("--rows", Rw);
     letterBtns.forEach(function (b, i) {
       b.style.gridRow = cells[i][0]; b.style.gridColumn = cells[i][1];
-      b.classList.toggle("up", cells[i][0] <= Rw / 2);   // obere Hälfte für die Person gegenüber
+      b.classList.toggle("up", !NET.role && cells[i][0] <= Rw / 2);   // obere Hälfte für die Person gegenüber (nur am selben Handy)
     });
   }
   window.addEventListener("resize", layout);
@@ -658,12 +701,19 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--focus); out
   /* ---------- Mitte zeichnen ---------- */
   var up = $("#half-up"), down = $("#half-down"), clockSay = $("#clock-say");
   function scoreLine() {
-    return P.players.map(function (n, i) { return esc(n) + " " + P.scores[i]; }).join(" · ");
+    var sc = scoresArr();
+    return players().map(function (n, i) { return esc(n) + " " + sc[i]; }).join(" · ");
   }
-  // Bei zwei Spielern sitzt Spieler 1 unten, Spieler 2 oben. Ab drei Spielern zeigen beide Hälften dasselbe.
-  function seat(side) { return P.players.length === 2 ? (side === "down" ? 0 : 1) : -1; }
+  // Am selben Handy: Spieler 1 sitzt unten, Spieler 2 oben (ab drei Spielern zeigen beide Hälften dasselbe).
+  // Online: unten bin ich, oben die andere Person.
+  function seat(side) {
+    if (NET.role) return side === "down" ? NET.me : 1 - NET.me;
+    return players().length === 2 ? (side === "down" ? 0 : 1) : -1;
+  }
   function halfHtml(side) {
-    var cur = esc(P.players[R.cur]), two = P.players.length === 2, mine = seat(side);
+    var names = players(), cur = esc(names[R.cur]), two = names.length === 2, mine = seat(side);
+    var you = !NET.role || side === "down";        // online oben: in der dritten Person
+    var other = mine >= 0 ? esc(names[mine]) : "";
     var catBlock = '<p class="label">' + (/…$/.test(R.cat) ? "Satz ergänzen" : "Kategorie") + '</p><p class="cat">' + esc(R.cat) + "</p>";
     var meta = '<div class="row meta"><span class="score">' + scoreLine() + '</span>' +
       '<button type="button" class="small-btn slim" data-act="reset">Neustart</button></div>';
@@ -671,25 +721,34 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--focus); out
     if (R.phase === "boom") {
       var next = R.winner >= 0
         ? '<button type="button" class="small-btn fill" data-act="new">Nächste Runde</button>'
-        : '<button type="button" class="small-btn fill" data-act="go">Weiter mit ' + esc(P.players[nextAlive(R.loser)]) + "</button>";
-      var loser = esc(P.players[R.loser]);
-      if (two && mine === R.loser) return '<p class="label">Bumm!</p><p class="big">Zu langsam!</p><p class="score">' + scoreLine() + "</p>" + next;
-      if (two) return '<p class="label">Gewonnen</p><p class="big">Punkt für dich!</p><p class="line"><strong>' + loser + "</strong> war zu langsam.</p>" +
-        '<p class="score">' + scoreLine() + "</p>" + next;
+        : '<button type="button" class="small-btn fill" data-act="go">Weiter mit ' + esc(names[nextAlive(R.loser)]) + "</button>";
+      var loser = esc(names[R.loser]);
+      if (two && mine === R.loser) return '<p class="label">Bumm!</p><p class="big">' + (you ? "Zu langsam!" : other + " war zu langsam") + '</p><p class="score">' + scoreLine() + "</p>" + next;
+      if (two) return '<p class="label">Gewonnen</p><p class="big">' + (you ? "Punkt für dich!" : "Punkt für " + other) + "</p>" +
+        (you ? '<p class="line"><strong>' + loser + "</strong> war zu langsam.</p>" : "") + '<p class="score">' + scoreLine() + "</p>" + next;
       return '<p class="label">Bumm!</p><p class="big">' + loser + (R.winner >= 0 ? " war dran" : " ist raus") + "</p>" +
-        (R.winner >= 0 ? '<p class="line">Punkt für <strong>' + esc(P.players[R.winner]) + "</strong></p>" : "") +
+        (R.winner >= 0 ? '<p class="line">Punkt für <strong>' + esc(names[R.winner]) + "</strong></p>" : "") +
         '<p class="score">' + scoreLine() + "</p>" + next;
     }
     if (R.flash) return '<p class="label">Geschafft</p><p class="line"><strong>' + esc(R.flash) + "</strong></p>" + catBlock;
 
     if (R.phase === "idle") {
+      if (NET.role && side === "up") {
+        return '<p class="label">Online</p><p class="line">Verbunden mit <strong>' + other + "</strong></p>" +
+          '<p class="score">' + scoreLine() + "</p>" +
+          '<button type="button" class="small-btn slim" data-act="disconnect">Verbindung trennen</button>';
+      }
       if (side === "up") return catBlock + '<p class="line">Uhr antippen zum Starten</p><p class="score">' + scoreLine() + "</p>";
-      return catBlock +
-        '<div class="mode" role="group" aria-label="Spielweise">' +
-          '<button type="button" data-act="mode-turn" aria-pressed="' + (P.mode === "turn") + '">Zeit pro Zug</button>' +
-          '<button type="button" data-act="mode-round" aria-pressed="' + (P.mode === "round") + '">Zeit pro Runde</button></div>' +
+      var m = modeNow();
+      var modeHtml = NET.role === "guest"
+        ? '<p class="line">' + (m === "turn" ? "Zeit pro Zug" : "Zeit pro Runde") + " · legt " + esc(names[0]) + " fest</p>"
+        : '<div class="mode" role="group" aria-label="Spielweise">' +
+            '<button type="button" data-act="mode-turn" aria-pressed="' + (m === "turn") + '">Zeit pro Zug</button>' +
+            '<button type="button" data-act="mode-round" aria-pressed="' + (m === "round") + '">Zeit pro Runde</button></div>';
+      return catBlock + modeHtml +
         '<div class="row"><button type="button" class="small-btn" data-act="cat">Andere Kategorie</button>' +
-        '<button type="button" class="small-btn" data-act="settings">Einstellungen</button></div>';
+        '<button type="button" class="small-btn" data-act="settings">Einstellungen</button></div>' +
+        (NET.role ? "" : '<button type="button" class="small-btn fill" data-act="online">Online spielen</button>');
     }
     // run / pause
     if (R.confirm) {
@@ -699,53 +758,223 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--focus); out
         '<button type="button" class="small-btn slim" data-act="reset-cancel">Weiterspielen</button>';
     }
     var pauseLine = R.phase === "pause" ? '<p class="line">Pause. Uhr antippen zum Weiterspielen.</p>' : "";
-    if (two && mine !== R.cur) return catBlock + '<p class="line"><strong>' + cur + "</strong> ist dran</p>" + pauseLine + meta;
+    if (two && mine !== R.cur) {
+      if (!you) return '<p class="line"><strong>' + other + "</strong> wartet</p>" + '<p class="score">' + scoreLine() + "</p>";
+      return catBlock + '<p class="line"><strong>' + cur + "</strong> ist dran</p>" + pauseLine + meta;
+    }
+    if (!you) return '<p class="label">Am Zug</p><p class="big">' + other + " ist dran</p>" + pauseLine;
     return catBlock + '<p class="big">' + (two ? "Du bist dran" : cur + " ist dran") + "</p>" + pauseLine + meta;
   }
   var centerEl = $("#center");
   function render() {
     up.innerHTML = halfHtml("up");
     down.innerHTML = halfHtml("down");
-    var playing = (R.phase === "run" || R.phase === "pause") && !R.confirm && !R.flash, two = P.players.length === 2;
+    var playing = (R.phase === "run" || R.phase === "pause") && !R.confirm && !R.flash, two = players().length === 2;
     ["up", "down"].forEach(function (side) {
       var el = side === "up" ? up : down, mine = seat(side);
       el.classList.toggle("turn", playing && (!two || mine === R.cur));
       el.classList.toggle("lost", R.phase === "boom" && (!two || mine === R.loser));
     });
-    centerEl.classList.toggle("focus-down", playing && two && R.cur === 0);
-    centerEl.classList.toggle("focus-up", playing && two && R.cur === 1);
+    var meIdx = NET.role ? NET.me : 0;
+    var focusDown = (playing && two && R.cur === meIdx) || R.phase === "idle";
+    centerEl.classList.toggle("focus-down", focusDown);
+    centerEl.classList.toggle("focus-up", playing && two && R.cur !== meIdx);
+    board.classList.toggle("online", !!NET.role);
     board.classList.toggle("idle", R.phase === "idle");
     clockEl.classList.toggle("run", R.phase === "run");
     clockEl.classList.toggle("gone", R.phase === "boom");
     clockSay.hidden = R.phase === "run";
     clockSay.textContent = R.phase === "pause" ? "Weiter" : "Start";
     clockEl.setAttribute("aria-label", R.phase === "run" ? "Uhr läuft. Antippen für Pause." : R.phase === "pause" ? "Pause. Antippen zum Weiterspielen." : "Uhr: Runde starten");
+    if (NET.role === "host") broadcast();
   }
 
-  clockEl.addEventListener("click", function () {
-    if (R.phase === "idle") start();
-    else if (R.phase === "run") pause();
-    else if (R.phase === "pause") resume();
-  });
+  /* ---------- Aktionen: am selben Handy direkt, online über die Person, die das Spiel führt ---------- */
+  function act(type, v) {
+    if (NET.role && type === "press" && R.phase === "run" && R.cur !== NET.me) {
+      say(players()[R.cur] + " ist dran."); return;
+    }
+    if (NET.role === "guest") { send({ t: "act", a: type, v: v }); return; }
+    apply(type, v);
+  }
+  function apply(type, v) {
+    if (type === "clock") { if (R.phase === "idle") start(); else if (R.phase === "run") pause(); else if (R.phase === "pause") resume(); }
+    else if (type === "press") pressLetter(v);
+    else if (type === "new") newRound();
+    else if (type === "go") continueRound();
+    else if (type === "reset") { pause(); R.confirm = true; render(); }
+    else if (type === "reset-cancel") { if (R.phase === "pause") resume(); else { R.confirm = false; render(); } }
+    else if (type === "reset-round") { newRound(); say("Runde neu gestartet."); }
+    else if (type === "reset-all") {
+      if (NET.role) NET.scores = NET.names.map(function () { return 0; });
+      else { P.scores = P.players.map(function () { return 0; }); save(); }
+      newRound(); say("Alles zurückgesetzt.");
+    }
+    else if (type === "cat") { if (R.phase === "idle") { R.cat = nextCategory(); render(); } }
+    else if (type === "mode") { P.mode = v === "round" ? "round" : "turn"; save(); render(); }
+    else if (type === "hide") pause();
+  }
+
+  clockEl.addEventListener("click", function () { act("clock"); });
   function onCenter(e) {
     var b = e.target.closest("[data-act]");
     if (!b) return;
-    var act = b.dataset.act;
-    if (act === "new") newRound();
-    else if (act === "go") continueRound();
-    else if (act === "reset") { pause(); R.confirm = true; render(); }
-    else if (act === "reset-cancel") { if (R.phase === "pause") resume(); else { R.confirm = false; render(); } }
-    else if (act === "reset-round") { newRound(); say("Runde neu gestartet."); }
-    else if (act === "reset-all") { P.scores = P.players.map(function () { return 0; }); save(); newRound(); say("Alles zurückgesetzt."); }
-    else if (act === "cat") { R.cat = nextCategory(); render(); }
-    else if (act === "settings") openSettings();
-    else if (act === "mode-turn" || act === "mode-round") { P.mode = act === "mode-turn" ? "turn" : "round"; save(); render(); }
+    var a = b.dataset.act;
+    if (a === "settings") openSettings();
+    else if (a === "online") openOnline();
+    else if (a === "disconnect") { leaveOnline(""); }
+    else if (a === "mode-turn" || a === "mode-round") act("mode", a === "mode-turn" ? "turn" : "round");
+    else act(a);
   }
   up.addEventListener("click", onCenter);
   down.addEventListener("click", onCenter);
 
   // App im Hintergrund: Runde anhalten, damit niemand unfair explodiert
-  document.addEventListener("visibilitychange", function () { if (document.hidden) pause(); });
+  document.addEventListener("visibilitychange", function () { if (document.hidden) act("hide"); });
+
+  /* ---------- Online-Verbindung (PeerJS, erst bei Bedarf geladen) ---------- */
+  var PEER_SRC = "https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js";
+  var ID_PREFIX = "wortbombe-spiele-";
+  var CODE_CHARS = "ABCDEFGHJKLMNPRSTUVWXYZ";        // ohne I, O, Q: am Telefon gut zu verstehen
+  var onlineEl = $("#online"), netStatus = $("#net-status"), myNameEl = $("#my-name");
+  function status(t) { netStatus.textContent = t; }
+  function myName() { return (myNameEl.value || "").trim() || P.players[0] || "Ich"; }
+  function cleanName(n) { return String(n || "").slice(0, 14) || "Mitspieler"; }
+  function send(m) { try { if (NET.conn && NET.conn.open) NET.conn.send(m); } catch (e) {} }
+  function broadcast() {
+    send({ t: "state", s: { phase: R.phase, cat: R.cat, used: R.used, cur: R.cur, alive: R.alive, loser: R.loser,
+      winner: R.winner, flash: R.flash, confirm: R.confirm, names: NET.names, scores: NET.scores, mode: P.mode } });
+  }
+  function applyState(st) {
+    var wasBoom = R.phase === "boom";
+    R.phase = st.phase; R.cat = st.cat; R.used = st.used || {}; R.cur = st.cur; R.alive = st.alive || [0, 1];
+    R.loser = st.loser; R.winner = st.winner; R.flash = st.flash; R.confirm = st.confirm;
+    NET.names = st.names; NET.scores = st.scores; NET.mode = st.mode;
+    letterBtns.forEach(function (b) {
+      var u = !!R.used[b.dataset.l];
+      b.classList.toggle("used", u);
+      b.setAttribute("aria-label", "Buchstabe " + b.dataset.l + (u ? ", schon benutzt" : ""));
+    });
+    if (R.phase === "run") { if (!ticker) { audio(); startTicking(); } keepAwake(true); }
+    else { stopClock(); keepAwake(false); }
+    if (R.phase === "boom" && !wasBoom) explode();
+    render();
+  }
+  function withPeer(cb) {
+    if (window.Peer) { cb(); return; }
+    status("Lade Online-Funktion …");
+    var sc = document.createElement("script");
+    sc.src = PEER_SRC; sc.async = true;
+    sc.onload = cb;
+    sc.onerror = function () { status("Die Online-Funktion konnte nicht geladen werden. Ist das Handy mit dem Internet verbunden?"); };
+    document.head.appendChild(sc);
+  }
+  function errText(e) {
+    var t = e && e.type;
+    if (t === "network" || t === "server-error" || t === "socket-error" || t === "socket-closed") return "Keine Verbindung zum Vermittlungsdienst. Bitte Internet prüfen und nochmal versuchen.";
+    if (t === "browser-incompatible") return "Dieser Browser unterstützt die Online-Funktion nicht.";
+    return "Verbindung fehlgeschlagen" + (t ? " (" + t + ")" : "") + ". Bitte nochmal versuchen.";
+  }
+  function netReset() {
+    try { if (NET.conn) NET.conn.close(); } catch (e) {}
+    try { if (NET.peer) NET.peer.destroy(); } catch (e) {}
+    NET.role = null; NET.conn = null; NET.peer = null; NET.me = 0; NET.names = []; NET.scores = [0, 0]; NET.starter = 0;
+  }
+  function wire(c, role) {
+    c.on("open", function () {
+      NET.conn = c; NET.role = role; NET.me = role === "host" ? 0 : 1;
+      c.send({ t: "hello", name: myName() });
+      status("Verbunden.");
+    });
+    c.on("data", function (m) {
+      if (!m || typeof m !== "object") return;
+      if (m.t === "hello") {
+        if (role === "host") {
+          NET.names = [myName(), cleanName(m.name)]; NET.scores = [0, 0]; NET.starter = 0;
+          enterOnline(); newRound();
+        } else {
+          NET.names = [cleanName(m.name), myName()];
+          enterOnline();
+        }
+      } else if (m.t === "state" && role === "guest") {
+        applyState(m.s);
+      } else if (m.t === "act" && role === "host") {
+        if (m.a === "press" && R.phase === "run" && R.cur !== 1) return;   // nur wer dran ist, darf drücken
+        apply(m.a, m.v);
+      }
+    });
+    c.on("close", function () { if (NET.conn === c) leaveOnline("Die Verbindung ist getrennt. Ihr spielt jetzt wieder an einem Handy."); });
+    c.on("error", function () { if (NET.conn === c) leaveOnline("Die Verbindung ist abgebrochen."); });
+  }
+  function makeCode() { var c = ""; for (var i = 0; i < 4; i++) c += CODE_CHARS[randInt(CODE_CHARS.length)]; return c; }
+  function hostGame() {
+    withPeer(function () {
+      netReset();
+      var code = makeCode();
+      var peer = NET.peer = new Peer(ID_PREFIX + code.toLowerCase());
+      $("#net-join-box").hidden = true; $("#net-code-box").hidden = false; $("#net-code").textContent = "····";
+      status("Erstelle Spiel …");
+      peer.on("open", function () {
+        $("#net-code").textContent = code;
+        status("Sag den Code am Telefon an. Warte auf die andere Person …");
+      });
+      peer.on("connection", function (c) {
+        if (NET.conn) { c.on("open", function () { c.close(); }); return; }
+        wire(c, "host");
+      });
+      peer.on("error", function (e) {
+        if (e.type === "unavailable-id") { hostGame(); return; }   // Code schon vergeben: neuen ziehen
+        if (!NET.role) status(errText(e));
+      });
+    });
+  }
+  function joinGame() {
+    var code = ($("#join-code").value || "").toUpperCase().replace(/[^A-Z]/g, "");
+    if (code.length !== 4) { status("Der Code hat vier Buchstaben."); return; }
+    withPeer(function () {
+      netReset();
+      var peer = NET.peer = new Peer();
+      status("Suche Spiel " + code + " …");
+      peer.on("open", function () { wire(peer.connect(ID_PREFIX + code.toLowerCase(), { reliable: true }), "guest"); });
+      peer.on("error", function (e) {
+        if (NET.role) return;
+        status(e.type === "peer-unavailable" ? "Kein Spiel mit dem Code " + code + " gefunden. Code prüfen und nochmal versuchen." : errText(e));
+      });
+    });
+  }
+  function enterOnline() {
+    onlineEl.hidden = true;
+    stopClock(); keepAwake(false);
+    board.classList.add("online");
+    layout(); render();
+    say("Verbunden mit " + NET.names[1 - NET.me] + ".");
+  }
+  function leaveOnline(msg) {
+    var was = !!NET.role;
+    netReset();
+    board.classList.remove("online");
+    layout(); newRound();
+    if (was && msg) { openOnline(); status(msg); }
+  }
+  function openOnline() {
+    myNameEl.value = P.myName || P.players[0] || "";
+    $("#net-code-box").hidden = true; $("#net-join-box").hidden = true;
+    status(""); onlineEl.hidden = false;
+  }
+  myNameEl.addEventListener("input", function () { P.myName = myNameEl.value.trim(); save(); });
+  $("#net-create").addEventListener("click", hostGame);
+  $("#net-join").addEventListener("click", function () {
+    $("#net-code-box").hidden = true; $("#net-join-box").hidden = false; status("");
+    if (!NET.role) { try { if (NET.peer) NET.peer.destroy(); } catch (e) {} NET.peer = null; }
+    $("#join-code").focus();
+  });
+  $("#join-code").addEventListener("input", function (e) { e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 4); });
+  $("#join-code").addEventListener("keydown", function (e) { if (e.key === "Enter") joinGame(); });
+  $("#net-connect").addEventListener("click", joinGame);
+  $("#net-close").addEventListener("click", function () {
+    onlineEl.hidden = true;
+    if (!NET.role) netReset();   // noch nicht verbunden: Warten abbrechen
+  });
 
   /* ---------- Einstellungen ---------- */
   var settings = $("#settings"), plist = $("#plist"), confirmBox = $("#confirm");

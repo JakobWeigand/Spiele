@@ -47,6 +47,18 @@ Das Handy liegt flach zwischen den Spielern. Um den Rand liegen 24 Buchstaben (A
 - Bei „Zeit pro Runde“ hat die nächste Person nach dem Weitergeben immer noch mindestens 1,5 Sekunden.
 - Tempo, Ton, 2–5 Spieler und Punkte unter „Einstellungen“. Uhr antippen während der Runde pausiert, „Neustart“ setzt Runde oder Punkte zurück.
 
+### Wortbombe online (zwei Handys)
+
+Zum Spielen, wenn ihr nicht am selben Ort seid, zum Beispiel beim Telefonieren:
+
+1. Beide öffnen die Wortbombe und tippen auf **„Online spielen“**.
+2. Eine Person tippt **„Spiel erstellen“** und sagt den vierstelligen Code an.
+3. Die andere tippt **„Beitreten“**, gibt den Code ein und tippt **„Verbinden“**.
+
+Danach sehen beide dieselbe Kategorie. Wer dran ist, drückt den Buchstaben auf seinem Handy, beim anderen verschwindet er sofort. Uhr, Explosion und Punkte laufen auf beiden gleich; das Handy, das das Spiel erstellt hat, führt die geheime Uhr.
+
+Technik: Die Handys finden sich über den kostenlosen Vermittlungsdienst von PeerJS (die Bibliothek wird erst beim Tippen auf „Online spielen“ von jsDelivr geladen). Die Spieldaten gehen danach direkt von Handy zu Handy. Der Online-Modus braucht Internet, alles andere läuft weiter offline.
+
 ## Chooser
 
 Alle legen einen Finger aufs Display. Sobald keine Finger mehr dazukommen, läuft ein kurzer Countdown, dann wählt die App zufällig aus. Gewählte Finger werden grün, die anderen verblassen. Alle Finger loslassen startet die nächste Runde.
