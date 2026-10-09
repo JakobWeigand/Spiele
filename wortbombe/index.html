@@ -207,6 +207,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--focus); out
 .panel .mode button { min-height: 46px; font-size: 15px; }
 .mode.three { grid-template-columns: 1fr 1fr 1fr; }
 .note { margin: 0; font-size: 14px; color: var(--small); }
+.note a { color: inherit; text-underline-offset: 3px; }
 .plist { display: grid; gap: 8px; }
 .prow { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
 .prow input {
@@ -287,6 +288,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--focus); out
   <div class="panel" role="dialog" aria-modal="true" aria-labelledby="online-title">
     <h2 id="online-title">Online spielen</h2>
     <p class="note">Zu zweit auf zwei Handys, zum Beispiel beim Telefonieren. Eine Person erstellt ein Spiel und sagt der anderen den Code.</p>
+    <p class="note">Für die Verbindung erfahren Server von PeerJS und Google deine IP-Adresse. Mehr unter <a href="../datenschutz.html">Datenschutz</a>.</p>
     <p class="label">Dein Name</p>
     <div class="prow"><input type="text" id="my-name" maxlength="14" autocomplete="off" aria-label="Dein Name"></div>
     <div class="two" id="net-choose">
@@ -573,6 +575,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--focus); out
   }
 
   function pressLetter(L) {
+    if (LETTERS.indexOf(L) === -1) return;   // nur echte Buchstaben (online kommen sie vom anderen Handy)
     var btn = btnOf[L];
     if (R.phase === "pause") { resume(); return; }
     if (R.phase !== "run") { say(R.phase === "idle" ? "Erst die Uhr antippen, dann geht es los." : ""); return; }
@@ -835,7 +838,9 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--focus); out
   document.addEventListener("visibilitychange", function () { if (document.hidden) act("hide"); });
 
   /* ---------- Online-Verbindung (PeerJS, erst bei Bedarf geladen) ---------- */
-  var PEER_SRC = "https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js";
+  // PeerJS 1.5.4 liegt unverändert im App-Ordner (MIT-Lizenz in peerjs-LICENSE.txt) und kommt nicht von einem fremden CDN.
+  // So kann unterwegs niemand anderen Code unterschieben und kein CDN erfährt, wer online spielt.
+  var PEER_SRC = "peerjs.min.js";
   var ID_PREFIX = "wortbombe-spiele-";
   var CODE_CHARS = "ABCDEFGHJKLMNPRSTUVWXYZ";        // ohne I, O, Q: am Telefon gut zu verstehen
   var onlineEl = $("#online"), netStatus = $("#net-status"), myNameEl = $("#my-name");
@@ -847,11 +852,21 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--focus); out
     send({ t: "state", s: { phase: R.phase, cat: R.cat, used: R.used, cur: R.cur, alive: R.alive, loser: R.loser,
       winner: R.winner, flash: R.flash, confirm: R.confirm, names: NET.names, scores: NET.scores, mode: P.mode } });
   }
+  // Den Stand vom anderen Handy nie ungeprüft übernehmen: nur bekannte Werte, Zahlen als Zahlen, Texte gekürzt.
+  // Sonst könnte ein manipuliertes Handy HTML einschleusen oder die App abstürzen lassen.
+  function seatOr(v, none) { return v === 0 || v === 1 ? v : none; }
   function applyState(st) {
-    var wasBoom = R.phase === "boom";
-    R.phase = st.phase; R.cat = st.cat; R.used = st.used || {}; R.cur = st.cur; R.alive = st.alive || [0, 1];
-    R.loser = st.loser; R.winner = st.winner; R.flash = st.flash; R.confirm = st.confirm;
-    NET.names = st.names; NET.scores = st.scores; NET.mode = st.mode;
+    if (!st || typeof st !== "object") return;
+    var wasBoom = R.phase === "boom", used = {};
+    LETTERS.forEach(function (L) { if (st.used && st.used[L] === true) used[L] = true; });
+    R.phase = ["idle", "run", "pause", "boom"].indexOf(st.phase) !== -1 ? st.phase : "idle";
+    R.cat = String(st.cat || "").slice(0, 80); R.used = used; R.cur = seatOr(st.cur, 0);
+    R.alive = [0, 1].filter(function (i) { return Array.isArray(st.alive) && st.alive.indexOf(i) !== -1; });
+    if (!R.alive.length) R.alive = [0, 1];
+    R.loser = seatOr(st.loser, -1); R.winner = seatOr(st.winner, -1); R.flash = String(st.flash || "").slice(0, 80); R.confirm = st.confirm === true;
+    if (Array.isArray(st.names) && st.names.length === 2) NET.names = st.names.map(cleanName);
+    if (Array.isArray(st.scores) && st.scores.length === 2) NET.scores = st.scores.map(function (n) { return Math.max(0, n | 0); });
+    NET.mode = st.mode === "round" ? "round" : "turn";
     letterBtns.forEach(function (b) {
       var u = !!R.used[b.dataset.l];
       b.classList.toggle("used", u);

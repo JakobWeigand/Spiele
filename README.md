@@ -9,6 +9,7 @@
 - **Heiß & Kalt:** https://jakobweigand.github.io/Spiele/heisskalt/
 - **Codenames Duett:** https://jakobweigand.github.io/Spiele/codenames/
 - **Startseite mit allen Spielen:** https://jakobweigand.github.io/Spiele/
+- **Datenschutz:** https://jakobweigand.github.io/Spiele/datenschutz.html
 
 Aufs iPhone: Link in Safari öffnen → Teilen → „Zum Home-Bildschirm“ → einmal mit Internet öffnen. Danach läuft die App offline.
 
@@ -59,7 +60,7 @@ Zum Spielen, wenn ihr nicht am selben Ort seid, zum Beispiel beim Telefonieren:
 
 Danach sehen beide dieselbe Kategorie. Wer dran ist, drückt den Buchstaben auf seinem Handy, beim anderen verschwindet er sofort. Uhr, Explosion und Punkte laufen auf beiden gleich; das Handy, das das Spiel erstellt hat, führt die geheime Uhr.
 
-Technik: Die Handys finden sich über den kostenlosen Vermittlungsdienst von PeerJS (die Bibliothek wird erst beim Tippen auf „Online spielen“ von jsDelivr geladen). Die Spieldaten gehen danach direkt von Handy zu Handy. Der Online-Modus braucht Internet, alles andere läuft weiter offline.
+Technik: Die Handys finden sich über den kostenlosen Vermittlungsdienst von PeerJS. Die Bibliothek liegt als Kopie im App-Ordner und wird erst beim Tippen auf „Online spielen“ geladen. Die Spieldaten gehen danach direkt von Handy zu Handy. Der Online-Modus braucht Internet, alles andere läuft weiter offline. Welche Daten dabei an wen gehen, steht unter [Datenschutz](datenschutz.html).
 
 ## Heiß & Kalt
 
@@ -100,12 +101,15 @@ Weitere Funktionen: letzter Schritt zurücknehmen, Verlauf aller Züge, beide Sc
 
 ## Aufbau
 
-Jede App ist ein eigenständiger Ordner ohne Abhängigkeiten:
+Jede App ist ein eigenständiger Ordner ohne externe Abhängigkeiten:
 
 - `index.html`: die komplette App (HTML, CSS und JavaScript in einer Datei)
 - `manifest.webmanifest`: Name, Icon und Startverhalten für „Zum Home-Bildschirm“
 - `sw.js`: Service Worker, der die App beim ersten Öffnen speichert und danach offline ausliefert
 - `icon-180.png`, `icon-192.png`, `icon-512.png`: App-Icons
+- `peerjs.min.js` und `peerjs-LICENSE.txt` (nur Wortbombe sowie Heiß & Kalt): PeerJS 1.5.4 für den Online-Modus, unverändert aus dem npm-Paket, MIT-Lizenz
+
+Im Hauptordner liegen außerdem die Startseite `index.html` und die Datenschutzhinweise `datenschutz.html`.
 
 Die Würfel nutzen `crypto.getRandomValues` mit Rejection Sampling, damit jede Augenzahl gleich wahrscheinlich ist.
 Das Design folgt dem Designsystem Navy Research.
@@ -120,3 +124,10 @@ Das Design folgt dem Designsystem Navy Research.
 
 1. Datei im Ordner der App bearbeiten und pushen. GitHub Pages veröffentlicht die Änderung nach etwa einer Minute.
 2. In `sw.js` derselben App die Versionsnummer erhöhen (z. B. `v2` → `v3`). Erst dann holen sich installierte Apps die neue Version, beim nächsten Start mit Internet.
+
+## Sicherheit und Datenschutz
+
+- Alles, was vom anderen Handy kommt, wird vor dem Anzeigen geprüft. Das passiert in `applyState` (Wortbombe), `cleanState` (Heiß & Kalt) und `sanitize` (Codenames Duett). Neue Felder im Online-Stand dort mit aufnehmen und nie ungeprüft per `innerHTML` anzeigen.
+- Keine Skripte, Schriften oder Bilder von fremden Servern einbinden. Bibliotheken als Kopie in den App-Ordner legen.
+- Kommt ein neuer Online-Dienst dazu, `datenschutz.html` ergänzen.
+- Ein eigener Relay-Server für Codenames per `?relay=` wirkt nur unter `localhost` zum Testen.
