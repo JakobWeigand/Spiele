@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0d1b2a" media="(prefers-color-scheme: dark)">
+<title>Datenschutz · Spiele</title>
+<style>
+/* Datenschutz: gleiche Farben und Schrift wie die Startseite. */
+:root {
+  --sans: "Neue Montreal", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --bg: #ffffff; --surface: #f4f6f8; --text: #0d1b2a; --small: #3a4a5c; --muted: #6a7d93;
+  --rule: #d6dce4; --focus: #4a6fa5;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0d1b2a; --surface: #1a2c42; --text: #ffffff; --small: #dde3ea; --muted: #b8c4d4;
+    --rule: #6a7d93; --focus: #b8c4d4; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0d1b2a; --surface: #1a2c42; --text: #ffffff; --small: #dde3ea; --muted: #b8c4d4;
+  --rule: #6a7d93; --focus: #b8c4d4; color-scheme: dark;
+}
+*, *::before, *::after { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--sans); line-height: 1.5; }
+.wrap {
+  max-width: 640px; margin: 0 auto;
+  padding-inline: max(16px, env(safe-area-inset-left, 0px));
+  padding-block: calc(24px + env(safe-area-inset-top, 0px)) calc(32px + env(safe-area-inset-bottom, 0px));
+  display: grid; gap: 24px;
+}
+.eyebrow { margin: 0; font-size: 13px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
+h1 { margin: 6px 0 0; font-size: 34px; line-height: 1.1; letter-spacing: -.01em; }
+section { border-top: 2px solid var(--rule); padding-top: 18px; display: grid; gap: 10px; }
+h2 { margin: 0; font-size: 20px; line-height: 1.25; }
+p, li { margin: 0; font-size: 16px; color: var(--small); overflow-wrap: anywhere; }
+ul { margin: 0; padding-left: 1.2em; display: grid; gap: 8px; }
+.short { background: var(--surface); padding: 16px; border: 0; }
+.short li { color: var(--text); }
+a { color: inherit; text-underline-offset: 3px; }
+a:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.foot { font-size: 14px; color: var(--muted); }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <header>
+    <p class="eyebrow">Spiele</p>
+    <h1>Datenschutz</h1>
+  </header>
+
+  <ul class="short" aria-label="Kurz gesagt">
+    <li>Keine Cookies, kein Tracking, keine Werbung und keine Statistik.</li>
+    <li>Spielstände, Einstellungen und Namen bleiben auf deinem Gerät.</li>
+    <li>Daten gehen nur an fremde Dienste, wenn du online spielst. Welche das sind, steht weiter unten.</li>
+  </ul>
+
+  <section>
+    <h2>Verantwortlich</h2>
+    <p>Jakob Weigand, Inhaber des GitHub-Kontos JakobWeigand. Kontakt über GitHub unter <a href="https://github.com/JakobWeigand">github.com/JakobWeigand</a>.</p>
+  </section>
+
+  <section>
+    <h2>Hosting bei GitHub Pages</h2>
+    <p>Die Spiele liegen bei GitHub Pages, einem Dienst der GitHub Inc. in den USA. Wenn du eine Seite aufrufst oder eine installierte App nach Updates sucht, verarbeitet GitHub technisch nötige Daten wie deine IP-Adresse, den Zeitpunkt und die Browserkennung. Das dient der Auslieferung der Seiten und dem Schutz vor Angriffen.</p>
+    <p>Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO, also das berechtigte Interesse an einer sicheren und stabilen Bereitstellung. GitHub ist nach dem EU-US Data Privacy Framework zertifiziert. Mehr dazu in der <a href="https://docs.github.com/de/site-policy/privacy-policies/github-general-privacy-statement">Datenschutzerklärung von GitHub</a>.</p>
+  </section>
+
+  <section>
+    <h2>Speicher auf deinem Gerät</h2>
+    <p>Die Apps speichern Spielstand, Einstellungen und eingegebene Namen im Speicher deines Browsers. Außerdem legt jede App eine Offline-Kopie von sich selbst an. Diese Daten bleiben auf deinem Gerät und werden nicht übertragen.</p>
+    <p>Das Speichern ist für die Funktion nötig, die du nutzt. Deshalb braucht es dafür keine Einwilligung (§ 25 Abs. 2 Nr. 2 TDDDG). Löschen kannst du alles in den Einstellungen deines Browsers bei den Website-Daten von jakobweigand.github.io.</p>
+  </section>
+
+  <section>
+    <h2>Online spielen bei Wortbombe sowie Heiß &amp; Kalt</h2>
+    <p>Erst wenn du „Online spielen“ antippst, baut die App eine Verbindung auf. Die dafür nötige Bibliothek PeerJS liegt auf dieser Seite und kommt nicht von fremden Servern. Beteiligt sind dann diese Dienste.</p>
+    <ul>
+      <li>Der Vermittlungsserver von <a href="https://peerjs.com">PeerJS</a> (0.peerjs.com) bringt die zwei Handys zusammen. Er erfährt deine IP-Adresse und den Spiel-Code.</li>
+      <li>Ein STUN-Server von Google (stun.l.google.com, Google LLC, USA) teilt deinem Handy die eigene öffentliche IP-Adresse mit und erfährt sie dabei. Google ist nach dem EU-US Data Privacy Framework zertifiziert. Mehr in der <a href="https://policies.google.com/privacy?hl=de">Datenschutzerklärung von Google</a>.</li>
+      <li>Die TURN-Server von PeerJS (eu-0.turn.peerjs.com und us-0.turn.peerjs.com) leiten das Spiel weiter, falls keine direkte Verbindung klappt. Die Spieldaten bleiben dabei verschlüsselt.</li>
+    </ul>
+    <p>Danach laufen die Spieldaten verschlüsselt (WebRTC) direkt zwischen den beiden Handys. Die Person auf dem anderen Handy sieht deinen Namen und kann technisch deine IP-Adresse erfahren. Wer die Server von PeerJS betreibt und wo sie stehen, gibt das Projekt nicht genau an. Eine Verarbeitung außerhalb der EU ist daher möglich.</p>
+  </section>
+
+  <section>
+    <h2>Online spielen bei Codenames Duett</h2>
+    <p>Bei „Zwei Handys“ mit eingeschaltetem Schalter „Online verbinden“ laufen die Züge über den Dienst ntfy.sh. Vor dem Senden verschlüsselt dein Handy jeden Zug und deinen Namen mit einem Schlüssel aus dem Spiel-Code. ntfy.sh erfährt deine IP-Adresse und einen Kanalnamen, der aus dem Spiel-Code berechnet wird. Nach eigenen Angaben speichert ntfy.sh Nachrichten bis zu 12 Stunden und nutzt IP-Adressen gegen Missbrauch. Mehr in der <a href="https://docs.ntfy.sh/privacy/">Datenschutzerklärung von ntfy.sh</a>.</p>
+    <p>Weil der Spiel-Code kurz ist, schützt die Verschlüsselung vor Neugierigen, ist aber nicht für vertrauliche Inhalte gedacht. Ohne Internet oder mit ausgeschaltetem Schalter fließen keine Daten. Die Spielarten „Ein Handy zu zweit“ und „Allein mit KI-Partner“ laufen komplett offline.</p>
+  </section>
+
+  <section>
+    <h2>Rechtsgrundlage der Online-Funktionen</h2>
+    <p>Die Online-Funktionen nutzt du freiwillig und auf eigenen Wunsch. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO, weil die Verarbeitung für die von dir gewünschte Funktion nötig ist. Soweit Daten dabei in Länder außerhalb der EU gehen, geschieht das aus demselben Grund (Art. 49 Abs. 1 lit. b DSGVO). Alle Spiele funktionieren auch ohne Online-Funktion.</p>
+  </section>
+
+  <section>
+    <h2>Deine Rechte</h2>
+    <p>Du hast das Recht auf Auskunft, Berichtigung, Löschung, Einschränkung der Verarbeitung, Datenübertragbarkeit und Widerspruch (Art. 15 bis 21 DSGVO). Außerdem kannst du dich bei einer Datenschutz-Aufsichtsbehörde beschweren (Art. 77 DSGVO).</p>
+    <p>Der Betreiber dieser Seiten hat keinen eigenen Server und speichert keine Daten über dich. Für Daten bei GitHub, PeerJS, Google oder ntfy.sh wende dich bitte direkt an diese Anbieter.</p>
+  </section>
+
+  <p class="foot">Stand 9. Oktober 2026 · <a href="./">Zur Startseite</a></p>
+</main>
+</body>
+</html>

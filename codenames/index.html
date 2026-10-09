@@ -90,6 +90,7 @@ button:focus-visible, input:focus-visible, label:focus-within { outline: 3px sol
 }
 .setup h1 { margin: 4px 0 6px; font-size: 36px; line-height: 1.05; letter-spacing: -.01em; }
 .setup .lead { margin: 0; color: var(--small); font-size: 16px; max-width: 40ch; }
+.setup .links { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 28px; }
 .group { display: grid; gap: 10px; border: 0; margin: 0; padding: 0; min-width: 0; }
 .group > legend { padding: 0; margin-bottom: 10px; }
 .opt {
@@ -309,7 +310,7 @@ button:focus-visible, input:focus-visible, label:focus-within { outline: 3px sol
         <input class="text" id="join-code" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="9" placeholder="z. B. KX7-P3M" style="text-transform:uppercase;letter-spacing:.1em">
       </div>
       <div class="row">
-        <div class="t"><strong>Online verbinden</strong><span>Züge erscheinen live auf beiden Handys. Ohne Internet tippt ihr die Züge auf beiden Handys an.</span></div>
+        <div class="t"><strong>Online verbinden</strong><span>Züge erscheinen live auf beiden Handys, verschlüsselt über den Dienst ntfy.sh. Ohne Internet tippt ihr die Züge auf beiden Handys an.</span></div>
         <label class="switch"><input type="checkbox" id="online" checked aria-label="Online verbinden"><span></span></label>
       </div>
     </div>
@@ -338,7 +339,7 @@ button:focus-visible, input:focus-visible, label:focus-within { outline: 3px sol
 
     <p class="err" id="setup-err" role="alert" hidden></p>
     <button type="button" class="btn primary wide" id="start">Spiel starten</button>
-    <button type="button" class="linkish" id="rules-open">So wird gespielt</button>
+    <div class="links"><button type="button" class="linkish" id="rules-open">So wird gespielt</button><a class="linkish" href="../datenschutz.html">Datenschutz</a></div>
   </div>
 </main>
 
@@ -860,8 +861,10 @@ button:focus-visible, input:focus-visible, label:focus-within { outline: 3px sol
   // Züge werden mit dem Spiel-Code verschlüsselt (AES-GCM) und über einen öffentlichen Kanal geschickt.
   // Der Kanalname ist ein Hash des Codes. Ohne Internet läuft alles lokal weiter.
   var Relay = (function () {
+    // Ein eigener Relay-Server per ?relay= gilt nur beim lokalen Testen. Auf der echten Seite könnte
+    // ein präparierter Link sonst alle Online-Züge an einen fremden Server umleiten.
     var params = new URLSearchParams(location.search);
-    var BASE = params.get("relay") || "https://ntfy.sh";
+    var BASE = (location.hostname === "localhost" && params.get("relay")) || "https://ntfy.sh";
     var es = null, key = null, topic = null, forCode = null, state = "off", retry = 0, retryTimer = null;
     var lastMsgId = null, partnerSeen = false, partnerName = "", partnerSide = null, acked = {}, flushTimer = null;
     var te = new TextEncoder(), td = new TextDecoder();

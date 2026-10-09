@@ -151,6 +151,7 @@ button.cell.on { background: var(--accent); box-shadow: none; }
 .panel { width: 100%; max-width: 460px; max-height: 100%; overflow-y: auto; background: var(--bg); padding: 20px; display: grid; gap: 12px; }
 .panel h2 { margin: 0; font-size: 24px; line-height: 1.15; }
 .note { margin: 0; font-size: 15px; color: var(--small); }
+.note a { color: inherit; text-underline-offset: 3px; }
 .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .field {
   min-height: 50px; width: 100%; padding: 0 12px; font-size: 17px; color: var(--text); background: var(--bg);
@@ -203,6 +204,7 @@ button.cell.on { background: var(--accent); box-shadow: none; }
   <div class="panel" role="dialog" aria-modal="true" aria-labelledby="online-title">
     <h2 id="online-title">Online spielen</h2>
     <p class="note">Zu zweit auf zwei Handys, zum Beispiel beim Telefonieren. Eine Person erstellt ein Spiel und sagt der anderen den Code. Das Geheimwort sieht nur das Handy der Person, die die Hinweise gibt.</p>
+    <p class="note">Für die Verbindung erfahren Server von PeerJS und Google deine IP-Adresse. Mehr unter <a href="../datenschutz.html">Datenschutz</a>.</p>
     <p class="label">Dein Name</p>
     <input type="text" class="field" id="my-name" maxlength="14" autocomplete="off" aria-label="Dein Name">
     <div class="two-col" id="net-choose">
@@ -311,6 +313,36 @@ button.cell.on { background: var(--accent); box-shadow: none; }
       hand: [], pick: -1, pos: -1, giver: 0, games: 0, wins: P.wins, losses: P.losses, why: "", finalPick: -1 };
   }
   var S = freshState();
+  // Den Spielstand vom anderen Handy nie ungeprüft übernehmen: nur bekannte Phasen, ganze Zahlen im erlaubten Bereich, Texte gekürzt.
+  // Sonst könnte ein manipuliertes Handy HTML einschleusen oder die App abstürzen lassen.
+  function intIn(v, lo, hi) { return typeof v === "number" && v % 1 === 0 && v >= lo && v <= hi; }
+  function cleanState(s) {
+    var f = freshState();
+    if (!s || typeof s !== "object") return f;
+    function pair(p) { return intIn(p, 0, PAIRS.length - 1); }
+    f.phase = ["lobby", "clue", "guess", "final", "won", "lost"].indexOf(s.phase) !== -1 ? s.phase : "lobby";
+    f.words = Array.isArray(s.words) ? s.words.slice(0, GRID).map(function (w) { return String(w).slice(0, 40); }) : [];
+    for (var i = 0; i < GRID; i++) {
+      if (s.removed && s.removed[i] === true) f.removed[i] = true;
+      if (s.marks && s.marks[i] === true) f.marks[i] = true;
+    }
+    if (intIn(s.secret, 0, GRID - 1)) f.secret = s.secret;
+    if (intIn(s.finalPick, 0, GRID - 1)) f.finalPick = s.finalPick;
+    if (intIn(s.round, 1, ROUNDS)) f.round = s.round;
+    f.clues = (Array.isArray(s.clues) ? s.clues : []).filter(function (c) { return c && pair(c.p) && intIn(c.pos, 0, 3); })
+      .slice(0, ROUNDS).map(function (c) { return { p: c.p, pos: c.pos }; });
+    if ((f.phase === "guess" || f.phase === "final") && !f.clues.length) f.phase = "lobby";   // Raten ohne Hinweis gibt es nicht
+    f.used = (Array.isArray(s.used) ? s.used : []).filter(pair);
+    f.hand = (Array.isArray(s.hand) ? s.hand : []).filter(pair).slice(0, HAND);
+    if (pair(s.pick)) f.pick = s.pick;
+    if (intIn(s.pos, 0, 3)) f.pos = s.pos;
+    f.giver = s.giver === 1 ? 1 : 0;
+    f.games = intIn(s.games, 0, 1e6) ? s.games : 0;
+    f.wins = intIn(s.wins, 0, 1e6) ? s.wins : 0;
+    f.losses = intIn(s.losses, 0, 1e6) ? s.losses : 0;
+    f.why = s.why === "struck" || s.why === "wrong" ? s.why : "";
+    return f;
+  }
   var NET = { role: null, conn: null, peer: null, me: 0, names: [] };
   var reveal = false, passOn = false, knowMode = false;   // nur für ein Handy bzw. lokale Anzeige
 
@@ -354,15 +386,15 @@ button.cell.on { background: var(--accent); box-shadow: none; }
   function apply(type, v, from) {
     var giverAct = !online() || from === S.giver, guesserAct = !online() || from !== S.giver;
     if (type === "start") { if (S.phase === "lobby" || S.phase === "won" || S.phase === "lost") newGame(); }
-    else if (type === "pick" && giverAct && S.phase === "clue") { S.pick = v; }
-    else if (type === "pos" && giverAct && S.phase === "clue") { S.pos = v; }
+    else if (type === "pick" && giverAct && S.phase === "clue" && S.hand.indexOf(v) !== -1) { S.pick = v; }
+    else if (type === "pos" && giverAct && S.phase === "clue" && intIn(v, 0, 3)) { S.pos = v; }
     else if (type === "redraw" && giverAct && S.phase === "clue") { S.hand = drawHand(); S.pick = -1; }
     else if (type === "give" && giverAct && S.phase === "clue" && S.pick >= 0 && S.pos >= 0) {
       S.clues.push({ p: S.pick, pos: S.pos }); S.used.push(S.pick);
       S.phase = "guess"; S.marks = {};
       if (!online()) passOn = true;
     }
-    else if (type === "mark" && guesserAct && S.phase === "guess" && !S.removed[v]) {
+    else if (type === "mark" && guesserAct && S.phase === "guess" && intIn(v, 0, GRID - 1) && !S.removed[v]) {
       if (S.marks[v]) delete S.marks[v]; else S.marks[v] = true;
     }
     else if (type === "remove" && guesserAct && S.phase === "guess" && markedCount() > 0) {
@@ -374,7 +406,7 @@ button.cell.on { background: var(--accent); box-shadow: none; }
       S.round++; S.hand = drawHand(); S.pick = -1; S.pos = -1; S.phase = "clue";
       reveal = false;
     }
-    else if (type === "final" && guesserAct && (S.phase === "guess" || S.phase === "final") && !S.removed[v]) {
+    else if (type === "final" && guesserAct && (S.phase === "guess" || S.phase === "final") && intIn(v, 0, GRID - 1) && !S.removed[v]) {
       S.finalPick = v; S.marks = {};
       end(v === S.secret, v === S.secret ? "" : "wrong");
     }
@@ -544,7 +576,9 @@ button.cell.on { background: var(--accent); box-shadow: none; }
   /* ---------- Online (PeerJS, erst bei Bedarf geladen) ----------
      Das Handy, das das Spiel erstellt, führt den Spielstand. Das Geheimwort bekommt das andere Handy nur,
      wenn es die Hinweise gibt. */
-  var PEER_SRC = "https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js";
+  // PeerJS 1.5.4 liegt unverändert im App-Ordner (MIT-Lizenz in peerjs-LICENSE.txt) und kommt nicht von einem fremden CDN.
+  // So kann unterwegs niemand anderen Code unterschieben und kein CDN erfährt, wer online spielt.
+  var PEER_SRC = "peerjs.min.js";
   var ID_PREFIX = "heisskalt-spiele-";
   var CODE_CHARS = "ABCDEFGHJKLMNPRSTUVWXYZ";
   var onlineEl = $("#online"), netStatus = $("#net-status"), myNameEl = $("#my-name");
@@ -588,7 +622,8 @@ button.cell.on { background: var(--accent); box-shadow: none; }
         else { NET.names = [cleanName(m.name), myName()]; enterOnline(); }
       } else if (m.t === "state" && role === "guest") {
         var wasPhase = S.phase;
-        S = m.s; if (m.names) NET.names = m.names;
+        S = cleanState(m.s);
+        if (Array.isArray(m.names) && m.names.length === 2) NET.names = m.names.map(cleanName);
         if (S.phase !== "guess") knowMode = false;
         if (wasPhase !== S.phase) say(phaseSay());
         render();
