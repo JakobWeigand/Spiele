@@ -2,12 +2,12 @@
 
 ## ▶ Direkt spielen
 
-- **Kniffel:** https://jakobweigand.github.io/Spiele/kniffel/
-- **Quixx:** https://jakobweigand.github.io/Spiele/quixx/
+- **Pasch:** https://jakobweigand.github.io/Spiele/kniffel/
+- **Farbreihen:** https://jakobweigand.github.io/Spiele/quixx/
 - **Wortbombe:** https://jakobweigand.github.io/Spiele/wortbombe/
 - **Chooser:** https://jakobweigand.github.io/Spiele/chooser/
 - **Heiß & Kalt:** https://jakobweigand.github.io/Spiele/heisskalt/
-- **Codenames Duett:** https://jakobweigand.github.io/Spiele/codenames/
+- **Wortagenten:** https://jakobweigand.github.io/Spiele/codenames/
 - **Startseite mit allen Spielen:** https://jakobweigand.github.io/Spiele/
 - **Datenschutz:** https://jakobweigand.github.io/Spiele/datenschutz.html
 
@@ -19,11 +19,12 @@ Sechs Spiele-Apps für das Handy, jede als eigene Web-App, die nach der Installa
 
 | App | Ordner | Adresse |
 |---|---|---|
-| Kniffel | [`kniffel/`](kniffel/) | https://jakobweigand.github.io/Spiele/kniffel/ |
-| Quixx | [`quixx/`](quixx/) | https://jakobweigand.github.io/Spiele/quixx/ |
+| Pasch | [`kniffel/`](kniffel/) | https://jakobweigand.github.io/Spiele/kniffel/ |
+| Farbreihen | [`quixx/`](quixx/) | https://jakobweigand.github.io/Spiele/quixx/ |
 | Wortbombe | [`wortbombe/`](wortbombe/) | https://jakobweigand.github.io/Spiele/wortbombe/ |
 | Chooser | [`chooser/`](chooser/) | https://jakobweigand.github.io/Spiele/chooser/ |
-| Codenames Duett | [`codenames/`](codenames/) | https://jakobweigand.github.io/Spiele/codenames/ |
+| Heiß & Kalt | [`heisskalt/`](heisskalt/) | https://jakobweigand.github.io/Spiele/heisskalt/ |
+| Wortagenten | [`codenames/`](codenames/) | https://jakobweigand.github.io/Spiele/codenames/ |
 
 Die Startseite https://jakobweigand.github.io/Spiele/ verlinkt alle Apps.
 
@@ -31,8 +32,8 @@ Die Startseite https://jakobweigand.github.io/Spiele/ verlinkt alle Apps.
 
 - **Mit Block oder nur Würfel:** Oben in der Mitte schaltest du um. „Nur Würfel“ blendet Block, Tabs und Spieler aus.
 - **Würfel und Block:** Jede App hat zwei Seiten. Du wischst zwischen „Würfel“ und „Block“ oder tippst oben auf die Tabs.
-- **Kniffel-Block:** Nach dem Würfeln führt „Eintragen“ zum Block. Ein Tipp auf die Zeile trägt den Wurf beim Spieler am Zug ein, danach ist automatisch der nächste Spieler dran. Korrigieren geht über einen Tipp auf das ausgefüllte Feld. Grau steht in jedem freien Feld, was der Wurf dort bringt, unterstrichen das beste freie Feld. Bonus ab 63 und alle Summen werden berechnet.
-- **Quixx-Block:** Ankreuzen nur von links nach rechts, das letzte Feld erst ab 5 Kreuzen, das Schloss kreuzt sich dann selbst an und der Farbwürfel wird weggelegt. Fehlwürfe zählen −5. Das Spiel endet bei zwei geschlossenen Reihen oder vier Fehlwürfen.
+- **Pasch-Block:** Nach dem Würfeln führt „Eintragen“ zum Block. Ein Tipp auf die Zeile trägt den Wurf beim Spieler am Zug ein, danach ist automatisch der nächste Spieler dran. Korrigieren geht über einen Tipp auf das ausgefüllte Feld. Grau steht in jedem freien Feld, was der Wurf dort bringt, unterstrichen das beste freie Feld. Bonus ab 63 und alle Summen werden berechnet.
+- **Farbreihen-Block:** Ankreuzen nur von links nach rechts, das letzte Feld erst ab 5 Kreuzen, das Schloss kreuzt sich dann selbst an und der Farbwürfel wird weggelegt. Fehlwürfe zählen −5. Das Spiel endet bei zwei geschlossenen Reihen oder vier Fehlwürfen.
 - **Spieler:** 1 bis 6 Spieler mit Namen. Dort startest du auch ein neues Spiel.
 - **Hoch- und Querformat:** Im Querformat stehen die Würfel links, Status und Buttons rechts. Ausgelegt für iPhone 15/16/17 Pro.
 - **Spielstand bleibt erhalten:** auch wenn die App geschlossen wird. Gespeichert wird nur auf dem jeweiligen Gerät.
@@ -81,9 +82,9 @@ Alle legen einen Finger aufs Display. Sobald keine Finger mehr dazukommen, poche
 - Oben in der Mitte stellst du ein, wie viele gewählt werden: mit −/+ oder indem du die Zahl antippst und eintippst. Keine Obergrenze.
 - Es braucht immer mindestens einen Finger mehr, als gewählt werden. Wie viele Finger gleichzeitig erkannt werden, begrenzt nur das Handy selbst.
 
-## Codenames Duett
+## Wortagenten
 
-Kooperatives Wortspiel für zwei nach dem Vorbild von Codenames Duett. 25 Wörter liegen auf dem Brett. Jede Seite hat einen eigenen Schlüssel mit 9 Agenten, 3 Attentätern und 13 Passanten, zusammen gibt es 15 Agenten. Abwechselnd gibt eine Person einen Hinweis (ein Wort und eine Zahl), die andere tippt Wörter an. Agent heißt weiter raten, Passant beendet den Zug, ein Attentäter beendet das Spiel. Nach 9 Zügen (einstellbar 6 bis 12) folgt der plötzliche Tod ohne Hinweise.
+Kooperatives Wortspiel für zwei. 25 Wörter liegen auf dem Brett. Jede Seite hat einen eigenen Schlüssel mit 9 Agenten, 3 Attentätern und 13 Passanten, zusammen gibt es 15 Agenten. Abwechselnd gibt eine Person einen Hinweis (ein Wort und eine Zahl), die andere tippt Wörter an. Agent heißt weiter raten, Passant beendet den Zug, ein Attentäter beendet das Spiel. Nach 9 Zügen (einstellbar 6 bis 12) folgt der plötzliche Tod ohne Hinweise.
 
 **Drei Spielarten**
 
@@ -127,7 +128,7 @@ Das Design folgt dem Designsystem Navy Research.
 
 ## Sicherheit und Datenschutz
 
-- Alles, was vom anderen Handy kommt, wird vor dem Anzeigen geprüft. Das passiert in `applyState` (Wortbombe), `cleanState` (Heiß & Kalt) und `sanitize` (Codenames Duett). Neue Felder im Online-Stand dort mit aufnehmen und nie ungeprüft per `innerHTML` anzeigen.
+- Alles, was vom anderen Handy kommt, wird vor dem Anzeigen geprüft. Das passiert in `applyState` (Wortbombe), `cleanState` (Heiß & Kalt) und `sanitize` (Wortagenten). Neue Felder im Online-Stand dort mit aufnehmen und nie ungeprüft per `innerHTML` anzeigen.
 - Keine Skripte, Schriften oder Bilder von fremden Servern einbinden. Bibliotheken als Kopie in den App-Ordner legen.
 - Kommt ein neuer Online-Dienst dazu, `datenschutz.html` ergänzen.
-- Ein eigener Relay-Server für Codenames per `?relay=` wirkt nur unter `localhost` zum Testen.
+- Ein eigener Relay-Server für Wortagenten per `?relay=` wirkt nur unter `localhost` zum Testen.

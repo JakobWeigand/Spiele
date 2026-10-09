@@ -1,8 +1,8 @@
 {
   "id": "/Spiele/kniffel/",
-  "name": "Kniffel",
-  "short_name": "Kniffel",
-  "description": "Würfel für Kniffel: 5 Würfel, 3 Würfe pro Zug, auch offline.",
+  "name": "Pasch",
+  "short_name": "Pasch",
+  "description": "Würfelspiel mit 5 Würfeln und 3 Würfen pro Zug, auch offline.",
   "lang": "de",
   "start_url": "./",
   "scope": "./",

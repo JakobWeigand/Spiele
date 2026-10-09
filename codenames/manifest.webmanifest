@@ -1,7 +1,7 @@
 {
   "id": "/Spiele/codenames/",
-  "name": "Codenames Duett",
-  "short_name": "Duett",
+  "name": "Wortagenten",
+  "short_name": "Wortagenten",
   "description": "Kooperatives Wortspiel für zwei: zwei Handys, ein Handy oder mit KI-Partner. Läuft offline.",
   "lang": "de",
   "start_url": "./",
