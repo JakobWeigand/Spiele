@@ -7,12 +7,12 @@
 <meta name="theme-color" content="#0d1b2a" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Kniffel">
+<meta name="apple-mobile-web-app-title" content="Pasch">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" type="image/png" href="icon-192.png">
-<title>Kniffel</title>
+<title>Pasch</title>
 <style>
 /* Navy Research auf dem Handy: weißer Grund, helle Karten, ein Navy. Alle Ecken eckig, keine Schatten.
    Zwei Seiten nebeneinander (Würfel, Block), per Wischen oder Tabs. Hochformat: eine Spalte.
@@ -334,7 +334,7 @@ table.score col.cat-col { width: 40%; }
 <div class="app">
   <header class="top">
     <div class="top-row">
-      <h1>Kniffel</h1>
+      <h1>Pasch</h1>
       <div class="mode" role="group" aria-label="Spielweise">
         <button type="button" id="mode-block" aria-pressed="true">Mit Block</button>
         <button type="button" id="mode-plain" aria-pressed="false">Nur Würfel</button>
@@ -453,14 +453,14 @@ table.score col.cat-col { width: 40%; }
   var FACES = { 1: [4], 2: [2, 6], 3: [2, 4, 6], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8] };
   function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
 
-  /* ---------- Kniffel-Regeln ---------- */
+  /* ---------- Pasch-Regeln ---------- */
   var CATS = [
     { id: "ones", name: "Einser", face: 1 }, { id: "twos", name: "Zweier", face: 2 },
     { id: "threes", name: "Dreier", face: 3 }, { id: "fours", name: "Vierer", face: 4 },
     { id: "fives", name: "Fünfer", face: 5 }, { id: "sixes", name: "Sechser", face: 6 },
     { id: "three", name: "Dreierpasch", kind: "sum" }, { id: "four", name: "Viererpasch", kind: "sum" },
     { id: "fh", name: "Full House", fixed: 25 }, { id: "ss", name: "Kleine Straße", fixed: 30 },
-    { id: "ls", name: "Große Straße", fixed: 40 }, { id: "kn", name: "Kniffel", fixed: 50 },
+    { id: "ls", name: "Große Straße", fixed: 40 }, { id: "kn", name: "Fünferpasch", fixed: 50 },
     { id: "ch", name: "Chance", kind: "sum" }
   ];
   var UP = CATS.slice(0, 6), LOW = CATS.slice(6);
@@ -494,7 +494,7 @@ table.score col.cat-col { width: 40%; }
   }
   function bestCategory(v) {
     var a = analyse(v);
-    if (a.max === 5) return ["Kniffel", 50];
+    if (a.max === 5) return ["Fünferpasch", 50];
     if (a.large) return ["Große Straße", 40];
     if (a.small) return ["Kleine Straße", 30];
     if (a.shape === "23") return ["Full House", 25];

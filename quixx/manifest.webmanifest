@@ -1,8 +1,8 @@
 {
   "id": "/Spiele/quixx/",
-  "name": "Quixx",
-  "short_name": "Quixx",
-  "description": "Würfel für Quixx: 2 weiße und 4 farbige Würfel, auch offline.",
+  "name": "Farbreihen",
+  "short_name": "Farbreihen",
+  "description": "Würfelspiel mit 2 weißen und 4 farbigen Würfeln, auch offline.",
   "lang": "de",
   "start_url": "./",
   "scope": "./",

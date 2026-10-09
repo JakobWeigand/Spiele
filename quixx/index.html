@@ -7,12 +7,12 @@
 <meta name="theme-color" content="#0d1b2a" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Quixx">
+<meta name="apple-mobile-web-app-title" content="Farbreihen">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" type="image/png" href="icon-192.png">
-<title>Quixx</title>
+<title>Farbreihen</title>
 <style>
 /* Navy Research auf dem Handy: weißer Grund, helle Karten, ein Navy. Alle Ecken eckig, keine Schatten.
    Zwei Seiten nebeneinander (Würfel, Block), per Wischen oder Tabs. Hochformat: eine Spalte.
@@ -42,7 +42,7 @@
   --pad-l: max(16px, env(safe-area-inset-left, 0px));
   --pad-r: max(16px, env(safe-area-inset-right, 0px));
 
-  /* Quixx-Farben: rot, grün, blau aus dem System, gelb ergänzt; dazu helle Töne für die Felder */
+  /* Spielfarben: rot, grün, blau aus dem System, gelb ergänzt; dazu helle Töne für die Felder */
   --q-red: #c0392b;    --q-red-t: #f7dcd9;
   --q-yellow: #e2b33c; --q-yellow-t: #f8ecc9;
   --q-green: #2e8b6e;  --q-green-t: #d5ebe3;
@@ -338,7 +338,7 @@ table.combo { width: 100%; border-collapse: collapse; font-size: 16px; }
 <div class="app">
   <header class="top">
     <div class="top-row">
-      <h1>Quixx</h1>
+      <h1>Farbreihen</h1>
       <div class="mode" role="group" aria-label="Spielweise">
         <button type="button" id="mode-block" aria-pressed="true">Mit Block</button>
         <button type="button" id="mode-plain" aria-pressed="false">Nur Würfel</button>
@@ -442,7 +442,7 @@ table.combo { width: 100%; border-collapse: collapse; font-size: 16px; }
   function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
   var LOCK_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.5 11V8a4.5 4.5 0 0 1 9 0v3" fill="none" stroke="currentColor" stroke-width="2.6"/><rect x="5" y="11" width="14" height="10" fill="currentColor"/></svg>';
 
-  /* ---------- Quixx-Regeln ----------
+  /* ---------- Farbreihen-Regeln ----------
      Rot und Gelb laufen von 2 bis 12, Grün und Blau von 12 bis 2.
      Feld 0–10 sind die Zahlen, Feld 11 ist das Schloss. */
   var UP = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], DOWN = UP.slice().reverse();

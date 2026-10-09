@@ -1,4 +1,4 @@
-// Quixx: Offline-Speicher.
+// Farbreihen: Offline-Speicher.
 // Alles wird beim ersten Öffnen gespeichert und danach immer aus dem Speicher geladen.
 // Antworten mit Fehlerstatus überschreiben den Speicher nie.
 // Beide Spiele liegen auf derselben Domain und teilen sich den Cache-Speicher:
