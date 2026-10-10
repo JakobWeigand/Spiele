@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="app-version" content="1.2.1">
+<meta name="app-version" content="1.3.0">
 <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0d1b2a" media="(prefers-color-scheme: dark)">
 <meta name="color-scheme" content="light dark">
@@ -85,6 +85,33 @@ body { font-size: 17px; line-height: 1.4; letter-spacing: -0.01em; }
 .foot { margin: auto 0 0; font-size: 13px; color: var(--label-2); text-align: center; }
 .foot a { color: inherit; }
 
+/* Vorschau beim langen Drücken: ersetzt die Link-Vorschau von iOS */
+.game { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+.game.pressing { transform: scale(0.95); transition: transform 0.45s cubic-bezier(0.2, 0.8, 0.3, 1); }
+.peek { position: fixed; inset: 0; z-index: 200; display: grid; place-items: center; padding: 16px; }
+.peek-scrim {
+  position: absolute; inset: 0; background: var(--scrim); opacity: 0;
+  -webkit-backdrop-filter: blur(18px) saturate(140%); backdrop-filter: blur(18px) saturate(140%);
+}
+.peek-card:focus { outline: none; }
+.peek-card {
+  position: relative; display: grid; gap: 10px; justify-items: center;
+  transform-origin: 50% 50%; will-change: transform, opacity;
+}
+.peek-frame {
+  position: relative; overflow: hidden; border-radius: 26px; background: var(--bg);
+  width: min(72vw, calc((100dvh - 180px) * 390 / 844), 340px); aspect-ratio: 390 / 844;
+  box-shadow: var(--shadow-lg); cursor: pointer;
+}
+.peek-frame iframe { position: absolute; top: 0; left: 0; width: 390px; height: 844px; border: 0; transform-origin: 0 0; pointer-events: none; background: var(--bg); }
+.peek-bar {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%;
+  padding: 8px 8px 8px 16px; border-radius: 16px; background: var(--surface-raised); box-shadow: var(--shadow-md);
+}
+.peek-bar strong { font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
+.peek-bar .btn { min-height: 40px; padding: 0 18px; font-size: 15px; }
+@media (prefers-reduced-transparency: reduce) { .peek-scrim { -webkit-backdrop-filter: none; backdrop-filter: none; } }
+@media (prefers-reduced-motion: reduce) { .game.pressing { transform: none; } }
 @media (min-width: 560px) { .games { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (prefers-contrast: more) { .game { box-shadow: inset 0 0 0 1px var(--label); } }
 @media (prefers-reduced-motion: reduce) { .game, .icon-btn { transition: none; } }
@@ -210,6 +237,17 @@ body { font-size: 17px; line-height: 1.4; letter-spacing: -0.01em; }
     </div>
   </div>
 </dialog>
+
+<div class="peek" id="peek" hidden>
+  <div class="peek-scrim" id="peek-scrim"></div>
+  <div class="peek-card" id="peek-card" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="peek-title">
+    <div class="peek-frame" id="peek-frame"><iframe id="peek-iframe" title="Vorschau" tabindex="-1" aria-hidden="true"></iframe></div>
+    <div class="peek-bar">
+      <strong id="peek-title">Spiel</strong>
+      <button class="btn btn-primary" id="peek-open" type="button">Öffnen</button>
+    </div>
+  </div>
+</div>
 
 <div class="sr-only" aria-live="polite" id="announce"></div>
 <script src="shared/kit.js"></script>

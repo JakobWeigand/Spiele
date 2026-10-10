@@ -114,6 +114,8 @@ body {
   font-variant-numeric: tabular-nums;
 }
 button { font: inherit; color: inherit; touch-action: manipulation; }
+/* Keine iOS-Link-Vorschau und kein Bild-Menü beim langen Drücken */
+a, img, button { -webkit-touch-callout: none; }
 :where(button, a, input, select, textarea, [tabindex]:not([tabindex="-1"])):focus-visible {
   outline: 3px solid var(--accent); outline-offset: 2px;
 }
