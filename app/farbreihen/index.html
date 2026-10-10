@@ -2,8 +2,8 @@
 <html lang="de">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="app-version" content="1.1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="app-version" content="1.2.0">
 <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0d1b2a" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -128,11 +128,11 @@ h1 {
 .die.blank .pip { opacity: 0; }
 button.die-btn:active .die { transform: scale(0.94); }
 .die-name { font-size: 13px; font-weight: 600; text-align: center; color: var(--label-2); line-height: 1.4em; }
-.die.white  { background: var(--face-white);  --pip: #0d1b2a; }
-.die.red    { background: var(--face-red);    --pip: #ffffff; }
-.die.yellow { background: var(--face-yellow); --pip: #0d1b2a; }
-.die.green  { background: var(--face-green);  --pip: #ffffff; }
-.die.blue   { background: var(--face-blue);   --pip: #ffffff; }
+.die.white  { background: var(--face-white);  --pip: var(--pip-dark); }
+.die.red    { background: var(--face-red);    --pip: var(--pip-dark); }
+.die.yellow { background: var(--face-yellow); --pip: var(--pip-dark); }
+.die.green  { background: var(--face-green);  --pip: var(--pip-dark); }
+.die.blue   { background: var(--face-blue);   --pip: var(--pip-dark); }
 .die-btn.locked .die { opacity: 0.25; box-shadow: none; }
 .die-btn.locked .die-name { text-decoration: line-through; }
 .die.rolling { animation: tumble 0.48s cubic-bezier(0.2, 0.8, 0.3, 1); }

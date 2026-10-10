@@ -148,7 +148,12 @@
       onClosed = after || null;
       lastFocus = document.activeElement;
       if (!dlg.open) {
+        // Erst unten parken, dann öffnen: Sonst scrollt iOS das noch verschobene Panel beim Fokussieren
+        // kurz ins Bild, und das Sheet scheint von oben zu kommen.
+        y.set(1);
         if (typeof dlg.showModal === "function") dlg.showModal(); else dlg.setAttribute("open", "");
+        dlg.scrollTop = 0;
+        try { panel.focus({ preventScroll: true }); } catch (e) {}
         y.set(1);
       }
       y.to(0, { damping: 1, response: 0.38 });

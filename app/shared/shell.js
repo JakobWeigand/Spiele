@@ -31,6 +31,12 @@
   // Andere Seiten der App (z. B. ein zweiter Tab) übernehmen die Wahl sofort
   window.addEventListener("storage", function (e) { if (e.key === THEME_KEY) applyTheme(getTheme()); });
 
+  /* ---------- Kein Zoomen ----------
+     iOS Safari ignoriert user-scalable=no; die Gesten-Ereignisse lassen sich aber abfangen. */
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (type) {
+    document.addEventListener(type, function (e) { e.preventDefault(); }, { passive: false });
+  });
+
   /* ---------- Updates ---------- */
   var started = Date.now();
   var reg = null, waiting = null, remote = null, lastCheck = 0, reloading = false, timer = null;

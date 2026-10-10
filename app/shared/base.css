@@ -53,7 +53,8 @@
   --fox: #c0392b;
 
   --die-bg: #ffffff;
-  --die-pip: #0d1b2a;
+  --die-pip: #08121c;
+  --pip-dark: #08121c;          /* Würfelaugen auf allen Farbwürfeln: ≥ 3:1 auch auf Rot */
   --held: var(--accent);
 
   --r-sm: 8px;
@@ -75,7 +76,7 @@
     --material: rgba(13, 27, 42, 0.76); --material-edge: rgba(255, 255, 255, 0.08); --scrim: rgba(0, 0, 0, 0.55);
     --shadow-sm: none; --shadow-md: 0 6px 16px rgba(0, 0, 0, 0.45); --shadow-lg: 0 18px 50px rgba(0, 0, 0, 0.6);
     --red: #e8705f; --yellow: #e2b33c; --yellow-line: #e2b33c; --green: #4fbf98; --blue: #8fb0e0; --pink: #e48ab2; --silver: #b8c4d4; --fox: #e8705f;
-    --die-bg: #24384f; --die-pip: #ffffff;
+    --die-bg: #ffffff; --die-pip: #08121c;
     color-scheme: dark;
   }
 }
@@ -88,14 +89,20 @@
   --material: rgba(13, 27, 42, 0.76); --material-edge: rgba(255, 255, 255, 0.08); --scrim: rgba(0, 0, 0, 0.55);
   --shadow-sm: none; --shadow-md: 0 6px 16px rgba(0, 0, 0, 0.45); --shadow-lg: 0 18px 50px rgba(0, 0, 0, 0.6);
   --red: #e8705f; --yellow: #e2b33c; --yellow-line: #e2b33c; --green: #4fbf98; --blue: #8fb0e0; --pink: #e48ab2; --silver: #b8c4d4; --fox: #e8705f;
-  --die-bg: #24384f; --die-pip: #ffffff;
+  --die-bg: #ffffff; --die-pip: #08121c;
   color-scheme: dark;
 }
 
 
 *, *::before, *::after { box-sizing: border-box; }
 [hidden] { display: none !important; }
-html { background: var(--bg); }
+html { background: var(--bg); touch-action: manipulation; }
+/* Streifen hinter der Statusleiste: Beim Scrollen läuft Inhalt nicht sichtbar unter Uhr und Dynamic Island */
+body::before {
+  content: ""; position: fixed; z-index: 1000; top: 0; left: 0; right: 0; height: env(safe-area-inset-top, 0px);
+  background: var(--material); -webkit-backdrop-filter: blur(20px) saturate(180%); backdrop-filter: blur(20px) saturate(180%);
+  pointer-events: none;
+}
 body {
   margin: 0;
   background: var(--bg);
@@ -142,6 +149,7 @@ button { font: inherit; color: inherit; touch-action: manipulation; }
   *, *::before, *::after { scroll-behavior: auto !important; }
 }
 @media (prefers-reduced-transparency: reduce) {
+  body::before { background: var(--bg); -webkit-backdrop-filter: none; backdrop-filter: none; }
   .material, .home-link.float { background: var(--bg); -webkit-backdrop-filter: none; backdrop-filter: none; }
 }
 @media (prefers-contrast: more) {

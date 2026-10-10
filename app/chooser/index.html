@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="app-version" content="1.1.0">
+<meta name="app-version" content="1.2.0">
 <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0d1b2a" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -23,17 +23,17 @@
 :root {
   --chosen: var(--accent);   /* gewählter Kreis und Flut; weiße Schrift darauf hat ≥ 4,5:1 */
   /* Fingerfarben: weich, aber gut unterscheidbar */
-  --f1: #c0392b; --f2: #e2b33c; --f3: #2e8b6e; --f4: #4a6fa5; --f5: #c4588a; --f6: #6a7d93;
+  --f1: #c0392b; --f2: #e2b33c; --f3: #2e8b6e; --f4: #4a6fa5; --f5: #c4588a;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --chosen: var(--accent-fill); /* Navy-Blau, weiße Schrift darauf ≥ 4,5:1 */
-    --f1: #e8705f; --f2: #e2b33c; --f3: #4fbf98; --f4: #8fb0e0; --f5: #e48ab2; --f6: #b8c4d4;
+    --f1: #e8705f; --f2: #e2b33c; --f3: #4fbf98; --f4: #8fb0e0; --f5: #e48ab2;
   }
 }
 :root[data-theme="dark"] {
   --chosen: var(--accent-fill);
-  --f1: #e8705f; --f2: #e2b33c; --f3: #4fbf98; --f4: #8fb0e0; --f5: #e48ab2; --f6: #b8c4d4;
+  --f1: #e8705f; --f2: #e2b33c; --f3: #4fbf98; --f4: #8fb0e0; --f5: #e48ab2;
 }
 
 html, body { height: 100%; }
@@ -130,7 +130,7 @@ button, input { font: inherit; color: inherit; letter-spacing: inherit; }
     <div class="pick" role="group" aria-label="Wie viele werden gewählt">
       <span class="label">Wählen</span>
       <button type="button" class="step" id="minus" aria-label="Einen weniger wählen">−</button>
-      <input id="count" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" value="1" aria-label="Anzahl, die gewählt wird">
+      <input id="count" type="text" inputmode="numeric" pattern="[1-4]" maxlength="1" autocomplete="off" value="1" aria-label="Anzahl, die gewählt wird">
       <button type="button" class="step" id="plus" aria-label="Einen mehr wählen">+</button>
     </div>
     <span aria-hidden="true"></span>
@@ -168,14 +168,17 @@ button, input { font: inherit; color: inherit; letter-spacing: inherit; }
   var SETTLE = 600, PULSES = 3, PULSE_MS = 1000, COUNT = PULSES * PULSE_MS;
   var chosenAt = 0, flood = null, lastBeat = -1;
 
-  /* ---------- Anzahl, die gewählt wird (ohne Obergrenze) ---------- */
-  var KEY = "chooser-v1", k = 1;
-  try { var saved = JSON.parse(localStorage.getItem(KEY)); if (saved && saved.k >= 1) k = Math.floor(saved.k); } catch (e) {}
+  /* ---------- Anzahl, die gewählt wird ----------
+     iPhones erkennen höchstens fünf Finger gleichzeitig, und es braucht immer einen Finger mehr,
+     als gewählt werden: also 1 bis 4. Jeder der fünf Finger bekommt eine eigene Farbe. */
+  var KEY = "chooser-v1", K_MAX = 4, k = 1;
+  try { var saved = JSON.parse(localStorage.getItem(KEY)); if (saved && saved.k >= 1) k = Math.min(K_MAX, Math.floor(saved.k)); } catch (e) {}
   var countEl = $("#count"), minus = $("#minus"), plus = $("#plus");
   function setK(v, keepInput) {
-    k = Math.max(1, Math.floor(v) || 1);
-    if (!keepInput) countEl.value = k;
+    k = Math.min(K_MAX, Math.max(1, Math.floor(v) || 1));
+    if (!keepInput || String(k) !== countEl.value) countEl.value = k;
     minus.disabled = k <= 1;
+    plus.disabled = k >= K_MAX;
     try { localStorage.setItem(KEY, JSON.stringify({ v: 1, k: k })); } catch (e) {}
     if (phase !== "done") changed();
     updateStatus();
@@ -196,7 +199,7 @@ button, input { font: inherit; color: inherit; letter-spacing: inherit; }
   var palette = [], chosenColor = "#1a2c42", textColor = "#0d1b2a", bgColor = "#ffffff";
   function readColors() {
     var cs = getComputedStyle(document.documentElement);
-    palette = ["--f1", "--f2", "--f3", "--f4", "--f5", "--f6"].map(function (v) { return cs.getPropertyValue(v).trim(); });
+    palette = ["--f1", "--f2", "--f3", "--f4", "--f5"].map(function (v) { return cs.getPropertyValue(v).trim(); });
     chosenColor = cs.getPropertyValue("--chosen").trim();
     textColor = cs.getPropertyValue("--label").trim();
     bgColor = cs.getPropertyValue("--bg").trim();
@@ -466,7 +469,7 @@ button, input { font: inherit; color: inherit; letter-spacing: inherit; }
         ctx.globalAlpha = reduceMotion ? 0.72 + 0.28 * beat : 1;
         circle(f.x, f.y, rr); ctx.fill();
         ctx.strokeStyle = col; ctx.lineWidth = 5 + 3 * swell;
-        ctx.globalAlpha = 0.3 + 0.55 * beat;
+        ctx.globalAlpha = 0.6 + 0.4 * beat;
         circle(f.x, f.y, rr + 12 + breathe + 16 * swell); ctx.stroke();
       }
       ctx.restore();

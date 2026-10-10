@@ -108,7 +108,7 @@ Kooperatives Wortspiel: 16 Begriffe liegen aus, eines ist das Geheimwort. Nur de
 
 Alle legen einen Finger aufs Display. Sobald keine Finger mehr dazukommen, pochen die Ringe dreimal im Sekundentakt, dann wählt die App zufällig aus. Gewählte Finger werden dunkelblau hervorgehoben, die anderen verblassen. Bei genau einer gewählten Person flutet Navy den Bildschirm. Alle Finger loslassen startet die nächste Runde.
 
-- Oben in der Mitte stellst du ein, wie viele gewählt werden: mit −/+ oder indem du die Zahl antippst und eintippst. Keine Obergrenze.
+- Oben in der Mitte stellst du ein, wie viele gewählt werden: mit −/+ oder indem du die Zahl antippst und eintippst. In „Spieleabend“ 1 bis 4, weil iPhones höchstens fünf Finger gleichzeitig erkennen; jeder Finger hat eine eigene Farbe.
 - Es braucht immer mindestens einen Finger mehr, als gewählt werden. Wie viele Finger gleichzeitig erkannt werden, begrenzt nur das Handy selbst.
 
 ## Wortagenten

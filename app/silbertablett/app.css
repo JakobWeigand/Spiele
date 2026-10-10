@@ -183,11 +183,11 @@ main {
 /* Farbreihen */
 .qwhite { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; align-items: start; }
 .qcolor { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
-.die.white  { background: var(--face-white); --pip: #0d1b2a; }
-.die.red    { background: var(--face-red);    --pip: #ffffff; }
-.die.yellow { background: var(--face-yellow); --pip: #0d1b2a; }
-.die.green  { background: var(--face-green);  --pip: #ffffff; }
-.die.blue   { background: var(--face-blue);   --pip: #ffffff; }
+.die.white  { background: var(--face-white); --pip: var(--pip-dark); }
+.die.red    { background: var(--face-red);    --pip: var(--pip-dark); }
+.die.yellow { background: var(--face-yellow); --pip: var(--pip-dark); }
+.die.green  { background: var(--face-green);  --pip: var(--pip-dark); }
+.die.blue   { background: var(--face-blue);   --pip: var(--pip-dark); }
 .die.blank .pip { opacity: 0; }
 .die-btn.locked .die { opacity: 0.25; }
 .die-btn.locked .die-name { text-decoration: line-through; }
@@ -233,12 +233,12 @@ td.num.off { color: var(--label-3); font-weight: 400; }
   font-size: 15px; line-height: 1.4;
 }
 
-.c-white  { --face: var(--face-white);  --pip: #0d1b2a; --edge: var(--label-3); }
-.c-silver { --face: var(--face-silver); --pip: #0d1b2a; --edge: var(--face-silver); }
-.c-yellow { --face: var(--face-yellow); --pip: #0d1b2a; --edge: var(--face-yellow); }
-.c-blue   { --face: var(--face-blue);   --pip: #ffffff; --edge: var(--face-blue); }
-.c-green  { --face: var(--face-green);  --pip: #ffffff; --edge: var(--face-green); }
-.c-pink   { --face: var(--face-pink);   --pip: #ffffff; --edge: var(--face-pink); }
+.c-white  { --face: var(--face-white);  --pip: var(--pip-dark); --edge: var(--label-3); }
+.c-silver { --face: var(--face-silver); --pip: var(--pip-dark); --edge: var(--face-silver); }
+.c-yellow { --face: var(--face-yellow); --pip: var(--pip-dark); --edge: var(--face-yellow); }
+.c-blue   { --face: var(--face-blue);   --pip: var(--pip-dark); --edge: var(--face-blue); }
+.c-green  { --face: var(--face-green);  --pip: var(--pip-dark); --edge: var(--face-green); }
+.c-pink   { --face: var(--face-pink);   --pip: var(--pip-dark); --edge: var(--face-pink); }
 .die[class*="c-"] { background: var(--face); }
 .die.blank[class*="c-"] { background: transparent; box-shadow: inset 0 0 0 3px var(--edge); }
 
@@ -325,7 +325,7 @@ td.num.off { color: var(--label-3); font-weight: 400; }
 /* ---------- Sheets (Dialoge) ---------- */
 dialog.sheet {
   position: fixed; inset: 0; width: 100%; height: 100%; max-width: none; max-height: none;
-  margin: 0; padding: 0; border: 0; background: transparent; color: var(--label); overflow: hidden;
+  margin: 0; padding: 0; border: 0; background: transparent; color: var(--label); overflow: clip;
 }
 dialog.sheet::backdrop { background: transparent; }
 .scrim { position: absolute; inset: 0; background: var(--scrim); opacity: 0; }
