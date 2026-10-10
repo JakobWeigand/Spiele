@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="app-version" content="1.0.0">
-<meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<meta name="app-version" content="1.1.0">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0d1b2a" media="(prefers-color-scheme: dark)">
 <meta name="color-scheme" content="light dark">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -58,19 +58,21 @@ body { font-size: 17px; line-height: 1.4; letter-spacing: -0.01em; }
   transition: transform 0.12s ease-out;
 }
 .game:active { transform: scale(0.97); }
-.glyph { width: 52px; height: 52px; border-radius: 12px; display: grid; place-items: center; color: #fff; box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.08); }
+.glyph { width: 52px; height: 52px; border-radius: 12px; display: grid; place-items: center; color: #fff; box-shadow: inset 0 0 0 0.5px rgba(13, 27, 42, 0.08); }
 .glyph svg { width: 32px; height: 32px; }
 .game strong { display: block; font-size: 17px; font-weight: 600; letter-spacing: -0.02em; }
 .game span { display: block; font-size: 13px; line-height: 1.35; color: var(--label-2); margin-top: 2px; }
-.g-pasch { background: linear-gradient(180deg, #3b9bff, #0060df); }
-.g-farbreihen { background: linear-gradient(180deg, #ffffff, #e9e9ee); color: #1c1c1e; }
-.g-silbertablett { background: linear-gradient(180deg, #c9ced6, #8e96a3); }
-.g-wortbombe { background: linear-gradient(180deg, #ff6b5a, #d70015); }
-.g-chooser { background: linear-gradient(180deg, #b77cff, #6a2bd9); }
-.g-heisskalt { background: linear-gradient(90deg, #ff7a45 0 50%, #2f8cff 50% 100%); }
-.g-wortagenten { background: linear-gradient(180deg, #2fc77a, #1f7a3a); }
-:root[data-theme="dark"] .g-farbreihen { background: linear-gradient(180deg, #3a3a3c, #2c2c2e); color: #fff; }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .g-farbreihen { background: linear-gradient(180deg, #3a3a3c, #2c2c2e); color: #fff; } }
+.g-pasch { background: linear-gradient(180deg, #2c4668, #1a2c42); }
+.g-farbreihen { background: linear-gradient(180deg, #ffffff, #eef1f4); color: #0d1b2a; }
+.g-silbertablett { background: linear-gradient(180deg, #c9d0d9, #8f9bab); }
+.g-wortbombe { background: linear-gradient(180deg, #d6584a, #b03224); }
+.g-chooser { background: linear-gradient(180deg, #d27aa2, #b04a7a); }
+.g-heisskalt { background: linear-gradient(90deg, #c0392b 0 50%, #4a6fa5 50% 100%); }
+.g-wortagenten { background: linear-gradient(180deg, #3a9f80, #237a5e); }
+:root[data-theme="dark"] .g-pasch { background: linear-gradient(180deg, #5b80b6, #4a6fa5); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .g-pasch { background: linear-gradient(180deg, #5b80b6, #4a6fa5); } }
+:root[data-theme="dark"] .g-farbreihen { background: linear-gradient(180deg, #2c4668, #24384f); color: #fff; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .g-farbreihen { background: linear-gradient(180deg, #2c4668, #24384f); color: #fff; } }
 
 .install {
   display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: start;
@@ -117,15 +119,15 @@ body { font-size: 17px; line-height: 1.4; letter-spacing: -0.01em; }
   <p class="section-label" id="dice-label">Würfel</p>
   <ul class="games" aria-labelledby="dice-label">
     <li><a class="game" href="pasch/">
-      <span class="glyph g-pasch" aria-hidden="true"><svg viewBox="0 0 32 32"><rect x="5" y="5" width="22" height="22" rx="6" fill="#fff"/><g fill="#0a5fd6"><circle cx="11" cy="11" r="2.2"/><circle cx="21" cy="11" r="2.2"/><circle cx="16" cy="16" r="2.2"/><circle cx="11" cy="21" r="2.2"/><circle cx="21" cy="21" r="2.2"/></g></svg></span>
+      <span class="glyph g-pasch" aria-hidden="true"><svg viewBox="0 0 32 32"><rect x="5" y="5" width="22" height="22" rx="6" fill="#fff"/><g fill="#1a2c42"><circle cx="11" cy="11" r="2.2"/><circle cx="21" cy="11" r="2.2"/><circle cx="16" cy="16" r="2.2"/><circle cx="11" cy="21" r="2.2"/><circle cx="21" cy="21" r="2.2"/></g></svg></span>
       <div><strong>Pasch</strong><span>5 Würfel, 3 Würfe, Block mit Vorschlägen</span></div>
     </a></li>
     <li><a class="game" href="farbreihen/">
-      <span class="glyph g-farbreihen" aria-hidden="true"><svg viewBox="0 0 32 32"><rect x="5" y="6" width="22" height="4" rx="2" fill="#d70015"/><rect x="5" y="12" width="22" height="4" rx="2" fill="#ffcc00"/><rect x="5" y="18" width="22" height="4" rx="2" fill="#248a3d"/><rect x="5" y="24" width="22" height="4" rx="2" fill="#0a5fd6"/></svg></span>
+      <span class="glyph g-farbreihen" aria-hidden="true"><svg viewBox="0 0 32 32"><rect x="5" y="6" width="22" height="4" rx="2" fill="#c0392b"/><rect x="5" y="12" width="22" height="4" rx="2" fill="#e2b33c"/><rect x="5" y="18" width="22" height="4" rx="2" fill="#2e8b6e"/><rect x="5" y="24" width="22" height="4" rx="2" fill="#4a6fa5"/></svg></span>
       <div><strong>Farbreihen</strong><span>2 weiße, 4 farbige Würfel, Block</span></div>
     </a></li>
     <li><a class="game" href="silbertablett/">
-      <span class="glyph g-silbertablett" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M4 22h24l-2.5 4h-19Z" fill="#fff"/><rect x="7" y="9" width="8" height="8" rx="2.2" fill="#ffcc00"/><rect x="17" y="12" width="8" height="8" rx="2.2" fill="#d30f45"/><rect x="12" y="4.5" width="7" height="7" rx="2" fill="#0a5fd6"/></svg></span>
+      <span class="glyph g-silbertablett" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M4 22h24l-2.5 4h-19Z" fill="#fff"/><rect x="7" y="9" width="8" height="8" rx="2.2" fill="#e2b33c"/><rect x="17" y="12" width="8" height="8" rx="2.2" fill="#c4588a"/><rect x="12" y="4.5" width="7" height="7" rx="2" fill="#4a6fa5"/></svg></span>
       <div><strong>Silbertablett</strong><span>6 Farbwürfel, Würfelfelder, Block</span></div>
     </a></li>
   </ul>
@@ -133,11 +135,11 @@ body { font-size: 17px; line-height: 1.4; letter-spacing: -0.01em; }
   <p class="section-label" id="word-label">Wörter und mehr</p>
   <ul class="games" aria-labelledby="word-label">
     <li><a class="game" href="wortbombe/">
-      <span class="glyph g-wortbombe" aria-hidden="true"><svg viewBox="0 0 32 32"><circle cx="14" cy="19" r="9" fill="#fff"/><path d="M20 10l3-3" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/><circle cx="25" cy="6" r="2" fill="#ffd60a"/><text x="14" y="23.5" text-anchor="middle" font-size="12" font-weight="800" fill="#d70015" font-family="-apple-system, system-ui, sans-serif">A</text></svg></span>
+      <span class="glyph g-wortbombe" aria-hidden="true"><svg viewBox="0 0 32 32"><circle cx="14" cy="19" r="9" fill="#fff"/><path d="M20 10l3-3" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/><circle cx="25" cy="6" r="2" fill="#e2b33c"/><text x="14" y="23.5" text-anchor="middle" font-size="12" font-weight="800" fill="#c0392b" font-family="-apple-system, system-ui, sans-serif">A</text></svg></span>
       <div><strong>Wortbombe</strong><span>Kategorie, Buchstaben, geheime Uhr</span></div>
     </a></li>
     <li><a class="game" href="heisskalt/">
-      <span class="glyph g-heisskalt" aria-hidden="true"><svg viewBox="0 0 32 32"><rect x="13" y="4" width="6" height="17" rx="3" fill="#fff"/><circle cx="16" cy="23" r="5.5" fill="#fff"/><circle cx="16" cy="23" r="3" fill="#ff7a45"/><rect x="15" y="10" width="2" height="12" rx="1" fill="#ff7a45"/></svg></span>
+      <span class="glyph g-heisskalt" aria-hidden="true"><svg viewBox="0 0 32 32"><rect x="13" y="4" width="6" height="17" rx="3" fill="#fff"/><circle cx="16" cy="23" r="5.5" fill="#fff"/><circle cx="16" cy="23" r="3" fill="#c0392b"/><rect x="15" y="10" width="2" height="12" rx="1" fill="#c0392b"/></svg></span>
       <div><strong>Heiß &amp; Kalt</strong><span>Geheimwort finden, Hinweise mit Gegensätzen</span></div>
     </a></li>
     <li><a class="game" href="wortagenten/">

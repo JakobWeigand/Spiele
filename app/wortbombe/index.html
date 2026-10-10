@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="app-version" content="1.0.0">
-<meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<meta name="app-version" content="1.1.0">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0d1b2a" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Spieleabend">
@@ -31,17 +31,17 @@
   --focus: var(--accent);
   /* Spielfarben: Uhr als dunkle Bombe, Akzent = wer dran ist, Rot = Explosion und verlorene Runde.
      Weiße Schrift auf diesen Flächen hat in beiden Modi mindestens 4,5:1. */
-  --clock: #1c1c1e;
-  --turn-bg: var(--accent);
+  --clock: #1a2c42;
+  --turn-bg: var(--accent-fill);
   --lose-bg: var(--danger);
   --sheet: var(--surface-sheet, var(--bg));
-  --seg-on: var(--surface);
+  --seg-on: var(--thumb);
 }
 /* Dunkel: die System-Akzentfarben sind für weiße Schrift zu hell, daher etwas abgedunkelt */
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) { --clock: #3a3a3c; --turn-bg: #086acc; --lose-bg: #d13930; --seg-on: #636366; }
+  :root:not([data-theme="light"]) { --clock: #24384f; --lose-bg: #c0392b; }
 }
-:root[data-theme="dark"] { --clock: #3a3a3c; --turn-bg: #086acc; --lose-bg: #d13930; --seg-on: #636366; }
+:root[data-theme="dark"] { --clock: #24384f; --lose-bg: #c0392b; }
 
 html, body { height: 100%; }
 body {
@@ -717,9 +717,9 @@ body {
     var ctx = fx.getContext("2d"); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     var r = clockEl.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
     var css = getComputedStyle(document.documentElement);
-    var red = css.getPropertyValue("--danger").trim() || "#d70015";
-    var colors = [red, red, css.getPropertyValue("--wait").trim() || "#ff9f0a", "#ffcc00",
-      css.getPropertyValue("--label-3").trim() || "#8e8e93", css.getPropertyValue("--label").trim() || "#000000"];
+    var red = css.getPropertyValue("--danger").trim() || "#c0392b";
+    var colors = [red, red, css.getPropertyValue("--wait").trim() || "#9a6b00", "#e2b33c",
+      css.getPropertyValue("--label-3").trim() || "#6a7d93", css.getPropertyValue("--label").trim() || "#0d1b2a"];
     var parts = [];
     for (var i = 0; i < 110; i++) {
       var ang = Math.random() * Math.PI * 2, sp = 3 + Math.random() * 12;

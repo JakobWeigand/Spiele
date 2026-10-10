@@ -1,53 +1,59 @@
 /* Spieleabend – gemeinsames Fundament für alle Spiele (Design/apple-design).
    Tokens für Hell und Dunkel, Systemschrift, der Zurück-Knopf und gemeinsame Bausteine.
    Jedes Spiel bindet diese Datei ein und nutzt die Variablen; spielspezifisches CSS bleibt im Spiel. */
+/* Farben: Designsystem Navy Research (weiß, Karten #f4f6f8, Navy #1a2c42, Slate, Gray, Line, Light-Blue
+   und die Spielfarben Rot, Gelb, Grün, Blau, Rosa, Silber). Grün, Rosa und Gray sind für Schrift leicht
+   abgedunkelt, damit Text überall mindestens 4,5:1 Kontrast hat. Formen, Schrift und Bewegung: Apple-Stil. */
 :root {
   --font: -apple-system, BlinkMacSystemFont, system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 
-  /* Flächen (iOS „grouped“) */
-  --bg: #f2f2f7;
-  --surface: #ffffff;
-  --surface-2: #f2f2f7;
-  --fill: rgba(118, 118, 128, 0.12);
-  --fill-strong: rgba(118, 118, 128, 0.2);
-  --label: #000000;
-  --label-2: #6c6c70;          /* abgedunkelt gegenüber iOS, damit kleine Schrift ≥ 4,5:1 hat */
-  --label-3: #8e8e93;
-  --separator: rgba(60, 60, 67, 0.22);
-  --accent: #0068da;
-  --accent-fill: #0068da;   /* Flächen mit weißer Schrift */
+  /* Flächen */
+  --bg: #ffffff;               /* white */
+  --surface: #f4f6f8;          /* card */
+  --surface-2: #eef1f4;
+  --surface-sheet: #f4f6f8;    /* Sheets: Karte, darin weiße Zeilen */
+  --surface-raised: #ffffff;
+  --fill: rgba(26, 44, 66, 0.07);
+  --fill-strong: rgba(26, 44, 66, 0.14);
+  --label: #0d1b2a;            /* dark */
+  --label-2: #55677d;          /* zwischen slate und gray, 5,8:1 auf weiß */
+  --label-3: #6a7d93;          /* gray: nur Nebensächliches */
+  --separator: #d6dce4;        /* line */
+  --accent: #1a2c42;           /* navy: Betonung, Links, Ringe */
+  --accent-fill: #1a2c42;      /* Flächen mit weißer Schrift */
   --on-accent: #ffffff;
-  --danger: #d70015;
-  --ok: #248a3d;
-  --wait: #b25000;
+  --thumb: #ffffff;            /* gewähltes Segment */
+  --danger: #c0392b;
+  --ok: #237a5e;
+  --wait: #9a6b00;
 
-  --material: rgba(249, 249, 251, 0.72);
-  --material-edge: rgba(0, 0, 0, 0.08);
-  --scrim: rgba(0, 0, 0, 0.32);
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06), 0 1px 1px rgba(0, 0, 0, 0.04);
-  --shadow-md: 0 6px 16px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 18px 50px rgba(0, 0, 0, 0.18), 0 2px 8px rgba(0, 0, 0, 0.08);
+  --material: rgba(255, 255, 255, 0.78);
+  --material-edge: rgba(13, 27, 42, 0.08);
+  --scrim: rgba(13, 27, 42, 0.45);
+  --shadow-sm: 0 1px 2px rgba(13, 27, 42, 0.06), 0 1px 1px rgba(13, 27, 42, 0.04);
+  --shadow-md: 0 6px 16px rgba(13, 27, 42, 0.08), 0 1px 3px rgba(13, 27, 42, 0.06);
+  --shadow-lg: 0 18px 50px rgba(13, 27, 42, 0.18), 0 2px 8px rgba(13, 27, 42, 0.08);
 
-  /* Spielfarben: Würfelflächen bleiben in beiden Modi kräftig, damit die Augen Kontrast haben */
+  /* Spielfarben: Würfelflächen in beiden Modi gleich */
   --face-white: #ffffff;
-  --face-red: #d70015;
-  --face-yellow: #ffcc00;
-  --face-green: #248a3d;
-  --face-blue: #0a5fd6;
-  --face-pink: #d30f45;
-  --face-silver: #aeb4bc;
+  --face-red: #c0392b;
+  --face-yellow: #e2b33c;
+  --face-green: #2e8b6e;
+  --face-blue: #4a6fa5;
+  --face-pink: #c4588a;
+  --face-silver: #b8c1cc;
   /* Spielfarben für Schrift, Linien und Tönungen */
-  --red: #d70015;
-  --yellow: #a05a00;
-  --yellow-line: #e0a800;
-  --green: #1f7a3a;
-  --blue: #0a5fd6;
-  --pink: #c2185b;
-  --silver: #636e7b;
-  --fox: #e8590c;
+  --red: #c0392b;
+  --yellow: #8f6a0c;           /* yellow-ink */
+  --yellow-line: #e2b33c;
+  --green: #237a5e;
+  --blue: #4a6fa5;
+  --pink: #a8406f;
+  --silver: #55677d;
+  --fox: #c0392b;
 
   --die-bg: #ffffff;
-  --die-pip: #1c1c1e;
+  --die-pip: #0d1b2a;
   --held: var(--accent);
 
   --r-sm: 8px;
@@ -55,34 +61,34 @@
   --r-lg: 16px;
   --r-xl: 22px;
 
-  --surface-sheet: #f2f2f7;
-  --surface-raised: #ffffff;
   color-scheme: light;
 }
 
-/* Dunkel: einmal für das System, einmal für die manuelle Wahl in den Einstellungen */
+/* Dunkel (Navy Research „Cover & closing“): einmal für das System, einmal für die Wahl in den Einstellungen */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #000000; --surface: #1c1c1e; --surface-2: #2c2c2e;
-    --fill: rgba(118, 118, 128, 0.24); --fill-strong: rgba(118, 118, 128, 0.36);
-    --label: #ffffff; --label-2: #aeaeb2; --label-3: #8e8e93; --separator: rgba(84, 84, 88, 0.65);
-    --accent: #409cff; --accent-fill: #0a6ee6; --on-accent: #ffffff; --danger: #ff453a; --ok: #30d158; --wait: #ff9f0a;
-    --material: rgba(28, 28, 30, 0.72); --material-edge: rgba(255, 255, 255, 0.08); --scrim: rgba(0, 0, 0, 0.55);
-    --shadow-sm: none; --shadow-md: 0 6px 16px rgba(0, 0, 0, 0.5); --shadow-lg: 0 18px 50px rgba(0, 0, 0, 0.7);
-    --red: #ff6961; --yellow: #ffd60a; --yellow-line: #ffd60a; --green: #30d158; --blue: #409cff; --pink: #ff6482; --silver: #aeb4bc; --fox: #ff9f0a;
-    --die-bg: #3a3a3c; --die-pip: #ffffff; --surface-sheet: #1c1c1e; --surface-raised: #2c2c2e;
+    --bg: #0d1b2a; --surface: #1a2c42; --surface-2: #24384f; --surface-sheet: #1a2c42; --surface-raised: #24384f;
+    --fill: rgba(184, 196, 212, 0.14); --fill-strong: rgba(184, 196, 212, 0.24);
+    --label: #ffffff; --label-2: #b8c4d4; --label-3: #9aabbf; --separator: rgba(184, 196, 212, 0.22);
+    --accent: #b8c4d4; --accent-fill: #4a6fa5; --on-accent: #ffffff; --thumb: #3a5170;
+    --danger: #e8705f; --ok: #4fbf98; --wait: #e2b33c;
+    --material: rgba(13, 27, 42, 0.76); --material-edge: rgba(255, 255, 255, 0.08); --scrim: rgba(0, 0, 0, 0.55);
+    --shadow-sm: none; --shadow-md: 0 6px 16px rgba(0, 0, 0, 0.45); --shadow-lg: 0 18px 50px rgba(0, 0, 0, 0.6);
+    --red: #e8705f; --yellow: #e2b33c; --yellow-line: #e2b33c; --green: #4fbf98; --blue: #8fb0e0; --pink: #e48ab2; --silver: #b8c4d4; --fox: #e8705f;
+    --die-bg: #24384f; --die-pip: #ffffff;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #000000; --surface: #1c1c1e; --surface-2: #2c2c2e;
-  --fill: rgba(118, 118, 128, 0.24); --fill-strong: rgba(118, 118, 128, 0.36);
-  --label: #ffffff; --label-2: #aeaeb2; --label-3: #8e8e93; --separator: rgba(84, 84, 88, 0.65);
-  --accent: #409cff; --accent-fill: #0a6ee6; --on-accent: #ffffff; --danger: #ff453a; --ok: #30d158; --wait: #ff9f0a;
-  --material: rgba(28, 28, 30, 0.72); --material-edge: rgba(255, 255, 255, 0.08); --scrim: rgba(0, 0, 0, 0.55);
-  --shadow-sm: none; --shadow-md: 0 6px 16px rgba(0, 0, 0, 0.5); --shadow-lg: 0 18px 50px rgba(0, 0, 0, 0.7);
-  --red: #ff6961; --yellow: #ffd60a; --yellow-line: #ffd60a; --green: #30d158; --blue: #409cff; --pink: #ff6482; --silver: #aeb4bc; --fox: #ff9f0a;
-  --die-bg: #3a3a3c; --die-pip: #ffffff; --surface-sheet: #1c1c1e; --surface-raised: #2c2c2e;
+  --bg: #0d1b2a; --surface: #1a2c42; --surface-2: #24384f; --surface-sheet: #1a2c42; --surface-raised: #24384f;
+  --fill: rgba(184, 196, 212, 0.14); --fill-strong: rgba(184, 196, 212, 0.24);
+  --label: #ffffff; --label-2: #b8c4d4; --label-3: #9aabbf; --separator: rgba(184, 196, 212, 0.22);
+  --accent: #b8c4d4; --accent-fill: #4a6fa5; --on-accent: #ffffff; --thumb: #3a5170;
+  --danger: #e8705f; --ok: #4fbf98; --wait: #e2b33c;
+  --material: rgba(13, 27, 42, 0.76); --material-edge: rgba(255, 255, 255, 0.08); --scrim: rgba(0, 0, 0, 0.55);
+  --shadow-sm: none; --shadow-md: 0 6px 16px rgba(0, 0, 0, 0.45); --shadow-lg: 0 18px 50px rgba(0, 0, 0, 0.6);
+  --red: #e8705f; --yellow: #e2b33c; --yellow-line: #e2b33c; --green: #4fbf98; --blue: #8fb0e0; --pink: #e48ab2; --silver: #b8c4d4; --fox: #e8705f;
+  --die-bg: #24384f; --die-pip: #ffffff;
   color-scheme: dark;
 }
 

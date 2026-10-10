@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="app-version" content="1.0.0">
-<meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<meta name="app-version" content="1.1.0">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0d1b2a" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Spieleabend">
@@ -24,14 +24,14 @@
   --pad-l: max(16px, env(safe-area-inset-left, 0px));
   --pad-r: max(16px, env(safe-area-inset-right, 0px));
   /* gewählter Abschnitt der segmentierten Auswahl (wie iOS: hell weiß, dunkel grau) */
-  --seg-thumb: var(--surface);
+  --seg-thumb: var(--thumb);
   /* Spalte des Spielers am Zug */
   --cur-tint: color-mix(in srgb, var(--accent) 8%, var(--surface));
 }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) { --seg-thumb: #636366; --cur-tint: color-mix(in srgb, var(--accent) 16%, var(--surface)); }
+  :root:not([data-theme="light"]) { --seg-thumb: var(--thumb); --cur-tint: color-mix(in srgb, var(--accent) 16%, var(--surface)); }
 }
-:root[data-theme="dark"] { --seg-thumb: #636366; --cur-tint: color-mix(in srgb, var(--accent) 16%, var(--surface)); }
+:root[data-theme="dark"] { --seg-thumb: var(--thumb); --cur-tint: color-mix(in srgb, var(--accent) 16%, var(--surface)); }
 
 html, body { height: 100%; }
 body {

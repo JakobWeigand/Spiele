@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="app-version" content="1.0.0">
-<meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<meta name="app-version" content="1.1.0">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0d1b2a" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Spieleabend">
@@ -28,13 +28,12 @@
      gefüllte Akzentflächen mit weißer Schrift und Akzent als Schriftfarbe auf grauen Flächen. */
   --accent-text: var(--accent);
   --plate: var(--surface-raised);      /* erhabene Fläche: Knöpfe, Felder, Eingaben */
-  --thumb: var(--surface);             /* gewähltes Segment */
   --thumb-shadow: 0 3px 8px rgba(0, 0, 0, 0.12), 0 3px 1px rgba(0, 0, 0, 0.04);
 }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) { --accent-text: #5eb0ff; --thumb: #636366; }
+  :root:not([data-theme="light"]) { }
 }
-:root[data-theme="dark"] { --accent-text: #5eb0ff; --thumb: #636366; }
+
 
 html, body { height: 100%; }
 body { font-size: 16px; line-height: 1.4; overflow: hidden; }
@@ -129,9 +128,9 @@ h1 {
 .die.blank .pip { opacity: 0; }
 button.die-btn:active .die { transform: scale(0.94); }
 .die-name { font-size: 13px; font-weight: 600; text-align: center; color: var(--label-2); line-height: 1.4em; }
-.die.white  { background: var(--face-white);  --pip: #1c1c1e; }
+.die.white  { background: var(--face-white);  --pip: #0d1b2a; }
 .die.red    { background: var(--face-red);    --pip: #ffffff; }
-.die.yellow { background: var(--face-yellow); --pip: #1c1c1e; }
+.die.yellow { background: var(--face-yellow); --pip: #0d1b2a; }
 .die.green  { background: var(--face-green);  --pip: #ffffff; }
 .die.blue   { background: var(--face-blue);   --pip: #ffffff; }
 .die-btn.locked .die { opacity: 0.25; box-shadow: none; }
@@ -209,7 +208,7 @@ table.combo {
   box-shadow: var(--shadow-sm); transition: opacity 0.2s ease;
 }
 .qrow.red    { --rc: var(--face-red);    --rt: var(--red);    --rf: var(--face-red);    --ri: #ffffff; }
-.qrow.yellow { --rc: var(--yellow-line); --rt: var(--yellow); --rf: var(--face-yellow); --ri: #1c1c1e; }
+.qrow.yellow { --rc: var(--yellow-line); --rt: var(--yellow); --rf: var(--face-yellow); --ri: #0d1b2a; }
 .qrow.green  { --rc: var(--face-green);  --rt: var(--green);  --rf: var(--face-green);  --ri: #ffffff; }
 .qrow.blue   { --rc: var(--face-blue);   --rt: var(--blue);   --rf: var(--face-blue);   --ri: #ffffff; }
 .qrow.shut { opacity: 0.45; }

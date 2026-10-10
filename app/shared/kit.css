@@ -7,12 +7,10 @@
 }
 .seg .thumb {
   position: absolute; top: 2px; bottom: 2px; left: 2px;
-  border-radius: 8px; background: var(--surface);
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12), 0 3px 1px rgba(0, 0, 0, 0.04);
+  border-radius: 8px; background: var(--thumb);
+  box-shadow: 0 3px 8px rgba(13, 27, 42, 0.12), 0 3px 1px rgba(13, 27, 42, 0.04);
   pointer-events: none; will-change: transform;
 }
-:root[data-theme="dark"] .seg .thumb { background: #636366; }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .seg .thumb { background: #636366; } }
 .seg button {
   position: relative; z-index: 1;
   min-height: 34px; border: 0; background: transparent; border-radius: 8px;
@@ -23,7 +21,7 @@
 .seg button:active { transform: scale(0.96); }
 .seg.lg button { min-height: 38px; font-size: 16px; }
 /* Segmente ohne gleitenden Daumen (Spielerzahl in der Würfelrunde) */
-#cs-count button[aria-checked="true"] { background: var(--surface); box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12); }
+#cs-count button[aria-checked="true"] { background: var(--surface); box-shadow: 0 3px 8px rgba(13, 27, 42, 0.12); }
 
 .btn {
   min-height: 56px; border: 0; border-radius: 14px; cursor: pointer;
@@ -87,10 +85,7 @@ dialog.sheet::backdrop { background: transparent; }
 .sheet-body .small { font-size: 13px; color: var(--label-2); }
 .group { display: grid; gap: 8px; }
 .group > .label { padding-left: 16px; }
-.rows { background: var(--surface); border-radius: var(--r-md); overflow: hidden; }
-:root .rows { background: #ffffff; }
-:root[data-theme="dark"] .rows { background: #2c2c2e; }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .rows { background: #2c2c2e; } }
+.rows { background: var(--surface-raised); border-radius: var(--r-md); overflow: hidden; }
 .row {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
   min-height: 48px; padding: 10px 16px; position: relative;
@@ -132,10 +127,10 @@ a.row:active { background: var(--fill); }
 }
 .switch span::after {
   content: ""; position: absolute; top: 2px; left: 2px; width: 27px; height: 27px; border-radius: 50%;
-  background: #ffffff; box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15), 0 3px 1px rgba(0, 0, 0, 0.06);
+  background: #ffffff; box-shadow: 0 3px 8px rgba(13, 27, 42, 0.15), 0 3px 1px rgba(13, 27, 42, 0.06);
   transition: transform 0.3s cubic-bezier(0.3, 1.3, 0.5, 1);
 }
-.switch input:checked + span { background: #34c759; }
+.switch input:checked + span { background: var(--ok); }
 .switch input:checked + span::after { transform: translateX(20px); }
 .switch input:focus-visible + span { outline: 3px solid var(--accent); outline-offset: 2px; }
 

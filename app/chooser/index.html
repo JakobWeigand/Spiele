@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="app-version" content="1.0.0">
-<meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<meta name="app-version" content="1.1.0">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0d1b2a" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Spieleabend">
@@ -23,17 +23,17 @@
 :root {
   --chosen: var(--accent);   /* gewählter Kreis und Flut; weiße Schrift darauf hat ≥ 4,5:1 */
   /* Fingerfarben: weich, aber gut unterscheidbar */
-  --f1: #ff7a6e; --f2: #ffa834; --f3: #4cc777; --f4: #4fb8f0; --f5: #a98bf5; --f6: #f47fb0;
+  --f1: #c0392b; --f2: #e2b33c; --f3: #2e8b6e; --f4: #4a6fa5; --f5: #c4588a; --f6: #6a7d93;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --chosen: #0a6ee6;       /* etwas tiefer als das dunkle Systemblau, damit weiße Schrift auf der Flut ≥ 4,5:1 hat */
-    --f1: #ff6961; --f2: #ffb340; --f3: #4cd775; --f4: #70d7ff; --f5: #c49bff; --f6: #ff7eb3;
+    --chosen: var(--accent-fill); /* Navy-Blau, weiße Schrift darauf ≥ 4,5:1 */
+    --f1: #e8705f; --f2: #e2b33c; --f3: #4fbf98; --f4: #8fb0e0; --f5: #e48ab2; --f6: #b8c4d4;
   }
 }
 :root[data-theme="dark"] {
-  --chosen: #0a6ee6;
-  --f1: #ff6961; --f2: #ffb340; --f3: #4cd775; --f4: #70d7ff; --f5: #c49bff; --f6: #ff7eb3;
+  --chosen: var(--accent-fill);
+  --f1: #e8705f; --f2: #e2b33c; --f3: #4fbf98; --f4: #8fb0e0; --f5: #e48ab2; --f6: #b8c4d4;
 }
 
 html, body { height: 100%; }
@@ -193,7 +193,7 @@ button, input { font: inherit; color: inherit; letter-spacing: inherit; }
 
   /* ---------- Finger ---------- */
   var stage = $("#stage"), cv = $("#cv"), ctx = cv.getContext("2d");
-  var palette = [], chosenColor = "#0068da", textColor = "#000000", bgColor = "#f2f2f7";
+  var palette = [], chosenColor = "#1a2c42", textColor = "#0d1b2a", bgColor = "#ffffff";
   function readColors() {
     var cs = getComputedStyle(document.documentElement);
     palette = ["--f1", "--f2", "--f3", "--f4", "--f5", "--f6"].map(function (v) { return cs.getPropertyValue(v).trim(); });

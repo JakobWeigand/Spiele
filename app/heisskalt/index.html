@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="app-version" content="1.0.0">
-<meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<meta name="app-version" content="1.1.0">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0d1b2a" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Spieleabend">
@@ -22,9 +22,9 @@
    Signalfarben: Blau für das Geheimwort und den gewählten Hinweis, Rot für Streichen und Verlieren, Grün für Gewinnen.
    Volle Farbflächen mit weißer Schrift nutzen in beiden Modi dieselben Töne, damit der Kontrast immer ≥ 4,5:1 bleibt. */
 :root {
-  --solid-accent: #0068da;   /* Geheimwort, Hauptknopf */
-  --solid-hot: #d70015;      /* Streichen, verloren */
-  --solid-win: #1f7a3a;      /* gewonnen */
+  --solid-accent: var(--accent-fill);   /* Geheimwort, Hauptknopf */
+  --solid-hot: var(--face-red);      /* Streichen, verloren */
+  --solid-win: #237a5e;      /* gewonnen */
   --tint-text: var(--blue);  /* blaue Schrift auf grauen Flächen: etwas kräftiger als --accent, damit ≥ 4,5:1 */
   --pad-l: max(16px, env(safe-area-inset-left, 0px));
   --pad-r: max(16px, env(safe-area-inset-right, 0px));
