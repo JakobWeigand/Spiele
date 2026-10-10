@@ -1,0 +1,1141 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="app-version" content="1.0.0">
+<meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Spieleabend">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="apple-touch-icon" href="../icon-180.png">
+<link rel="icon" type="image/png" href="../icon-192.png">
+<title>Wortbombe</title>
+<link rel="stylesheet" href="../shared/base.css">
+<script src="../shared/shell.js"></script>
+<style>
+/* Wortbombe im Spieleabend-Stil (Design/apple-design) für ein Handy, das flach zwischen den Spielern liegt.
+   Rahmen aus 24 Buchstaben, in der Mitte Uhr und Kategorie. Die obere Hälfte steht auf dem Kopf,
+   damit die Person gegenüber mitlesen kann. Farben, Schrift und Hell/Dunkel kommen aus ../shared/base.css;
+   hier stehen nur Aliase der alten Namen und die wenigen Spielfarben. */
+:root {
+  --text: var(--label);
+  --body: var(--label);
+  --small: var(--label-2);
+  --muted: var(--label-2);
+  --rule: var(--separator);
+  --overlay: var(--scrim);
+  --focus: var(--accent);
+  /* Spielfarben: Uhr als dunkle Bombe, Akzent = wer dran ist, Rot = Explosion und verlorene Runde.
+     Weiße Schrift auf diesen Flächen hat in beiden Modi mindestens 4,5:1. */
+  --clock: #1c1c1e;
+  --turn-bg: var(--accent);
+  --lose-bg: var(--danger);
+  --sheet: var(--surface-sheet, var(--bg));
+  --seg-on: var(--surface);
+}
+/* Dunkel: die System-Akzentfarben sind für weiße Schrift zu hell, daher etwas abgedunkelt */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --clock: #3a3a3c; --turn-bg: #086acc; --lose-bg: #d13930; --seg-on: #636366; }
+}
+:root[data-theme="dark"] { --clock: #3a3a3c; --turn-bg: #086acc; --lose-bg: #d13930; --seg-on: #636366; }
+
+html, body { height: 100%; }
+body {
+  font-size: 16px; line-height: 1.35; letter-spacing: 0; overflow: hidden;
+  user-select: none; -webkit-user-select: none;
+}
+
+/* Spielfeld: Rahmen aus Buchstaben, Raster je nach Ausrichtung 6×8 oder 8×6 */
+.board {
+  --cols: 6; --rows: 8;
+  height: 100%; height: 100dvh;
+  display: grid; gap: 6px;
+  grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+  grid-template-rows: repeat(var(--rows), minmax(0, 1fr));
+  padding: max(10px, env(safe-area-inset-top, 0px)) max(10px, env(safe-area-inset-right, 0px))
+           max(10px, env(safe-area-inset-bottom, 0px)) max(10px, env(safe-area-inset-left, 0px));
+}
+.board.shake { animation: shake .45s cubic-bezier(.36,.07,.19,.97); }
+@keyframes shake {
+  10%, 90% { transform: translate(-2px, 1px); }
+  20%, 80% { transform: translate(4px, -2px); }
+  30%, 50%, 70% { transform: translate(-7px, 3px); }
+  40%, 60% { transform: translate(7px, -3px); }
+}
+
+.letter {
+  min-width: 0; min-height: 0; padding: 0; border: 0; border-radius: 12px;
+  background: var(--surface); color: var(--label); cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  font-size: clamp(22px, 7.5vmin, 38px); font-weight: 600; line-height: 1; letter-spacing: -0.02em;
+  display: grid; place-items: center;
+  transition: opacity .25s ease, background-color .1s ease, color .1s ease, transform .1s ease-out;
+}
+.letter span { display: block; }
+.letter.up span { transform: rotate(180deg); }
+.letter:active:not(.used) { background: var(--accent-fill); color: var(--on-accent); transform: scale(0.96); }
+.letter.used { opacity: .18; cursor: default; box-shadow: none; }
+.board.idle .letter:not(.used) { opacity: .55; }
+
+/* Mitte: zwei Hälften für die beiden Seiten, dazwischen die Uhr */
+.center {
+  grid-row: 2 / var(--rows); grid-column: 2 / var(--cols);
+  min-width: 0; min-height: 0;
+  display: grid; grid-template-rows: minmax(0, 1fr) auto minmax(0, 1fr); gap: 8px;
+  padding: 6px 4px;
+}
+.half {
+  grid-column: 1;
+  min-width: 0; min-height: 0; overflow: hidden;
+  display: flex; flex-direction: column; justify-content: center; align-items: center;
+  gap: 8px; text-align: center; padding: 10px;
+  border-radius: var(--r-lg); background: var(--surface); box-shadow: var(--shadow-sm);
+  transition: background-color .25s ease, color .25s ease;
+}
+#half-up { grid-row: 1; }
+#half-down { grid-row: 3; }
+.half.turn { background: var(--turn-bg); color: #ffffff; box-shadow: var(--shadow-md); }
+.half.lost { background: var(--lose-bg); color: #ffffff; box-shadow: var(--shadow-md); }
+.half.turn .label, .half.lost .label,
+.half.turn .cat, .half.lost .cat, .half.turn .line strong, .half.lost .line strong,
+.half.turn .line, .half.lost .line, .half.turn .score, .half.lost .score { color: #ffffff; }
+.half.turn .small-btn, .half.lost .small-btn { background: rgba(255, 255, 255, .2); color: #ffffff; }
+.half.turn .small-btn.fill { background: #ffffff; color: var(--turn-bg); }
+.half.lost .small-btn.fill { background: #ffffff; color: var(--lose-bg); }
+.big { margin: 0; font-size: clamp(24px, 7.2vmin, 36px); font-weight: 700; line-height: 1.08; letter-spacing: -0.025em; text-wrap: balance; }
+.center.focus-down { grid-template-rows: minmax(0, .8fr) auto minmax(0, 1.3fr); }
+.center.focus-up { grid-template-rows: minmax(0, 1.3fr) auto minmax(0, .8fr); }
+.half.up { transform: rotate(180deg); }
+.label {
+  margin: 0; font-size: 13px; font-weight: 600; letter-spacing: 0.02em; text-transform: uppercase; color: var(--label-2);
+}
+.half .label { font-size: 12px; }
+.label.red { color: var(--danger); }
+.cat {
+  margin: 0; font-size: clamp(19px, 5.4vmin, 27px); font-weight: 700; line-height: 1.15; letter-spacing: -0.02em;
+  text-wrap: balance; max-width: 100%; overflow-wrap: anywhere;
+}
+.line { margin: 0; font-size: 15px; color: var(--label-2); text-wrap: balance; }
+.line strong { color: var(--label); font-weight: 600; }
+.score { margin: 0; font-size: 13px; color: var(--label-2); font-variant-numeric: tabular-nums; }
+.chip {
+  display: inline-block; padding: 5px 10px; border-radius: 999px; background: var(--fill);
+  font-size: 14px; font-weight: 600; color: var(--label); max-width: 100%;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.chip.on { background: var(--accent-fill); color: var(--on-accent); }
+.row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.small-btn {
+  min-height: 38px; padding: 0 14px; border: 0; border-radius: 10px;
+  background: var(--fill); color: var(--accent); font-size: 15px; font-weight: 600; cursor: pointer;
+  transition: transform .1s ease-out, background-color .2s ease;
+}
+.small-btn:active { transform: scale(0.96); }
+.small-btn.fill { background: var(--accent-fill); color: var(--on-accent); }
+.small-btn.slim { min-height: 32px; padding: 0 12px; font-size: 13px; border-radius: 8px; }
+.row.meta { align-items: center; }
+
+/* Segmentierte Auswahl (wie .seg im Würfelbecher) */
+.mode {
+  display: grid; grid-template-columns: 1fr 1fr; padding: 2px; border-radius: 10px; background: var(--fill);
+}
+.mode button {
+  min-height: 34px; padding: 0 8px; border: 0; border-radius: 8px; background: transparent; cursor: pointer;
+  font-size: 15px; font-weight: 500; color: var(--label); white-space: nowrap;
+  transition: transform .1s ease-out, background-color .2s ease;
+}
+.mode button:active { transform: scale(0.96); }
+.mode button[aria-pressed="true"] {
+  background: var(--seg-on); font-weight: 600;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12), 0 3px 1px rgba(0, 0, 0, 0.04);
+}
+
+/* Uhr: kreisender Zeiger, aber keine Restzeit */
+.clock {
+  grid-row: 2; grid-column: 1;
+  justify-self: center; align-self: center;
+  width: min(150px, 34vmin); aspect-ratio: 1; padding: 0; border: 0; border-radius: 50%;
+  background: var(--clock); position: relative; cursor: pointer;
+  display: grid; place-items: center;
+  box-shadow: var(--shadow-md), inset 0 0 0 1px rgba(255, 255, 255, .06);
+  transition: transform .1s ease-out;
+}
+.clock:active { transform: scale(0.97); }
+.clock .hand {
+  position: absolute; left: 50%; bottom: 50%; width: 4px; height: 38%; margin-left: -2px; border-radius: 2px;
+  background: #ffffff; transform-origin: 50% 100%;
+}
+.clock .hub { position: absolute; left: 50%; top: 50%; width: 12%; aspect-ratio: 1; border-radius: 50%; background: #ffffff; transform: translate(-50%, -50%); }
+.clock .say {
+  position: relative; z-index: 1; padding: 4px 12px; border-radius: 8px; background: var(--clock);
+  color: #ffffff; font-size: 17px; font-weight: 600; letter-spacing: -0.01em;
+}
+.clock.run .hand { animation: spin 1.2s linear infinite; }
+.clock.run { animation: pulse 1s ease-in-out infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes pulse { 50% { transform: scale(1.035); } }
+.clock.gone { visibility: hidden; }
+
+/* Zurück zur Spieleauswahl: neben der Uhr, wo kein Buchstabe liegt. Während die Uhr läuft, ausgeblendet,
+   damit niemand mitten in der Runde aus Versehen das Spiel verlässt (in Pause und zwischen den Runden da). */
+.center .home-link {
+  grid-row: 2; grid-column: 1; justify-self: start; align-self: center; z-index: 2;
+  width: 40px; height: 40px; min-width: 40px; min-height: 40px; margin: 0; padding: 0; justify-content: center;
+  border-radius: 50%; background: var(--material); box-shadow: var(--shadow-sm), 0 0 0 0.5px var(--material-edge);
+  -webkit-backdrop-filter: blur(20px) saturate(180%); backdrop-filter: blur(20px) saturate(180%);
+  transition: opacity .15s ease, transform .1s ease-out;
+}
+.center .home-link:active { transform: scale(0.96); opacity: .6; }
+.center .home-link svg { margin-left: -2px; }
+.clock.run ~ .home-link { visibility: hidden; pointer-events: none; }
+
+/* Explosion */
+#flash { position: fixed; inset: 0; z-index: 20; pointer-events: none; background: var(--danger); opacity: 0; }
+#fx { position: fixed; inset: 0; z-index: 21; pointer-events: none; width: 100%; height: 100%; }
+
+/* Querformat: Uhr in der Mitte, Kategorie links und rechts daneben; Zurück-Knopf über der Uhr */
+@media (orientation: landscape) {
+  .center, .center.focus-down, .center.focus-up { grid-template-rows: minmax(0, 1fr); grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 14px; padding: 2px 6px; }
+  .center.focus-down { grid-template-columns: minmax(0, .85fr) auto minmax(0, 1.25fr); }
+  .center.focus-up { grid-template-columns: minmax(0, 1.25fr) auto minmax(0, .85fr); }
+  #half-up { grid-row: 1; grid-column: 1; }
+  #half-down { grid-row: 1; grid-column: 3; }
+  .clock { grid-row: 1; grid-column: 2; width: min(150px, 34vmin); }
+  .center .home-link { grid-row: 1; grid-column: 2; justify-self: center; align-self: start; }
+  .cat { font-size: clamp(17px, 5vmin, 24px); }
+}
+
+/* Kleine Handys im Hochformat (z. B. iPhone SE): Mitte etwas dichter, damit nichts abgeschnitten wird */
+@media (orientation: portrait) and (max-height: 700px) {
+  .center { gap: 6px; padding: 4px 2px; }
+  .half { padding: 6px; gap: 5px; border-radius: var(--r-md); }
+  .half .label { font-size: 11px; }
+  .line { font-size: 13px; }
+  .score { font-size: 12px; }
+  .row { gap: 6px; }
+  .small-btn { min-height: 30px; padding: 0 10px; font-size: 13px; border-radius: 8px; }
+  .small-btn.slim { min-height: 28px; font-size: 12px; }
+  .clock { width: min(150px, 30vmin); }
+  .cat { font-size: clamp(17px, 5vmin, 24px); }
+  .big { font-size: clamp(22px, 6.4vmin, 32px); }
+}
+
+@media (orientation: portrait) and (max-height: 600px) {
+  .board:not(.idle) .center.focus-down, .board:not(.idle) .center.focus-up { grid-template-rows: minmax(0, 1fr) auto minmax(0, 1fr); }
+  .half { gap: 4px; }
+  .clock { width: min(150px, 26vmin); }
+}
+
+/* Dialoge: Sheet von unten am Handy, zentrierte Karte auf großen Bildschirmen */
+.overlay {
+  position: fixed; inset: 0; z-index: 30; background: var(--scrim);
+  display: flex; align-items: flex-end; justify-content: center; padding: 0;
+  animation: scrim-in .25s ease;
+}
+.panel {
+  width: 100%; max-width: 600px; max-height: calc(100dvh - env(safe-area-inset-top, 0px) - 24px); overflow-y: auto;
+  overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
+  background: var(--sheet); color: var(--label);
+  border-radius: 14px 14px 0 0; box-shadow: var(--shadow-lg);
+  padding: 20px max(16px, env(safe-area-inset-right, 0px)) calc(20px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+  display: grid; gap: 12px;
+  animation: sheet-in .35s cubic-bezier(.32, .72, 0, 1);
+}
+@keyframes scrim-in { from { background: transparent; } }
+@keyframes sheet-in { from { transform: translateY(100%); } }
+@media (min-width: 640px) and (min-height: 560px) {
+  .overlay { align-items: center; padding: 24px; }
+  .panel { max-width: 520px; max-height: calc(100dvh - 64px); border-radius: var(--r-xl); padding: 24px; animation-name: card-in; }
+  @keyframes card-in { from { opacity: 0; transform: scale(.96); } }
+}
+.panel h2 { margin: 0 0 4px; font-size: 22px; font-weight: 700; line-height: 1.2; letter-spacing: -0.02em; }
+.panel .label { margin-top: 6px; padding-left: 4px; }
+.panel .mode button { min-height: 38px; font-size: 16px; }
+.mode.three { grid-template-columns: 1fr 1fr 1fr; }
+.note { margin: 0; font-size: 15px; line-height: 1.4; color: var(--label-2); }
+.note a { color: var(--accent); text-underline-offset: 3px; }
+.plist { display: grid; gap: 8px; }
+.prow { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+.prow .small-btn { min-height: 48px; border-radius: 12px; }
+.prow > :only-child { grid-column: 1 / -1; }
+#net-code-box, #net-join-box { display: grid; gap: 8px; }
+.prow input {
+  min-height: 48px; width: 100%; padding: 0 14px; font: inherit; font-size: 17px; color: var(--label);
+  background: var(--fill); border: 0; border-radius: var(--r-md); user-select: text; -webkit-user-select: text;
+}
+.btn {
+  min-height: 52px; border: 0; border-radius: 14px; cursor: pointer; padding: 0 14px;
+  font-size: 17px; font-weight: 600; line-height: 1.15;
+  transition: transform .1s ease-out, opacity .2s ease, background-color .2s ease;
+}
+.btn:active:not(:disabled) { transform: scale(0.97); }
+.btn-primary { background: var(--accent-fill); color: var(--on-accent); }
+.btn-secondary { background: var(--fill); color: var(--accent); }
+.btn:disabled { opacity: .4; cursor: default; }
+.confirm { background: var(--surface); border-radius: var(--r-md); padding: 14px; display: grid; gap: 10px; box-shadow: var(--shadow-sm); }
+.confirm p { margin: 0; font-weight: 600; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+/* Online: jeder sieht alles richtig herum */
+.board.online .half.up { transform: none; }
+.code {
+  margin: 0; padding: 12px; background: var(--surface); border-radius: var(--r-md); text-align: center;
+  font-size: 44px; font-weight: 700; line-height: 1.1; letter-spacing: .12em; font-variant-numeric: tabular-nums;
+  user-select: text; -webkit-user-select: text;
+}
+#join-code { text-transform: uppercase; letter-spacing: .2em; text-align: center; font-size: 26px; font-weight: 700; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* Weniger Bewegung: nichts kreist, wackelt oder gleitet; Dialoge blenden nur über */
+@media (prefers-reduced-motion: reduce) {
+  .clock.run, .clock.run .hand, .board.shake { animation: none; }
+  .panel, .overlay { animation: fade-in .2s ease; }
+  @keyframes fade-in { from { opacity: 0; } }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .center .home-link { background: var(--surface); -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+@media (prefers-contrast: more) {
+  .letter, .half, .small-btn, .mode, .prow input { box-shadow: 0 0 0 1px var(--separator); }
+}
+</style>
+</head>
+<body>
+<main class="board idle" id="board" aria-label="Wortbombe">
+  <div class="center" id="center">
+    <section class="half up" id="half-up" aria-hidden="true"></section>
+    <button type="button" class="clock" id="clock" aria-label="Uhr: Runde starten">
+      <span class="hand" aria-hidden="true"></span>
+      <span class="hub" aria-hidden="true"></span>
+      <span class="say" id="clock-say">Start</span>
+    </button>
+    <a class="home-link compact" href="../" aria-label="Alle Spiele"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="txt">Spiele</span></a>
+    <section class="half" id="half-down"></section>
+  </div>
+</main>
+
+<div id="flash" aria-hidden="true"></div>
+<canvas id="fx" aria-hidden="true"></canvas>
+
+<div class="overlay" id="settings" hidden>
+  <div class="panel" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+    <h2 id="settings-title">Einstellungen</h2>
+    <p class="label">Spielweise</p>
+    <div class="mode" id="set-mode">
+      <button type="button" data-mode="turn">Zeit pro Zug</button>
+      <button type="button" data-mode="round">Zeit pro Runde</button>
+    </div>
+    <p class="note" id="mode-note"></p>
+    <p class="label">Tempo</p>
+    <div class="mode three" id="set-tempo">
+      <button type="button" data-tempo="schnell">Schnell</button>
+      <button type="button" data-tempo="normal">Normal</button>
+      <button type="button" data-tempo="entspannt">Entspannt</button>
+    </div>
+    <p class="label">Ton</p>
+    <div class="mode" id="set-sound">
+      <button type="button" data-sound="1">An</button>
+      <button type="button" data-sound="0">Aus</button>
+    </div>
+    <p class="label">Spieler</p>
+    <div class="plist" id="plist"></div>
+    <button type="button" class="btn btn-secondary" id="p-add">Spieler hinzufügen</button>
+    <button type="button" class="btn btn-secondary" id="reset">Punkte auf 0 setzen</button>
+    <div class="confirm" id="confirm" hidden>
+      <p>Alle Punkte löschen?</p>
+      <div class="two">
+        <button type="button" class="btn btn-secondary" id="confirm-no">Abbrechen</button>
+        <button type="button" class="btn btn-primary" id="confirm-yes">Ja, auf 0</button>
+      </div>
+    </div>
+    <button type="button" class="btn btn-primary" id="settings-done">Fertig</button>
+  </div>
+</div>
+
+<div class="overlay" id="online" hidden>
+  <div class="panel" role="dialog" aria-modal="true" aria-labelledby="online-title">
+    <h2 id="online-title">Online spielen</h2>
+    <p class="note">Zu zweit auf zwei Handys, zum Beispiel beim Telefonieren. Eine Person erstellt ein Spiel und sagt der anderen den Code.</p>
+    <p class="note">Für die Verbindung erfahren Server von PeerJS und Google deine IP-Adresse. Mehr unter <a href="../../datenschutz.html">Datenschutz</a>.</p>
+    <p class="label">Dein Name</p>
+    <div class="prow"><input type="text" id="my-name" maxlength="14" autocomplete="off" aria-label="Dein Name"></div>
+    <div class="two" id="net-choose">
+      <button type="button" class="btn btn-primary" id="net-create">Spiel erstellen</button>
+      <button type="button" class="btn btn-secondary" id="net-join">Beitreten</button>
+    </div>
+    <div id="net-code-box" hidden>
+      <p class="label">Dein Code</p>
+      <p class="code" id="net-code">····</p>
+    </div>
+    <div id="net-join-box" hidden>
+      <p class="label">Code eingeben</p>
+      <div class="prow">
+        <input type="text" id="join-code" maxlength="4" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="Code des Spiels">
+        <button type="button" class="btn btn-primary" id="net-connect">Verbinden</button>
+      </div>
+    </div>
+    <p class="note" id="net-status" aria-live="polite"></p>
+    <button type="button" class="btn btn-secondary" id="net-close">Schließen</button>
+  </div>
+</div>
+
+<div class="sr-only" aria-live="polite" id="announce"></div>
+
+<script>
+(function () {
+  "use strict";
+  var $ = function (s) { return document.querySelector(s); };
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+
+  /* ---------- Zufall aus dem Betriebssystem, ohne Verzerrung ---------- */
+  var u32 = new Uint32Array(1);
+  function randInt(n) {                     // 0 … n-1
+    if (!(window.crypto && crypto.getRandomValues)) return Math.floor(Math.random() * n);
+    var limit = Math.floor(0x100000000 / n) * n;
+    do { crypto.getRandomValues(u32); } while (u32[0] >= limit);
+    return u32[0] % n;
+  }
+
+  /* ---------- Spielmaterial ---------- */
+  var LETTERS = "ABCDEFGHIJKLMNOPRSTUVWYZ".split("");   // 24 Tasten, ohne Q und X
+  var TEMPO = {                                          // Sekunden, geheim gezogen, eher kurz als lang
+    schnell:   { turn: [3, 9],   round: [12, 50] },
+    normal:    { turn: [4, 13],  round: [18, 75] },
+    entspannt: { turn: [6, 18],  round: [28, 105] }
+  };
+  var CATEGORIES = [
+    "Tiere", "Haustiere", "Tiere im Wasser", "Vögel", "Insekten", "Tiere im Zoo", "Tiere auf dem Bauernhof",
+    "Obst", "Gemüse", "Obst oder Gemüse", "Gewürze und Kräuter", "Süßigkeiten", "Kuchen und Gebäck", "Gerichte",
+    "Frühstück", "Getränke", "Cocktails", "Käsesorten", "Brot und Brötchen", "Nudelsorten", "Eissorten",
+    "Dinge in der Küche", "Dinge im Kühlschrank", "Dinge im Badezimmer", "Dinge im Schlafzimmer",
+    "Dinge im Wohnzimmer", "Dinge im Garten", "Dinge im Keller", "Dinge in der Schule", "Dinge im Büro",
+    "Dinge im Supermarkt", "Dinge am Strand", "Dinge im Koffer", "Dinge in der Handtasche", "Werkzeuge",
+    "Möbel", "Elektrogeräte", "Dinge, die man aufladen kann", "Dinge, die man verschenken kann",
+    "Dinge, die rund sind", "Dinge, die rot sind", "Dinge, die grün sind", "Dinge, die weiß sind",
+    "Dinge, die fliegen", "Dinge, die stinken", "Dinge, die klebrig sind", "Dinge, die man faltet",
+    "Dinge, die Räder haben", "Dinge, die man im Winter braucht", "Dinge mit Knöpfen", "Dinge aus Holz",
+    "Dinge aus Metall", "Dinge aus Glas", "Dinge, die kaputtgehen können", "Dinge, die man sammelt",
+    "Kleidung", "Schuhe", "Accessoires", "Stoffe und Materialien", "Farben", "Formen",
+    "Berufe", "Berufe mit Uniform", "Hobbys", "Sportarten", "Ballsportarten", "Wintersport",
+    "Sportgeräte", "Fußballvereine", "Olympische Disziplinen", "Brettspiele und Kartenspiele",
+    "Musikinstrumente", "Musikrichtungen", "Bands und Musiker", "Lieder", "Tänze",
+    "Filme", "Serien", "Zeichentrickfiguren", "Superhelden", "Märchen und Märchenfiguren",
+    "Bücher", "Comicfiguren", "Schauspieler", "Prominente", "Sportler", "Berühmte Deutsche",
+    "Historische Persönlichkeiten", "Vornamen", "Mädchennamen", "Jungennamen", "Nachnamen",
+    "Länder", "Länder in Europa", "Hauptstädte", "Städte in Deutschland", "Städte weltweit",
+    "Flüsse", "Berge und Gebirge", "Inseln", "Sehenswürdigkeiten", "Urlaubsziele",
+    "Bundesländer und Regionen", "Sprachen", "Automarken", "Marken", "Modemarken", "Supermärkte und Läden",
+    "Fahrzeuge", "Dinge am Flughafen", "Dinge im Krankenhaus", "Dinge im Zirkus", "Dinge auf dem Bauernhof",
+    "Dinge im Weltall", "Wetter", "Naturerscheinungen", "Blumen", "Bäume", "Pflanzen",
+    "Körperteile", "Krankheiten", "Gefühle", "Charaktereigenschaften", "Adjektive",
+    "Verben", "Dinge, die man tut, wenn man müde ist", "Gründe, zu spät zu kommen", "Ausreden",
+    "Schimpfwörter, aber nett", "Komplimente", "Dinge, die man nicht sagen sollte", "Dinge, die Babys tun",
+    "Feiertage und Feste", "Dinge an Weihnachten", "Dinge an Ostern", "Dinge auf einer Party",
+    "Dinge auf einer Hochzeit", "Dinge im Kino", "Dinge im Fitnessstudio", "Dinge beim Camping",
+    "Apps und Webseiten", "Computerbegriffe", "Spiele", "Videospiele", "Spielzeug",
+    "Wörter mit doppeltem Buchstaben", "Wörter mit mehr als acht Buchstaben", "Englische Wörter",
+    "Fremdwörter", "Abkürzungen", "Dinge, die man zählen kann", "Dinge, die laut sind", "Dinge, die leise sind",
+    "Dinge, die man trinken kann", "Dinge, die man essen kann", "Dinge, die man nicht essen sollte",
+    "Mythologische Wesen", "Gruselige Dinge", "Dinge im Märchenwald", "Fantasiefiguren",
+    "Erfindungen", "Chemische Elemente", "Schulfächer", "Mathematische Begriffe", "Planeten und Sterne",
+    "Kosenamen", "Dinge, die man im Bett macht", "Dinge, die Paare streiten lassen", "Dinge, die man teilt",
+    // Satzanfänge: mit einem passenden Wort ergänzen
+    "In der Dusche ist immer …", "Im Kühlschrank liegt immer …", "Im Urlaub vergesse ich immer …",
+    "Auf keiner Party darf fehlen …", "Unter dem Bett liegt …", "Im Handschuhfach liegt …",
+    "In meiner Hosentasche ist …", "Am liebsten esse ich …", "Das kaufe ich nie im Supermarkt …",
+    "Im Wald hört man …", "Auf dem Weihnachtsmarkt riecht es nach …", "Beim Zahnarzt denke ich an …",
+    "Auf eine einsame Insel nehme ich mit …", "Im Kino esse ich …", "Mein Nachbar sammelt …",
+    "Im Zoo sieht man …", "Morgens brauche ich zuerst …", "Im Freibad gibt es …",
+    "Wenn ich reich wäre, kaufe ich …", "Mein erstes Wort war …", "Im Schwimmbad stinkt es nach …",
+    "Was man nie zu einem Date mitbringt …", "Oma sagt immer …", "Auf der Autobahn sieht man …",
+    "In der Mikrowelle sollte man nie …", "Ein guter Grund, nicht aufzustehen …", "Im Keller wohnt …",
+    "Bei einem Stromausfall braucht man …", "Im Flugzeug nervt …", "Am Sonntag mache ich …",
+    "Mit einem Löffel kann man …", "Im Rucksack eines Kindes findet man …", "Das passt nicht in einen Koffer …",
+    "Auf dem Dachboden steht …", "Ein Superheld bräuchte …", "Im Klassenzimmer riecht es nach …",
+    "Was ein Pirat immer dabei hat …", "Bei Regen braucht man …", "Im Märchen gibt es immer …",
+    "Auf dem Rummel gewinnt man …", "Was man auf dem Flohmarkt findet …", "In einer Spülmaschine landet …",
+    "Ein Hund würde gerne …", "Eine Katze hasst …", "Auf dem Mond gibt es …", "In der Wüste braucht man …",
+    "Im Fitnessstudio hört man …", "Im Hotelzimmer klaut man …", "Was im Auto immer liegen bleibt …",
+    "Was man nachts um drei isst …", "Was auf einem Schreibtisch steht …", "Am Lagerfeuer erzählt man von …",
+    "In einer Schatzkiste liegt …", "Was man im Winter vermisst …", "Was man im Sommer vermisst …",
+    "Im Werkzeugkasten fehlt immer …", "Was Kinder an Weihnachten wollen …", "Was Eltern immer sagen …",
+    "Auf einem Bauernhof riecht es nach …", "Ein Roboter kann …", "Was ein Zauberer aus dem Hut zieht …",
+    "Was man beim Umzug verliert …", "Im Badezimmerschrank steht …", "In der Kaffeeküche gibt es …",
+    "Auf dem Balkon steht …", "Was in einem Erste-Hilfe-Kasten ist …", "Was man in eine Brotdose packt …",
+    "Was nach einer Party herumliegt …", "Was ein Detektiv braucht …", "Im Weltall schwebt …",
+    "Was man in der Stadt hört …", "Was man auf dem Land hört …", "Ein Geschenk, das niemand will …",
+    "Was man vor dem Schlafen macht …", "Was man nach dem Aufstehen macht …", "Was in einem Museum steht …",
+    "Was Astronauten essen …", "Im Spielzeugladen gibt es …", "Was man an der Tankstelle kauft …",
+    // Weitere Kategorien
+    "Pizzabeläge", "Saucen und Dips", "Fast-Food-Ketten", "Biersorten", "Weinsorten", "Teesorten",
+    "Kaffeespezialitäten", "Suppen", "Salate", "Desserts", "Schokoladenmarken", "Nüsse und Samen",
+    "Exotische Früchte", "Pilze", "Fleischgerichte", "Vegetarische Gerichte", "Italienische Gerichte",
+    "Asiatische Gerichte", "Deutsche Gerichte", "Grillgut", "Brotaufstriche", "Müslisorten",
+    "Wörter, die mit „-ung“ enden", "Wörter, die mit „-heit“ enden", "Zusammengesetzte Wörter mit „Haus“",
+    "Wörter mit „ei“", "Wörter mit „sch“", "Wörter mit drei Silben", "Wörter mit einer Silbe",
+    "Reimwörter auf „-and“", "Dinge, die man drückt", "Dinge, die man zieht", "Dinge, die man wirft",
+    "Dinge, die man schneidet", "Dinge, die man kocht", "Dinge, die man trägt", "Dinge, die man öffnet",
+    "Dinge mit Löchern", "Dinge mit Streifen", "Dinge mit Flügeln", "Dinge mit Beinen",
+    "Dinge mit einem Deckel", "Dinge, die schwimmen", "Dinge, die leuchten", "Dinge, die kalt sind",
+    "Dinge, die heiß sind", "Dinge, die weich sind", "Dinge, die spitz sind", "Dinge, die schwer sind",
+    "Dinge, die winzig sind", "Dinge, die riesig sind", "Dinge, die gelb sind", "Dinge, die blau sind",
+    "Dinge, die schwarz sind", "Dinge, die süß schmecken", "Dinge, die sauer schmecken",
+    "Dinge, die man mieten kann", "Dinge, die man reparieren kann", "Dinge, die man wegwirft",
+    "Dinge, die man bei Ebay verkauft", "Dinge in einem Auto", "Dinge in einem Zelt", "Dinge auf einem Schiff",
+    "Dinge im Zug", "Dinge in einer Bäckerei", "Dinge in einer Apotheke", "Dinge in einem Baumarkt",
+    "Dinge in einer Bibliothek", "Dinge in einem Restaurant", "Dinge in einem Stadion", "Dinge im Wald",
+    "Dinge auf dem Spielplatz", "Dinge im Winter", "Dinge im Herbst", "Dinge im Frühling", "Dinge im Sommer",
+    "Säugetiere", "Reptilien", "Tiere in Afrika", "Tiere in Australien", "Tiere im Wald", "Hunderassen",
+    "Tiere, die fliegen können", "Tiere mit vier Beinen", "Tierbabys", "Fabelwesen und Monster",
+    "Berufe im Krankenhaus", "Berufe auf dem Bau", "Berufe mit Tieren", "Traumberufe von Kindern",
+    "Handwerksberufe", "Tätigkeiten im Haushalt", "Gartenarbeiten", "Dinge, die man in der Freizeit tut",
+    "Wassersportarten", "Kampfsportarten", "Fußballbegriffe", "Spielerpositionen", "Turnübungen",
+    "Gesellschaftsspiele", "Partyspiele", "Kinderspiele", "Kartenspiele", "Spielfiguren", "Disney-Figuren",
+    "Pixar-Filme", "Actionfilme", "Liebesfilme", "Horrorfilme", "Kinderserien", "Fernsehsender", "Moderatoren",
+    "Sänger und Sängerinnen", "Rapper", "Deutsche Bands", "Weihnachtslieder", "Kinderlieder",
+    "Opern und Musicals", "Romanfiguren", "Kinderbuchfiguren", "Hauptstädte in Europa", "Länder in Afrika",
+    "Länder in Asien", "Länder in Amerika", "Städte in Italien", "Städte in Spanien", "Städte in Frankreich",
+    "Meere und Ozeane", "Seen", "Wüsten", "Vulkane", "Stadtteile und Viertel", "Straßennamen", "Gebäude",
+    "Räume in einem Haus", "Automodelle", "Motorradmarken", "Fluggesellschaften", "Technikmarken",
+    "Kosmetikmarken", "Sportmarken", "Spielzeugmarken", "Getränkemarken", "Zeitschriften und Zeitungen",
+    "Soziale Netzwerke", "Programmiersprachen und Technikbegriffe", "Dinge an einem Computer",
+    "Dinge an einem Fahrrad", "Teile eines Autos", "Teile eines Baumes", "Teile einer Blume", "Organe",
+    "Knochen", "Krankheiten bei Kindern", "Hausmittel", "Medikamente", "Frisuren", "Schmuck", "Hüte und Mützen",
+    "Unterwäsche und Nachtwäsche", "Taschen", "Make-up und Pflegeprodukte", "Düfte",
+    "Musiknoten und Musikbegriffe", "Malerei und Kunst", "Bastelmaterial", "Schreibwaren", "Zahlen und Mengen",
+    "Zeitangaben", "Wochentage, Monate und Jahreszeiten", "Himmelsrichtungen und Orte", "Vornamen für Hunde",
+    "Vornamen für Katzen", "Spitznamen", "Titel und Anreden", "Familienmitglieder",
+    "Dinge, die man zur Hochzeit schenkt", "Mitbringsel aus dem Urlaub", "Souvenirs"
+  ];
+
+  /* ---------- Einstellungen und Punkte (bleiben gespeichert) ---------- */
+  var KEY = "wortbombe-v1";
+  var MAX_PLAYERS = 5;
+  function freshP() {
+    return { v: 1, players: ["Spieler 1", "Spieler 2"], scores: [0, 0], mode: "turn", tempo: "normal", sound: true, starter: 0, deck: [], deckPos: 0 };
+  }
+  function load() {
+    try {
+      var p = JSON.parse(localStorage.getItem(KEY));
+      if (p && p.v === 1 && Array.isArray(p.players) && p.players.length >= 2 &&
+          Array.isArray(p.scores) && p.scores.length === p.players.length && TEMPO[p.tempo]) return p;
+    } catch (e) {}
+    return freshP();
+  }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(P)); } catch (e) {} }
+  var P = load();
+  /* ---------- Online (zwei Handys) ----------
+     Wer das Spiel erstellt, führt die Runde (Uhr, Kategorie, Punkte) und schickt nach jeder Änderung den Stand.
+     Das andere Handy schickt nur Aktionen wie „Buchstabe F gedrückt“. */
+  var NET = { role: null, conn: null, peer: null, me: 0, names: [], scores: [0, 0], starter: 0, mode: "turn" };
+  function players() { return NET.role ? NET.names : P.players; }
+  function scoresArr() { return NET.role ? NET.scores : P.scores; }
+  function modeNow() { return NET.role === "guest" ? NET.mode : P.mode; }
+  if (P.players.length > MAX_PLAYERS) { P.players = P.players.slice(0, MAX_PLAYERS); P.scores = P.scores.slice(0, MAX_PLAYERS); P.starter = 0; }
+
+  // Kategorien als gemischter Stapel: keine Wiederholung, bis alle einmal dran waren
+  function nextCategory() {
+    if (!Array.isArray(P.deck) || P.deck.length !== CATEGORIES.length || P.deckPos >= P.deck.length) {
+      P.deck = CATEGORIES.map(function (_, i) { return i; });
+      for (var i = P.deck.length - 1; i > 0; i--) { var j = randInt(i + 1), t = P.deck[i]; P.deck[i] = P.deck[j]; P.deck[j] = t; }
+      P.deckPos = 0;
+    }
+    var c = CATEGORIES[P.deck[P.deckPos++]];
+    save();
+    return c;
+  }
+
+  /* ---------- Runde ---------- */
+  // phase: idle (vor dem Start) · run · pause · boom (abgelaufen)
+  var R = { phase: "idle", cat: nextCategory(), used: {}, cur: P.starter % P.players.length, alive: [], loser: -1, winner: -1, deadline: 0, left: 0, flash: "", confirm: false };
+  function resetAlive() { R.alive = players().map(function (_, i) { return i; }); }
+  resetAlive();
+
+  var GRACE_MS = 1500;   // Mindestzeit für die nächste Person bei „Zeit pro Runde“
+  // Zufällige Zeit auf die Zehntelsekunde, kurze Zeiten etwas häufiger als lange.
+  // Bei „Zeit pro Zug“ wird die Bombe mit jedem Buchstaben ungeduldiger: am Ende bleibt gut die Hälfte.
+  function secondsFor(kind) {
+    var r = TEMPO[P.tempo][kind], u = randInt(10001) / 10000, s = r[0] + (r[1] - r[0]) * Math.pow(u, 1.4);
+    if (kind === "turn") s = Math.max(2.5, s * (1 - 0.45 * Object.keys(R.used).length / LETTERS.length));
+    return Math.round(s * 10) / 10;
+  }
+
+  /* ---------- Ton (wird erst nach dem ersten Tippen erzeugt) ---------- */
+  var ac = null;
+  function audio() {
+    if (!P.sound) return null;
+    try {
+      if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)();
+      if (ac.state === "suspended") ac.resume();
+    } catch (e) { ac = null; }
+    return ac;
+  }
+  var tickHigh = false;
+  function tick() {
+    var a = audio(); if (!a) return;
+    var o = a.createOscillator(), g = a.createGain(), t = a.currentTime;
+    o.type = "square"; o.frequency.value = (tickHigh = !tickHigh) ? 1650 : 1250;
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.06, t + 0.004);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.045);
+    o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + 0.06);
+  }
+  function boomSound() {
+    var a = audio(); if (!a) return;
+    var t = a.currentTime, len = Math.floor(a.sampleRate * 1.3), buf = a.createBuffer(1, len, a.sampleRate), d = buf.getChannelData(0);
+    for (var i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.2);
+    var n = a.createBufferSource(), f = a.createBiquadFilter(), g = a.createGain();
+    n.buffer = buf; f.type = "lowpass"; f.frequency.setValueAtTime(1600, t); f.frequency.exponentialRampToValueAtTime(120, t + 1.1);
+    g.gain.setValueAtTime(0.9, t); g.gain.exponentialRampToValueAtTime(0.001, t + 1.25);
+    n.connect(f); f.connect(g); g.connect(a.destination); n.start(t);
+    var o = a.createOscillator(), og = a.createGain();
+    o.type = "sine"; o.frequency.setValueAtTime(110, t); o.frequency.exponentialRampToValueAtTime(32, t + 0.7);
+    og.gain.setValueAtTime(0.8, t); og.gain.exponentialRampToValueAtTime(0.001, t + 0.8);
+    o.connect(og); og.connect(a.destination); o.start(t); o.stop(t + 0.85);
+  }
+
+  /* ---------- Bildschirm wach halten, solange die Runde läuft ---------- */
+  var wake = null;
+  function keepAwake(on) {
+    try {
+      if (on && !wake && navigator.wakeLock) {
+        navigator.wakeLock.request("screen").then(function (w) { wake = w; w.addEventListener("release", function () { wake = null; }); }).catch(function () {});
+      } else if (!on && wake) { wake.release().catch(function () {}); wake = null; }
+    } catch (e) {}
+  }
+
+  /* ---------- Uhr ---------- */
+  var timer = 0, ticker = 0;
+  function arm(seconds) {
+    clearTimeout(timer);
+    R.deadline = Date.now() + seconds * 1000;
+    timer = setTimeout(expire, seconds * 1000);
+  }
+  function startTicking() { clearInterval(ticker); tick(); ticker = setInterval(tick, 500); }
+  function stopClock() { clearTimeout(timer); clearInterval(ticker); ticker = 0; }
+
+  function start() {
+    audio();
+    R.phase = "run";
+    arm(secondsFor(modeNow() === "turn" ? "turn" : "round"));
+    startTicking(); keepAwake(true);
+    render();
+    say(players()[R.cur] + " beginnt. Kategorie: " + R.cat + ".");
+  }
+  function pause() {
+    if (R.phase !== "run") return;
+    R.left = Math.max(500, R.deadline - Date.now());
+    stopClock(); R.phase = "pause"; keepAwake(false);
+    render(); say("Pause.");
+  }
+  function resume() {
+    audio();
+    R.phase = "run"; R.confirm = false;
+    clearTimeout(timer); R.deadline = Date.now() + R.left; timer = setTimeout(expire, R.left);
+    startTicking(); keepAwake(true);
+    render(); say("Weiter.");
+  }
+  function nextAlive(from) {
+    var i = R.alive.indexOf(from);
+    if (i === -1) {  // from ist gerade ausgeschieden: nächster nach ihm in Sitzreihenfolge
+      for (var k = 1; k <= players().length; k++) { var c = (from + k) % players().length; if (R.alive.indexOf(c) !== -1) return c; }
+    }
+    return R.alive[(i + 1) % R.alive.length];
+  }
+
+  function pressLetter(L) {
+    if (LETTERS.indexOf(L) === -1) return;   // nur echte Buchstaben (online kommen sie vom anderen Handy)
+    var btn = btnOf[L];
+    if (R.phase === "pause") { resume(); return; }
+    if (R.phase !== "run") { say(R.phase === "idle" ? "Erst die Uhr antippen, dann geht es los." : ""); return; }
+    if (R.used[L]) return;
+    R.used[L] = true;
+    btn.classList.add("used");
+    btn.setAttribute("aria-label", "Buchstabe " + L + ", schon benutzt");
+    if (navigator.vibrate) { try { navigator.vibrate(8); } catch (e) {} }
+    R.cur = nextAlive(R.cur);
+    if (Object.keys(R.used).length === LETTERS.length) {
+      // Alle Buchstaben geschafft: neue Kategorie, Buchstaben wieder frei
+      R.used = {}; R.cat = nextCategory(); R.flash = "Alle 24 Buchstaben geschafft. Neue Kategorie!";
+      letterBtns.forEach(function (b) { b.classList.remove("used"); b.setAttribute("aria-label", "Buchstabe " + b.dataset.l); });
+      setTimeout(function () { R.flash = ""; render(); }, 3500);
+    }
+    if (modeNow() === "turn") arm(secondsFor("turn"));
+    else if (R.deadline - Date.now() < GRACE_MS) arm(GRACE_MS / 1000);   // nie direkt nach dem Weitergeben
+    render();
+    say(players()[R.cur] + " ist dran.");
+  }
+
+  function expire() {
+    stopClock(); keepAwake(false);
+    R.phase = "boom"; R.loser = R.cur;
+    R.alive = R.alive.filter(function (i) { return i !== R.loser; });
+    if (R.alive.length === 1) {
+      R.winner = R.alive[0];
+      scoresArr()[R.winner]++;
+      if (NET.role) NET.starter = R.loser;   // wer verloren hat, beginnt die nächste Runde
+      else { P.starter = R.loser; save(); }
+    } else {
+      R.winner = -1;
+    }
+    explode();
+    render();
+    say("Bumm! " + players()[R.loser] + " war dran" + (R.winner >= 0 ? ". Punkt für " + players()[R.winner] + "." : " und ist raus."));
+  }
+
+  function newRound() {
+    stopClock(); keepAwake(false);
+    R.phase = "idle"; R.used = {}; R.cat = nextCategory(); R.loser = -1; R.winner = -1; R.flash = ""; R.confirm = false;
+    resetAlive();
+    R.cur = (NET.role ? NET.starter : P.starter) % players().length;
+    letterBtns.forEach(function (b) { b.classList.remove("used"); b.setAttribute("aria-label", "Buchstabe " + b.dataset.l); });
+    render();
+  }
+  function continueRound() {           // bei mehr als zwei Spielern: der Nächste macht weiter
+    R.cur = nextAlive(R.loser);
+    R.loser = -1;
+    start();
+  }
+
+  /* ---------- Explosion ---------- */
+  var fx = $("#fx"), flash = $("#flash"), board = $("#board"), clockEl = $("#clock");
+  var reduceMotion = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function explode() {
+    boomSound();
+    if (navigator.vibrate) { try { navigator.vibrate([90, 40, 160]); } catch (e) {} }
+    if (flash.animate) {
+      if (reduceMotion) flash.animate([{ opacity: 0 }, { opacity: 0.2, offset: 0.3 }, { opacity: 0 }], { duration: 700, easing: "ease-in-out" });
+      else flash.animate([{ opacity: 0.85 }, { opacity: 0 }], { duration: 650, easing: "ease-out" });
+    }
+    if (reduceMotion) return;
+    board.classList.remove("shake"); void board.offsetWidth; board.classList.add("shake");
+
+    var dpr = Math.min(2, window.devicePixelRatio || 1), W = innerWidth, H = innerHeight;
+    fx.width = W * dpr; fx.height = H * dpr;
+    var ctx = fx.getContext("2d"); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    var r = clockEl.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    var css = getComputedStyle(document.documentElement);
+    var red = css.getPropertyValue("--danger").trim() || "#d70015";
+    var colors = [red, red, css.getPropertyValue("--wait").trim() || "#ff9f0a", "#ffcc00",
+      css.getPropertyValue("--label-3").trim() || "#8e8e93", css.getPropertyValue("--label").trim() || "#000000"];
+    var parts = [];
+    for (var i = 0; i < 110; i++) {
+      var ang = Math.random() * Math.PI * 2, sp = 3 + Math.random() * 12;
+      parts.push({ x: cx, y: cy, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp, s: 3 + Math.random() * 8,
+        rot: Math.random() * 6, vr: (Math.random() - .5) * .5, c: colors[i % colors.length], sq: Math.random() < .55 });
+    }
+    var t0 = performance.now(), DUR = 1300;
+    function frame(now) {
+      var t = (now - t0) / DUR;
+      ctx.clearRect(0, 0, W, H);
+      if (t >= 1) return;
+      // Druckwelle
+      ctx.globalAlpha = Math.max(0, 1 - t * 1.6);
+      ctx.strokeStyle = red; ctx.lineWidth = 10 * (1 - t) + 2;
+      ctx.beginPath(); ctx.arc(cx, cy, 20 + t * Math.max(W, H) * .75, 0, Math.PI * 2); ctx.stroke();
+      // Feuerkern
+      ctx.globalAlpha = Math.max(0, 1 - t * 3);
+      ctx.fillStyle = red; ctx.beginPath(); ctx.arc(cx, cy, r.width * (.5 + t * 2.2), 0, Math.PI * 2); ctx.fill();
+      // Splitter
+      ctx.globalAlpha = Math.max(0, 1 - t * t);
+      parts.forEach(function (p) {
+        p.x += p.vx; p.y += p.vy; p.vy += .18; p.vx *= .985; p.rot += p.vr;
+        ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.fillStyle = p.c;
+        if (p.sq) ctx.fillRect(-p.s / 2, -p.s / 2, p.s, p.s * .6);
+        else { ctx.beginPath(); ctx.arc(0, 0, p.s / 2, 0, Math.PI * 2); ctx.fill(); }
+        ctx.restore();
+      });
+      ctx.globalAlpha = 1;
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  }
+
+  /* ---------- Buchstaben-Rahmen ---------- */
+  var btnOf = {};
+  var letterBtns = LETTERS.map(function (L) {
+    var b = document.createElement("button");
+    b.type = "button"; b.className = "letter"; b.dataset.l = L;
+    b.innerHTML = "<span>" + L + "</span>";
+    b.setAttribute("aria-label", "Buchstabe " + L);
+    b.addEventListener("click", function () { act("press", L); });
+    board.appendChild(b);
+    btnOf[L] = b;
+    return b;
+  });
+  // Plätze im Uhrzeigersinn um den Rand: oben, rechts, unten, links
+  function layout() {
+    var portrait = innerHeight >= innerWidth, C = portrait ? 6 : 8, Rw = portrait ? 8 : 6, cells = [];
+    for (var c = 1; c <= C; c++) cells.push([1, c]);
+    for (var r = 2; r < Rw; r++) cells.push([r, C]);
+    for (c = C; c >= 1; c--) cells.push([Rw, c]);
+    for (r = Rw - 1; r > 1; r--) cells.push([r, 1]);
+    board.style.setProperty("--cols", C);
+    board.style.setProperty("--rows", Rw);
+    letterBtns.forEach(function (b, i) {
+      b.style.gridRow = cells[i][0]; b.style.gridColumn = cells[i][1];
+      b.classList.toggle("up", !NET.role && cells[i][0] <= Rw / 2);   // obere Hälfte für die Person gegenüber (nur am selben Handy)
+    });
+  }
+  window.addEventListener("resize", layout);
+  layout();
+
+  /* ---------- Mitte zeichnen ---------- */
+  var up = $("#half-up"), down = $("#half-down"), clockSay = $("#clock-say");
+  function scoreLine() {
+    var sc = scoresArr();
+    return players().map(function (n, i) { return esc(n) + " " + sc[i]; }).join(" · ");
+  }
+  // Am selben Handy: Spieler 1 sitzt unten, Spieler 2 oben (ab drei Spielern zeigen beide Hälften dasselbe).
+  // Online: unten bin ich, oben die andere Person.
+  function seat(side) {
+    if (NET.role) return side === "down" ? NET.me : 1 - NET.me;
+    return players().length === 2 ? (side === "down" ? 0 : 1) : -1;
+  }
+  function halfHtml(side) {
+    var names = players(), cur = esc(names[R.cur]), two = names.length === 2, mine = seat(side);
+    var you = !NET.role || side === "down";        // online oben: in der dritten Person
+    var other = mine >= 0 ? esc(names[mine]) : "";
+    var catBlock = '<p class="label">' + (/…$/.test(R.cat) ? "Satz ergänzen" : "Kategorie") + '</p><p class="cat">' + esc(R.cat) + "</p>";
+    var meta = '<div class="row meta"><span class="score">' + scoreLine() + '</span>' +
+      '<button type="button" class="small-btn slim" data-act="reset">Neustart</button></div>';
+
+    if (R.phase === "boom") {
+      var next = R.winner >= 0
+        ? '<button type="button" class="small-btn fill" data-act="new">Nächste Runde</button>'
+        : '<button type="button" class="small-btn fill" data-act="go">Weiter mit ' + esc(names[nextAlive(R.loser)]) + "</button>";
+      var loser = esc(names[R.loser]);
+      if (two && mine === R.loser) return '<p class="label">Bumm!</p><p class="big">' + (you ? "Zu langsam!" : other + " war zu langsam") + '</p><p class="score">' + scoreLine() + "</p>" + next;
+      if (two) return '<p class="label">Gewonnen</p><p class="big">' + (you ? "Punkt für dich!" : "Punkt für " + other) + "</p>" +
+        (you ? '<p class="line"><strong>' + loser + "</strong> war zu langsam.</p>" : "") + '<p class="score">' + scoreLine() + "</p>" + next;
+      return '<p class="label">Bumm!</p><p class="big">' + loser + (R.winner >= 0 ? " war dran" : " ist raus") + "</p>" +
+        (R.winner >= 0 ? '<p class="line">Punkt für <strong>' + esc(names[R.winner]) + "</strong></p>" : "") +
+        '<p class="score">' + scoreLine() + "</p>" + next;
+    }
+    if (R.flash) return '<p class="label">Geschafft</p><p class="line"><strong>' + esc(R.flash) + "</strong></p>" + catBlock;
+
+    if (R.phase === "idle") {
+      if (NET.role && side === "up") {
+        return '<p class="label">Online</p><p class="line">Verbunden mit <strong>' + other + "</strong></p>" +
+          '<p class="score">' + scoreLine() + "</p>" +
+          '<button type="button" class="small-btn slim" data-act="disconnect">Verbindung trennen</button>';
+      }
+      if (side === "up") return catBlock + '<p class="line">Uhr antippen zum Starten</p><p class="score">' + scoreLine() + "</p>";
+      // Spielweise steht in den Einstellungen, online sieht die zweite Person hier nur, was gilt
+      var modeHtml = NET.role === "guest"
+        ? '<p class="line">' + (modeNow() === "turn" ? "Zeit pro Zug" : "Zeit pro Runde") + " · legt " + esc(names[0]) + " fest</p>"
+        : "";
+      return catBlock + modeHtml +
+        '<div class="row"><button type="button" class="small-btn" data-act="cat">Andere Kategorie</button>' +
+        '<button type="button" class="small-btn" data-act="settings">Einstellungen</button></div>' +
+        (NET.role ? "" : '<button type="button" class="small-btn fill" data-act="online">Online spielen</button>');
+    }
+    // run / pause
+    if (R.confirm) {
+      return '<p class="label">Neustart</p><p class="line">Was soll zurückgesetzt werden?</p>' +
+        '<div class="row"><button type="button" class="small-btn fill" data-act="reset-round">Runde neu</button>' +
+        '<button type="button" class="small-btn" data-act="reset-all">Alles auf 0</button></div>' +
+        '<button type="button" class="small-btn slim" data-act="reset-cancel">Weiterspielen</button>';
+    }
+    // Pause: gleiche Zeilen wie im Spiel, nur der Text wechselt. So springt nichts nach unten.
+    var paused = R.phase === "pause";
+    if (two && mine !== R.cur) {
+      if (!you) return '<p class="line"><strong>' + other + "</strong> wartet</p>" + '<p class="score">' + scoreLine() + "</p>";
+      return catBlock + '<p class="line">' + (paused ? "Pause · " : "") + "<strong>" + cur + "</strong> ist dran</p>" + meta;
+    }
+    if (!you) return '<p class="label">' + (paused ? "Pause" : "Am Zug") + '</p><p class="big">' + other + " ist dran</p>";
+    return catBlock + '<p class="big">' + (paused ? "Pause" : two ? "Du bist dran" : cur + " ist dran") + "</p>" + meta;
+  }
+  var centerEl = $("#center");
+  function render() {
+    up.innerHTML = halfHtml("up");
+    down.innerHTML = halfHtml("down");
+    var playing = (R.phase === "run" || R.phase === "pause") && !R.confirm && !R.flash, two = players().length === 2;
+    ["up", "down"].forEach(function (side) {
+      var el = side === "up" ? up : down, mine = seat(side);
+      el.classList.toggle("turn", playing && (!two || mine === R.cur));
+      el.classList.toggle("lost", R.phase === "boom" && (!two || mine === R.loser));
+    });
+    var meIdx = NET.role ? NET.me : 0;
+    var focusDown = (playing && two && R.cur === meIdx) || R.phase === "idle";
+    centerEl.classList.toggle("focus-down", focusDown);
+    centerEl.classList.toggle("focus-up", playing && two && R.cur !== meIdx);
+    board.classList.toggle("online", !!NET.role);
+    board.classList.toggle("idle", R.phase === "idle");
+    clockEl.classList.toggle("run", R.phase === "run");
+    clockEl.classList.toggle("gone", R.phase === "boom");
+    clockSay.hidden = R.phase === "run";
+    clockSay.textContent = R.phase === "pause" ? "Weiter" : "Start";
+    clockEl.setAttribute("aria-label", R.phase === "run" ? "Uhr läuft. Antippen für Pause." : R.phase === "pause" ? "Pause. Antippen zum Weiterspielen." : "Uhr: Runde starten");
+    if (NET.role === "host") broadcast();
+  }
+
+  /* ---------- Aktionen: am selben Handy direkt, online über die Person, die das Spiel führt ---------- */
+  function act(type, v) {
+    if (NET.role && type === "press" && R.phase === "run" && R.cur !== NET.me) {
+      say(players()[R.cur] + " ist dran."); return;
+    }
+    if (NET.role === "guest") { send({ t: "act", a: type, v: v }); return; }
+    apply(type, v);
+  }
+  function apply(type, v) {
+    if (type === "clock") { if (R.phase === "idle") start(); else if (R.phase === "run") pause(); else if (R.phase === "pause") resume(); }
+    else if (type === "press") pressLetter(v);
+    else if (type === "new") newRound();
+    else if (type === "go") continueRound();
+    else if (type === "reset") { pause(); R.confirm = true; render(); }
+    else if (type === "reset-cancel") { if (R.phase === "pause") resume(); else { R.confirm = false; render(); } }
+    else if (type === "reset-round") { newRound(); say("Runde neu gestartet."); }
+    else if (type === "reset-all") {
+      if (NET.role) NET.scores = NET.names.map(function () { return 0; });
+      else { P.scores = P.players.map(function () { return 0; }); save(); }
+      newRound(); say("Alles zurückgesetzt.");
+    }
+    else if (type === "cat") { if (R.phase === "idle") { R.cat = nextCategory(); render(); } }
+    else if (type === "hide") pause();
+  }
+
+  clockEl.addEventListener("click", function () { act("clock"); });
+  function onCenter(e) {
+    var b = e.target.closest("[data-act]");
+    if (!b) return;
+    var a = b.dataset.act;
+    if (a === "settings") openSettings();
+    else if (a === "online") openOnline();
+    else if (a === "disconnect") { leaveOnline(""); }
+    else act(a);
+  }
+  up.addEventListener("click", onCenter);
+  down.addEventListener("click", onCenter);
+
+  // App im Hintergrund: Runde anhalten, damit niemand unfair explodiert
+  document.addEventListener("visibilitychange", function () { if (document.hidden) act("hide"); });
+
+  /* ---------- Online-Verbindung (PeerJS, erst bei Bedarf geladen) ---------- */
+  // PeerJS 1.5.4 liegt unverändert im App-Ordner (MIT-Lizenz in peerjs-LICENSE.txt) und kommt nicht von einem fremden CDN.
+  // So kann unterwegs niemand anderen Code unterschieben und kein CDN erfährt, wer online spielt.
+  var PEER_SRC = "peerjs.min.js";
+  var ID_PREFIX = "wortbombe-spiele-";
+  var CODE_CHARS = "ABCDEFGHJKLMNPRSTUVWXYZ";        // ohne I, O, Q: am Telefon gut zu verstehen
+  var onlineEl = $("#online"), netStatus = $("#net-status"), myNameEl = $("#my-name");
+  function status(t) { netStatus.textContent = t; }
+  function myName() { return (myNameEl.value || "").trim() || P.players[0] || "Ich"; }
+  function cleanName(n) { return String(n || "").slice(0, 14) || "Mitspieler"; }
+  function send(m) { try { if (NET.conn && NET.conn.open) NET.conn.send(m); } catch (e) {} }
+  function broadcast() {
+    send({ t: "state", s: { phase: R.phase, cat: R.cat, used: R.used, cur: R.cur, alive: R.alive, loser: R.loser,
+      winner: R.winner, flash: R.flash, confirm: R.confirm, names: NET.names, scores: NET.scores, mode: P.mode } });
+  }
+  // Den Stand vom anderen Handy nie ungeprüft übernehmen: nur bekannte Werte, Zahlen als Zahlen, Texte gekürzt.
+  // Sonst könnte ein manipuliertes Handy HTML einschleusen oder die App abstürzen lassen.
+  function seatOr(v, none) { return v === 0 || v === 1 ? v : none; }
+  function applyState(st) {
+    if (!st || typeof st !== "object") return;
+    var wasBoom = R.phase === "boom", used = {};
+    LETTERS.forEach(function (L) { if (st.used && st.used[L] === true) used[L] = true; });
+    R.phase = ["idle", "run", "pause", "boom"].indexOf(st.phase) !== -1 ? st.phase : "idle";
+    R.cat = String(st.cat || "").slice(0, 80); R.used = used; R.cur = seatOr(st.cur, 0);
+    R.alive = [0, 1].filter(function (i) { return Array.isArray(st.alive) && st.alive.indexOf(i) !== -1; });
+    if (!R.alive.length) R.alive = [0, 1];
+    R.loser = seatOr(st.loser, -1); R.winner = seatOr(st.winner, -1); R.flash = String(st.flash || "").slice(0, 80); R.confirm = st.confirm === true;
+    if (Array.isArray(st.names) && st.names.length === 2) NET.names = st.names.map(cleanName);
+    if (Array.isArray(st.scores) && st.scores.length === 2) NET.scores = st.scores.map(function (n) { return Math.max(0, n | 0); });
+    NET.mode = st.mode === "round" ? "round" : "turn";
+    letterBtns.forEach(function (b) {
+      var u = !!R.used[b.dataset.l];
+      b.classList.toggle("used", u);
+      b.setAttribute("aria-label", "Buchstabe " + b.dataset.l + (u ? ", schon benutzt" : ""));
+    });
+    if (R.phase === "run") { if (!ticker) { audio(); startTicking(); } keepAwake(true); }
+    else { stopClock(); keepAwake(false); }
+    if (R.phase === "boom" && !wasBoom) explode();
+    render();
+  }
+  function withPeer(cb) {
+    if (window.Peer) { cb(); return; }
+    status("Lade Online-Funktion …");
+    var sc = document.createElement("script");
+    sc.src = PEER_SRC; sc.async = true;
+    sc.onload = cb;
+    sc.onerror = function () { status("Die Online-Funktion konnte nicht geladen werden. Ist das Handy mit dem Internet verbunden?"); };
+    document.head.appendChild(sc);
+  }
+  function errText(e) {
+    var t = e && e.type;
+    if (t === "network" || t === "server-error" || t === "socket-error" || t === "socket-closed") return "Keine Verbindung zum Vermittlungsdienst. Bitte Internet prüfen und nochmal versuchen.";
+    if (t === "browser-incompatible") return "Dieser Browser unterstützt die Online-Funktion nicht.";
+    return "Verbindung fehlgeschlagen" + (t ? " (" + t + ")" : "") + ". Bitte nochmal versuchen.";
+  }
+  // Solange eine Online-Sitzung besteht (vom Erstellen bzw. Suchen eines Spiels bis zum Trennen), darf die Shell
+  // kein Update per Neuladen einspielen, sonst reißt die Verbindung ab. Die Merkvariable hält die Aufrufe ausgeglichen.
+  var netHeld = false;
+  function netHold(on) {
+    if (on === netHeld) return;
+    netHeld = on;
+    if (window.Shell) Shell.hold(on);
+  }
+  function netReset() {
+    try { if (NET.conn) NET.conn.close(); } catch (e) {}
+    try { if (NET.peer) NET.peer.destroy(); } catch (e) {}
+    netHold(false);
+    NET.role = null; NET.conn = null; NET.peer = null; NET.me = 0; NET.names = []; NET.scores = [0, 0]; NET.starter = 0;
+  }
+  function wire(c, role) {
+    c.on("open", function () {
+      NET.conn = c; NET.role = role; NET.me = role === "host" ? 0 : 1;
+      c.send({ t: "hello", name: myName() });
+      status("Verbunden.");
+    });
+    c.on("data", function (m) {
+      if (!m || typeof m !== "object") return;
+      if (m.t === "hello") {
+        if (role === "host") {
+          NET.names = [myName(), cleanName(m.name)]; NET.scores = [0, 0]; NET.starter = 0;
+          enterOnline(); newRound();
+        } else {
+          NET.names = [cleanName(m.name), myName()];
+          enterOnline();
+        }
+      } else if (m.t === "state" && role === "guest") {
+        applyState(m.s);
+      } else if (m.t === "act" && role === "host") {
+        if (m.a === "press" && R.phase === "run" && R.cur !== 1) return;   // nur wer dran ist, darf drücken
+        apply(m.a, m.v);
+      }
+    });
+    c.on("close", function () { if (NET.conn === c) leaveOnline("Die Verbindung ist getrennt. Ihr spielt jetzt wieder an einem Handy."); });
+    c.on("error", function () { if (NET.conn === c) leaveOnline("Die Verbindung ist abgebrochen."); });
+  }
+  function makeCode() { var c = ""; for (var i = 0; i < 4; i++) c += CODE_CHARS[randInt(CODE_CHARS.length)]; return c; }
+  function hostGame() {
+    withPeer(function () {
+      netReset();
+      var code = makeCode();
+      var peer = NET.peer = new Peer(ID_PREFIX + code.toLowerCase());
+      netHold(true);
+      $("#net-join-box").hidden = true; $("#net-code-box").hidden = false; $("#net-code").textContent = "····";
+      status("Erstelle Spiel …");
+      peer.on("open", function () {
+        $("#net-code").textContent = code;
+        status("Sag den Code am Telefon an. Warte auf die andere Person …");
+      });
+      peer.on("connection", function (c) {
+        if (NET.conn) { c.on("open", function () { c.close(); }); return; }
+        wire(c, "host");
+      });
+      peer.on("error", function (e) {
+        if (e.type === "unavailable-id") { hostGame(); return; }   // Code schon vergeben: neuen ziehen
+        if (!NET.role) status(errText(e));
+      });
+    });
+  }
+  function joinGame() {
+    var code = ($("#join-code").value || "").toUpperCase().replace(/[^A-Z]/g, "");
+    if (code.length !== 4) { status("Der Code hat vier Buchstaben."); return; }
+    withPeer(function () {
+      netReset();
+      var peer = NET.peer = new Peer();
+      netHold(true);
+      status("Suche Spiel " + code + " …");
+      peer.on("open", function () { wire(peer.connect(ID_PREFIX + code.toLowerCase(), { reliable: true }), "guest"); });
+      peer.on("error", function (e) {
+        if (NET.role) return;
+        status(e.type === "peer-unavailable" ? "Kein Spiel mit dem Code " + code + " gefunden. Code prüfen und nochmal versuchen." : errText(e));
+      });
+    });
+  }
+  function enterOnline() {
+    onlineEl.hidden = true;
+    stopClock(); keepAwake(false);
+    board.classList.add("online");
+    layout(); render();
+    say("Verbunden mit " + NET.names[1 - NET.me] + ".");
+  }
+  function leaveOnline(msg) {
+    var was = !!NET.role;
+    netReset();
+    board.classList.remove("online");
+    layout(); newRound();
+    if (was && msg) { openOnline(); status(msg); }
+  }
+  function openOnline() {
+    myNameEl.value = P.myName || P.players[0] || "";
+    $("#net-code-box").hidden = true; $("#net-join-box").hidden = true;
+    status(""); onlineEl.hidden = false;
+  }
+  myNameEl.addEventListener("input", function () { P.myName = myNameEl.value.trim(); save(); });
+  $("#net-create").addEventListener("click", hostGame);
+  $("#net-join").addEventListener("click", function () {
+    $("#net-code-box").hidden = true; $("#net-join-box").hidden = false; status("");
+    if (!NET.role) { try { if (NET.peer) NET.peer.destroy(); } catch (e) {} NET.peer = null; netHold(false); }
+    $("#join-code").focus();
+  });
+  $("#join-code").addEventListener("input", function (e) { e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 4); });
+  $("#join-code").addEventListener("keydown", function (e) { if (e.key === "Enter") joinGame(); });
+  $("#net-connect").addEventListener("click", joinGame);
+  $("#net-close").addEventListener("click", function () {
+    onlineEl.hidden = true;
+    if (!NET.role) netReset();   // noch nicht verbunden: Warten abbrechen
+  });
+
+  /* ---------- Einstellungen ---------- */
+  var settings = $("#settings"), plist = $("#plist"), confirmBox = $("#confirm");
+  var NOTES = {
+    turn: "Jeder gedrückte Buchstabe startet eine neue, geheime Zeit für die nächste Person. Mit jedem Buchstaben wird sie im Schnitt kürzer.",
+    round: "Eine geheime Zeit für die ganze Runde, mal kurz, mal lang. Wer beim Knall dran ist, verliert."
+  };
+  function renderSettings() {
+    document.querySelectorAll("#set-mode button").forEach(function (b) { b.setAttribute("aria-pressed", b.dataset.mode === P.mode); });
+    document.querySelectorAll("#set-tempo button").forEach(function (b) { b.setAttribute("aria-pressed", b.dataset.tempo === P.tempo); });
+    document.querySelectorAll("#set-sound button").forEach(function (b) { b.setAttribute("aria-pressed", (b.dataset.sound === "1") === P.sound); });
+    $("#mode-note").textContent = NOTES[P.mode];
+    plist.innerHTML = P.players.map(function (n, i) {
+      return '<div class="prow"><input type="text" id="pname-' + i + '" value="' + esc(n) + '" maxlength="14" autocomplete="off" aria-label="Name von Spieler ' + (i + 1) + '">' +
+        (P.players.length > 2 ? '<button type="button" class="small-btn" data-remove="' + i + '">Entfernen</button>' : "") + "</div>";
+    }).join("");
+    $("#p-add").disabled = P.players.length >= MAX_PLAYERS;
+  }
+  $("#set-mode").addEventListener("click", function (e) { var b = e.target.closest("[data-mode]"); if (b) { P.mode = b.dataset.mode; save(); renderSettings(); render(); } });
+  $("#set-tempo").addEventListener("click", function (e) { var b = e.target.closest("[data-tempo]"); if (b) { P.tempo = b.dataset.tempo; save(); renderSettings(); } });
+  $("#set-sound").addEventListener("click", function (e) { var b = e.target.closest("[data-sound]"); if (b) { P.sound = b.dataset.sound === "1"; save(); renderSettings(); if (P.sound) tick(); } });
+  plist.addEventListener("input", function (e) {
+    var m = /^pname-(\d+)$/.exec(e.target.id);
+    if (!m) return;
+    P.players[+m[1]] = e.target.value.trim() || "Spieler " + (+m[1] + 1);
+    save(); render();
+  });
+  plist.addEventListener("click", function (e) {
+    var b = e.target.closest("[data-remove]");
+    if (!b) return;
+    var i = +b.dataset.remove;
+    P.players.splice(i, 1); P.scores.splice(i, 1);
+    P.starter = P.starter % P.players.length;
+    save(); renderSettings(); newRound();
+  });
+  $("#p-add").addEventListener("click", function () {
+    if (P.players.length >= MAX_PLAYERS) return;
+    P.players.push("Spieler " + (P.players.length + 1)); P.scores.push(0);
+    save(); renderSettings(); newRound();
+    var inp = $("#pname-" + (P.players.length - 1)); if (inp) { inp.focus(); inp.select(); }
+  });
+  $("#reset").addEventListener("click", function () { confirmBox.hidden = false; });
+  $("#confirm-no").addEventListener("click", function () { confirmBox.hidden = true; });
+  $("#confirm-yes").addEventListener("click", function () {
+    P.scores = P.players.map(function () { return 0; }); save(); confirmBox.hidden = true; render();
+  });
+  function openSettings() { renderSettings(); confirmBox.hidden = true; settings.hidden = false; $("#settings-done").focus(); }
+  function closeSettings() { settings.hidden = true; render(); }
+  $("#settings-done").addEventListener("click", closeSettings);
+  settings.addEventListener("click", function (e) { if (e.target === settings) closeSettings(); });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !settings.hidden) closeSettings(); });
+
+  var announce = $("#announce");
+  function say(text) { announce.textContent = ""; if (text) setTimeout(function () { announce.textContent = text; }, 30); }
+
+  render();
+})();
+</script>
+</body>
+</html>

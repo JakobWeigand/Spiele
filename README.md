@@ -2,20 +2,51 @@
 
 ## ▶ Direkt spielen
 
-- **Pasch:** https://jakobweigand.github.io/Spiele/kniffel/
-- **Farbreihen:** https://jakobweigand.github.io/Spiele/quixx/
-- **Wortbombe:** https://jakobweigand.github.io/Spiele/wortbombe/
-- **Chooser:** https://jakobweigand.github.io/Spiele/chooser/
-- **Heiß & Kalt:** https://jakobweigand.github.io/Spiele/heisskalt/
-- **Wortagenten:** https://jakobweigand.github.io/Spiele/codenames/
-- **Startseite mit allen Spielen:** https://jakobweigand.github.io/Spiele/
+- **Spieleabend – alle Spiele in einer App:** https://jakobweigand.github.io/Spiele/app/
+- **Startseite:** https://jakobweigand.github.io/Spiele/
 - **Datenschutz:** https://jakobweigand.github.io/Spiele/datenschutz.html
 
-Aufs iPhone: Link in Safari öffnen → Teilen → „Zum Home-Bildschirm“ → einmal mit Internet öffnen. Danach läuft die App offline.
+Aufs iPhone: Link in Safari öffnen → Teilen → „Zum Home-Bildschirm“ → einmal mit Internet öffnen. Danach laufen alle Spiele offline.
 
 ---
 
-Sechs Spiele-Apps für das Handy, jede als eigene Web-App, die nach der Installation offline läuft.
+## Spieleabend (Ordner `app/`)
+
+Eine Web-App mit sieben Spielen, einem Icon und einer Installation:
+
+| Spiel | Ordner | Herkunft |
+|---|---|---|
+| Pasch | [`app/pasch/`](app/pasch/) | aus `kniffel/` |
+| Farbreihen | [`app/farbreihen/`](app/farbreihen/) | aus `quixx/` |
+| Silbertablett | [`app/silbertablett/`](app/silbertablett/) | neu: sechs Farbwürfel, Würfelfelder, Silbertablett, digitaler Block mit Punktzählung, „Zusammen“ für mehrere Handys |
+| Wortbombe | [`app/wortbombe/`](app/wortbombe/) | aus `wortbombe/` |
+| Heiß & Kalt | [`app/heisskalt/`](app/heisskalt/) | aus `heisskalt/` |
+| Wortagenten | [`app/wortagenten/`](app/wortagenten/) | aus `codenames/` |
+| Chooser | [`app/chooser/`](app/chooser/) | aus `chooser/` |
+
+- **Startseite** `app/index.html` mit allen Spielen und den Einstellungen (Zahnrad): Updates, Erscheinungsbild (Automatisch/Hell/Dunkel, gilt für alle Spiele), Datenschutz.
+- **Gemeinsam** in `app/shared/`: `base.css` (Design-Tokens nach Design-Leitfaden Apple-Stil: Systemschrift, Systemfarben, Hell/Dunkel, Materialien, Barrierefreiheit), `shell.js` (Erscheinungsbild, Service Worker, Updates), `kit.css`/`kit.js` (Sheets, Segmente, Springs für die Startseite).
+- **Zurück:** Jedes Spiel hat oben links einen Zurück-Knopf zur Spieleauswahl.
+- **Spielstände** bleiben erhalten: Die Spiele nutzen dieselben Speicher-Schlüssel wie die Einzel-Apps (gleiche Domain).
+
+### Updates
+
+- **Nach Updates suchen:** Knopf in den Einstellungen der Startseite.
+- **Automatisch aktualisieren** (Standard an): Die App sucht beim Öffnen, beim Zurückkehren (höchstens alle 30 Minuten) und stündlich. Eine neue Version wird im Hintergrund geladen und gewechselt, sobald die App im Hintergrund ist oder gerade gestartet wurde. Laufende Online-Spiele (Wortbombe, Heiß & Kalt, Wortagenten) melden das per `Shell.hold()` und werden nicht unterbrochen. Ist die Automatik aus, erscheint ein Hinweis „Version … ist bereit“.
+- **Prüfsummen:** `app/sw.js` enthält die Version und die SHA-256-Prüfsumme jeder Datei. Bei einem Update wird jede Datei frisch geladen und geprüft. Stimmt eine nicht (halber Upload, alter Zwischenspeicher), wird das Update verworfen und die bisherige Version läuft weiter.
+
+### Neue Version veröffentlichen
+
+1. Dateien in `app/` ändern.
+2. `python3 tools/release.py 1.0.1` (nächste Versionsnummer). Das setzt die Version in allen Seiten, schreibt die Prüfsummen in `app/sw.js` und `app/version.json`.
+3. Committen und pushen. GitHub Pages veröffentlicht nach etwa einer Minute, installierte Apps holen sich die Version selbst.
+4. `python3 tools/release.py --check` prüft vor dem Push, ob alles zusammenpasst.
+
+---
+
+## Einzelne Apps (bisher)
+
+Die bisherigen Einzel-Apps bleiben unter ihren Adressen erhalten, damit installierte Apps weiterlaufen. Neue Funktionen kommen nur noch in `app/`.
 
 | App | Ordner | Adresse |
 |---|---|---|
@@ -26,9 +57,7 @@ Sechs Spiele-Apps für das Handy, jede als eigene Web-App, die nach der Installa
 | Heiß & Kalt | [`heisskalt/`](heisskalt/) | https://jakobweigand.github.io/Spiele/heisskalt/ |
 | Wortagenten | [`codenames/`](codenames/) | https://jakobweigand.github.io/Spiele/codenames/ |
 
-Die Startseite https://jakobweigand.github.io/Spiele/ verlinkt alle Apps.
-
-## Funktionen
+## Funktionen (Pasch und Farbreihen)
 
 - **Mit Block oder nur Würfel:** Oben in der Mitte schaltest du um. „Nur Würfel“ blendet Block, Tabs und Spieler aus.
 - **Würfel und Block:** Jede App hat zwei Seiten. Du wischst zwischen „Würfel“ und „Block“ oder tippst oben auf die Tabs.
@@ -100,7 +129,7 @@ Die KI kennt 418 Spielwörter mit je 15 bis 18 Assoziationen (gut 3.100 Begriffe
 
 Weitere Funktionen: letzter Schritt zurücknehmen, Verlauf aller Züge, beide Schlüssel nach dem Spiel aufdecken, Spielstand bleibt beim Schließen erhalten, Hoch- und Querformat, helles und dunkles Design.
 
-## Aufbau
+## Aufbau der Einzel-Apps
 
 Jede App ist ein eigenständiger Ordner ohne externe Abhängigkeiten:
 
@@ -113,7 +142,7 @@ Jede App ist ein eigenständiger Ordner ohne externe Abhängigkeiten:
 Im Hauptordner liegen außerdem die Startseite `index.html` und die Datenschutzhinweise `datenschutz.html`.
 
 Die Würfel nutzen `crypto.getRandomValues` mit Rejection Sampling, damit jede Augenzahl gleich wahrscheinlich ist.
-Das Design folgt dem Designsystem Navy Research.
+Die Einzel-Apps folgen dem Designsystem Navy Research, „Spieleabend“ dem Apple-Stil aus dem Design-Leitfaden.
 
 ## Auf dem Handy installieren
 
@@ -121,7 +150,7 @@ Das Design folgt dem Designsystem Navy Research.
 2. iPhone: Teilen → „Zum Home-Bildschirm“. Android: Menü → „App installieren“.
 3. Die App einmal mit Internet über das neue Icon öffnen. Danach läuft sie offline.
 
-## Eine App ändern
+## Eine Einzel-App ändern
 
 1. Datei im Ordner der App bearbeiten und pushen. GitHub Pages veröffentlicht die Änderung nach etwa einer Minute.
 2. In `sw.js` derselben App die Versionsnummer erhöhen (z. B. `v2` → `v3`). Erst dann holen sich installierte Apps die neue Version, beim nächsten Start mit Internet.
@@ -131,4 +160,5 @@ Das Design folgt dem Designsystem Navy Research.
 - Alles, was vom anderen Handy kommt, wird vor dem Anzeigen geprüft. Das passiert in `applyState` (Wortbombe), `cleanState` (Heiß & Kalt) und `sanitize` (Wortagenten). Neue Felder im Online-Stand dort mit aufnehmen und nie ungeprüft per `innerHTML` anzeigen.
 - Keine Skripte, Schriften oder Bilder von fremden Servern einbinden. Bibliotheken als Kopie in den App-Ordner legen.
 - Kommt ein neuer Online-Dienst dazu, `datenschutz.html` ergänzen.
+- Silbertablett „Zusammen“: öffentliche MQTT-Server (HiveMQ, EMQX), Inhalte unverschlüsselt (nur TLS zum Server). Eingehende Stände prüft `sanitize` in `app/silbertablett/js/wuerfel.js`.
 - Ein eigener Relay-Server für Wortagenten per `?relay=` wirkt nur unter `localhost` zum Testen.

@@ -1,0 +1,144 @@
+/* Spieleabend – gemeinsames Fundament für alle Spiele (Design/apple-design).
+   Tokens für Hell und Dunkel, Systemschrift, der Zurück-Knopf und gemeinsame Bausteine.
+   Jedes Spiel bindet diese Datei ein und nutzt die Variablen; spielspezifisches CSS bleibt im Spiel. */
+:root {
+  --font: -apple-system, BlinkMacSystemFont, system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  /* Flächen (iOS „grouped“) */
+  --bg: #f2f2f7;
+  --surface: #ffffff;
+  --surface-2: #f2f2f7;
+  --fill: rgba(118, 118, 128, 0.12);
+  --fill-strong: rgba(118, 118, 128, 0.2);
+  --label: #000000;
+  --label-2: #6c6c70;          /* abgedunkelt gegenüber iOS, damit kleine Schrift ≥ 4,5:1 hat */
+  --label-3: #8e8e93;
+  --separator: rgba(60, 60, 67, 0.22);
+  --accent: #0068da;
+  --accent-fill: #0068da;   /* Flächen mit weißer Schrift */
+  --on-accent: #ffffff;
+  --danger: #d70015;
+  --ok: #248a3d;
+  --wait: #b25000;
+
+  --material: rgba(249, 249, 251, 0.72);
+  --material-edge: rgba(0, 0, 0, 0.08);
+  --scrim: rgba(0, 0, 0, 0.32);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06), 0 1px 1px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 6px 16px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 18px 50px rgba(0, 0, 0, 0.18), 0 2px 8px rgba(0, 0, 0, 0.08);
+
+  /* Spielfarben: Würfelflächen bleiben in beiden Modi kräftig, damit die Augen Kontrast haben */
+  --face-white: #ffffff;
+  --face-red: #d70015;
+  --face-yellow: #ffcc00;
+  --face-green: #248a3d;
+  --face-blue: #0a5fd6;
+  --face-pink: #d30f45;
+  --face-silver: #aeb4bc;
+  /* Spielfarben für Schrift, Linien und Tönungen */
+  --red: #d70015;
+  --yellow: #a05a00;
+  --yellow-line: #e0a800;
+  --green: #1f7a3a;
+  --blue: #0a5fd6;
+  --pink: #c2185b;
+  --silver: #636e7b;
+  --fox: #e8590c;
+
+  --die-bg: #ffffff;
+  --die-pip: #1c1c1e;
+  --held: var(--accent);
+
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-xl: 22px;
+
+  --surface-sheet: #f2f2f7;
+  --surface-raised: #ffffff;
+  color-scheme: light;
+}
+
+/* Dunkel: einmal für das System, einmal für die manuelle Wahl in den Einstellungen */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #000000; --surface: #1c1c1e; --surface-2: #2c2c2e;
+    --fill: rgba(118, 118, 128, 0.24); --fill-strong: rgba(118, 118, 128, 0.36);
+    --label: #ffffff; --label-2: #aeaeb2; --label-3: #8e8e93; --separator: rgba(84, 84, 88, 0.65);
+    --accent: #409cff; --accent-fill: #0a6ee6; --on-accent: #ffffff; --danger: #ff453a; --ok: #30d158; --wait: #ff9f0a;
+    --material: rgba(28, 28, 30, 0.72); --material-edge: rgba(255, 255, 255, 0.08); --scrim: rgba(0, 0, 0, 0.55);
+    --shadow-sm: none; --shadow-md: 0 6px 16px rgba(0, 0, 0, 0.5); --shadow-lg: 0 18px 50px rgba(0, 0, 0, 0.7);
+    --red: #ff6961; --yellow: #ffd60a; --yellow-line: #ffd60a; --green: #30d158; --blue: #409cff; --pink: #ff6482; --silver: #aeb4bc; --fox: #ff9f0a;
+    --die-bg: #3a3a3c; --die-pip: #ffffff; --surface-sheet: #1c1c1e; --surface-raised: #2c2c2e;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #000000; --surface: #1c1c1e; --surface-2: #2c2c2e;
+  --fill: rgba(118, 118, 128, 0.24); --fill-strong: rgba(118, 118, 128, 0.36);
+  --label: #ffffff; --label-2: #aeaeb2; --label-3: #8e8e93; --separator: rgba(84, 84, 88, 0.65);
+  --accent: #409cff; --accent-fill: #0a6ee6; --on-accent: #ffffff; --danger: #ff453a; --ok: #30d158; --wait: #ff9f0a;
+  --material: rgba(28, 28, 30, 0.72); --material-edge: rgba(255, 255, 255, 0.08); --scrim: rgba(0, 0, 0, 0.55);
+  --shadow-sm: none; --shadow-md: 0 6px 16px rgba(0, 0, 0, 0.5); --shadow-lg: 0 18px 50px rgba(0, 0, 0, 0.7);
+  --red: #ff6961; --yellow: #ffd60a; --yellow-line: #ffd60a; --green: #30d158; --blue: #409cff; --pink: #ff6482; --silver: #aeb4bc; --fox: #ff9f0a;
+  --die-bg: #3a3a3c; --die-pip: #ffffff; --surface-sheet: #1c1c1e; --surface-raised: #2c2c2e;
+  color-scheme: dark;
+}
+
+
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { background: var(--bg); }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--label);
+  font-family: var(--font);
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-font-smoothing: antialiased;
+  font-variant-numeric: tabular-nums;
+}
+button { font: inherit; color: inherit; touch-action: manipulation; }
+:where(button, a, input, select, textarea, [tabindex]:not([tabindex="-1"])):focus-visible {
+  outline: 3px solid var(--accent); outline-offset: 2px;
+}
+
+/* Zurück zur Spieleauswahl: in jedem Spiel oben links */
+.home-link {
+  display: inline-flex; align-items: center; gap: 2px;
+  min-height: 44px; min-width: 44px; padding: 0 8px 0 0; margin-left: -6px;
+  border: 0; background: transparent; color: var(--accent); text-decoration: none;
+  font: 400 17px/1 var(--font); letter-spacing: -0.01em; cursor: pointer;
+  -webkit-user-select: none; user-select: none;
+  transition: opacity 0.15s ease;
+}
+.home-link:active { opacity: 0.4; }
+.home-link svg { width: 24px; height: 24px; flex: none; }
+.home-link.compact .txt { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+/* schwebende Variante für Vollbild-Spiele (Chooser, Wortbombe) */
+.home-link.float {
+  position: fixed; z-index: 50;
+  top: calc(env(safe-area-inset-top, 0px) + 8px); left: calc(env(safe-area-inset-left, 0px) + 12px);
+  margin: 0; padding: 0 12px 0 6px; min-height: 36px; border-radius: 999px;
+  background: var(--material); -webkit-backdrop-filter: blur(20px) saturate(180%); backdrop-filter: blur(20px) saturate(180%);
+  box-shadow: var(--shadow-sm); font-size: 15px; font-weight: 600;
+}
+
+.material {
+  background: var(--material);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  backdrop-filter: blur(24px) saturate(180%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .material, .home-link.float { background: var(--bg); -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+@media (prefers-contrast: more) {
+  :root:not(#_) { --separator: color-mix(in srgb, var(--label) 50%, transparent); --fill: rgba(118, 118, 128, 0.3); }
+  .material { background: var(--bg); -webkit-backdrop-filter: none; backdrop-filter: none; }
+}

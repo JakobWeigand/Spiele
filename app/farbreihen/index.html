@@ -1,0 +1,846 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="app-version" content="1.0.0">
+<meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Spieleabend">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="apple-touch-icon" href="../icon-180.png">
+<link rel="icon" type="image/png" href="../icon-192.png">
+<title>Farbreihen</title>
+<link rel="stylesheet" href="../shared/base.css">
+<script src="../shared/shell.js"></script>
+<style>
+/* Farbreihen im Stil der Spieleabend-App (Design/apple-design): Systemschrift und Farben aus ../shared/base.css
+   (Hell/Dunkel automatisch und über data-theme), runde Ecken, dezente Schatten, Feedback beim Drücken.
+   Zwei Seiten nebeneinander (Würfel, Block), per Wischen oder Tabs. Hochformat: eine Spalte.
+   Querformat: Würfel links, Kombinationen und Button rechts; Block mit breiten Feldern. */
+:root {
+  --pad-l: max(16px, env(safe-area-inset-left, 0px));
+  --pad-r: max(16px, env(safe-area-inset-right, 0px));
+  /* Abgeleitet aus base.css, nur damit Schrift auf Flächen überall ≥ 4,5:1 Kontrast hat:
+     gefüllte Akzentflächen mit weißer Schrift und Akzent als Schriftfarbe auf grauen Flächen. */
+  --accent-text: var(--accent);
+  --plate: var(--surface-raised);      /* erhabene Fläche: Knöpfe, Felder, Eingaben */
+  --thumb: var(--surface);             /* gewähltes Segment */
+  --thumb-shadow: 0 3px 8px rgba(0, 0, 0, 0.12), 0 3px 1px rgba(0, 0, 0, 0.04);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --accent-text: #5eb0ff; --thumb: #636366; }
+}
+:root[data-theme="dark"] { --accent-text: #5eb0ff; --thumb: #636366; }
+
+html, body { height: 100%; }
+body { font-size: 16px; line-height: 1.4; overflow: hidden; }
+a { color: var(--accent-text); }
+
+.app {
+  display: flex; flex-direction: column; height: 100%; height: 100dvh;
+  max-width: 600px; margin: 0 auto;
+  padding-top: env(safe-area-inset-top, 0px);
+  user-select: none; -webkit-user-select: none;
+}
+
+/* Kopfzeile: Zeile 1 Zurück · Titel · Spielweise; Zeile 2 Tabs · Spieler */
+.top { display: grid; gap: 8px; padding: 4px var(--pad-r) 10px var(--pad-l); }
+.top-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px; min-height: 44px; }
+.top-row .spacer { display: none; }
+.top-row2 { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px; }
+.brand { display: flex; align-items: center; gap: 2px; min-width: 0; }
+h1 {
+  margin: 0; min-width: 0; font-size: 22px; font-weight: 700; line-height: 1.1; letter-spacing: -0.022em;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* Segmentierte Auswahl: Spielweise und Ansicht */
+.mode, .seg {
+  display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr);
+  padding: 2px; border-radius: 10px; background: var(--fill);
+}
+.mode button, .seg button {
+  min-height: 32px; padding: 0 10px; border: 0; border-radius: 8px; background: transparent; cursor: pointer;
+  font-size: 14px; font-weight: 500; letter-spacing: -0.005em; color: var(--label); white-space: nowrap;
+  transition: transform 0.1s ease-out, background-color 0.2s ease, box-shadow 0.2s ease;
+}
+.seg button { min-height: 36px; font-size: 15px; }
+.mode button[aria-pressed="true"], .seg button[aria-selected="true"] {
+  background: var(--thumb); font-weight: 600; box-shadow: var(--thumb-shadow);
+}
+.mode button:active, .seg button:active { transform: scale(0.96); }
+
+.btn-ghost {
+  min-height: 40px; padding: 0 14px; border: 0; border-radius: 10px;
+  background: var(--plate); color: var(--accent-text); box-shadow: var(--shadow-sm);
+  font-size: 15px; font-weight: 600; cursor: pointer; white-space: nowrap;
+  transition: transform 0.1s ease-out;
+}
+.btn-ghost:active { transform: scale(0.96); }
+
+.app.noblock .top-row2, .app.noblock #page-block, .app.noblock .status-who { display: none; }
+
+/* Seiten zum Wischen */
+.pager {
+  flex: 1; min-height: 0; display: flex; overflow-x: auto; overflow-y: hidden; position: relative;
+  scroll-snap-type: x mandatory; overscroll-behavior-x: contain; scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.pager::-webkit-scrollbar { display: none; }
+.page {
+  flex: 0 0 100%; width: 100%; min-width: 0; min-height: 0; position: relative;
+  scroll-snap-align: start; scroll-snap-stop: always;
+  display: flex; flex-direction: column;
+  padding-left: var(--pad-l); padding-right: var(--pad-r);
+}
+
+.label {
+  margin: 0; font-size: 13px; font-weight: 600; letter-spacing: 0.02em; text-transform: uppercase;
+  color: var(--label-2);
+}
+.hint { margin: 0; font-size: 15px; line-height: 1.4; color: var(--label-2); }
+.legal {
+  justify-self: center; display: inline-flex; align-items: center; min-height: 44px; padding: 0 8px;
+  font-size: 15px; color: var(--accent-text); text-underline-offset: 3px;
+}
+
+/* ---------- Würfel-Seite ---------- */
+.dice-wrap { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.dice-main { flex: 1; min-height: 0; overflow-y: auto; padding-block: 8px 12px; display: flex; flex-direction: column; gap: 16px; }
+.dice-side { display: flex; flex-direction: column; gap: 12px; }
+
+.die-btn {
+  display: grid; gap: 6px; justify-items: stretch; padding: 0; border: 0;
+  background: transparent; cursor: pointer; min-width: 0;
+}
+.die {
+  width: 100%; aspect-ratio: 1; max-width: 100%;
+  display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr);
+  padding: 15%; border-radius: 22%;
+  box-shadow: var(--shadow-md), inset 0 0 0 0.5px rgba(0, 0, 0, 0.06);
+  transition: transform 0.12s ease-out, opacity 0.2s ease;
+}
+.pip { width: 74%; aspect-ratio: 1; border-radius: 50%; place-self: center; background: var(--pip); opacity: 0; }
+.pip.on { opacity: 1; }
+.die.blank .pip { opacity: 0; }
+button.die-btn:active .die { transform: scale(0.94); }
+.die-name { font-size: 13px; font-weight: 600; text-align: center; color: var(--label-2); line-height: 1.4em; }
+.die.white  { background: var(--face-white);  --pip: #1c1c1e; }
+.die.red    { background: var(--face-red);    --pip: #ffffff; }
+.die.yellow { background: var(--face-yellow); --pip: #1c1c1e; }
+.die.green  { background: var(--face-green);  --pip: #ffffff; }
+.die.blue   { background: var(--face-blue);   --pip: #ffffff; }
+.die-btn.locked .die { opacity: 0.25; box-shadow: none; }
+.die-btn.locked .die-name { text-decoration: line-through; }
+.die.rolling { animation: tumble 0.48s cubic-bezier(0.2, 0.8, 0.3, 1); }
+@keyframes tumble {
+  0%   { transform: none; }
+  25%  { transform: translateY(-10px) rotate(-14deg) scale(0.92); }
+  55%  { transform: translateY(2px) rotate(8deg) scale(1.03); }
+  80%  { transform: rotate(-2deg); }
+  100% { transform: none; }
+}
+
+.qwhite { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; align-items: start; }
+.qcolor { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.sum {
+  aspect-ratio: 1; border-radius: 22%; background: var(--accent-fill); color: #ffffff;
+  display: grid; align-content: center; justify-items: center; gap: 2px; padding: 8px;
+  box-shadow: var(--shadow-md);
+}
+.sum .label { color: inherit; font-size: 11px; text-align: center; }
+.sum .big { font-size: 46px; font-weight: 700; line-height: 1; letter-spacing: -0.03em; }
+
+/* Kombinationen als Liste */
+table.combo {
+  width: 100%; border-collapse: separate; border-spacing: 0; font-size: 16px;
+  background: var(--surface); border-radius: var(--r-md); overflow: hidden; box-shadow: var(--shadow-sm);
+}
+.combo th { font-size: 13px; font-weight: 600; color: var(--label-2); padding: 10px 14px 6px; text-align: right; }
+.combo th:first-child, .combo td:first-child { text-align: left; }
+.combo td { padding: 7px 14px; text-align: right; border-top: 0.5px solid var(--separator); color: var(--label); }
+.combo td.num { font-size: 22px; font-weight: 700; line-height: 1.15; letter-spacing: -0.02em; }
+.combo td.num.off { color: var(--label-2); font-weight: 400; }
+.swatch { display: inline-block; width: 12px; height: 12px; border-radius: 4px; margin-right: 10px; vertical-align: -1px; }
+.swatch.red { background: var(--face-red); }
+.swatch.yellow { background: var(--face-yellow); }
+.swatch.green { background: var(--face-green); }
+.swatch.blue { background: var(--face-blue); }
+
+.bar {
+  display: grid; grid-template-columns: 1fr;
+  padding-block: 4px calc(12px + env(safe-area-inset-bottom, 0px));
+}
+.btn {
+  min-height: 56px; border: 0; border-radius: 14px; cursor: pointer;
+  font-size: 17px; font-weight: 600; letter-spacing: -0.01em; padding: 0 14px; line-height: 1.15;
+  transition: transform 0.1s ease-out, opacity 0.2s ease;
+}
+.btn:active:not(:disabled) { transform: scale(0.97); }
+.btn:disabled { opacity: 0.4; cursor: default; }
+.btn-primary { background: var(--accent-fill); color: #ffffff; }
+.btn-secondary { background: var(--plate); color: var(--accent-text); box-shadow: var(--shadow-sm); }
+
+/* ---------- Block-Seite ---------- */
+.block-scroll {
+  flex: 1; min-height: 0; overflow-y: auto; padding-block: 8px calc(16px + env(safe-area-inset-bottom, 0px));
+  display: grid; gap: 12px; align-content: start;
+}
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  min-height: 40px; padding: 0 14px; border: 0; border-radius: var(--r-md);
+  background: var(--plate); color: var(--label); box-shadow: var(--shadow-sm);
+  font-size: 15px; font-weight: 600; cursor: pointer;
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  transition: transform 0.1s ease-out, background-color 0.2s ease;
+}
+.chip:active { transform: scale(0.96); }
+.chip[aria-pressed="true"] { background: var(--accent-fill); color: #ffffff; }
+
+/* Reihen: getönte Karte, Felder mit Farbrand, angekreuzt in voller Würfelfarbe */
+.qsheet { display: grid; gap: 8px; }
+.qrow {
+  display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 3px; padding: 4px;
+  border-radius: var(--r-md); background: color-mix(in srgb, var(--rc) 16%, var(--surface));
+  box-shadow: var(--shadow-sm); transition: opacity 0.2s ease;
+}
+.qrow.red    { --rc: var(--face-red);    --rt: var(--red);    --rf: var(--face-red);    --ri: #ffffff; }
+.qrow.yellow { --rc: var(--yellow-line); --rt: var(--yellow); --rf: var(--face-yellow); --ri: #1c1c1e; }
+.qrow.green  { --rc: var(--face-green);  --rt: var(--green);  --rf: var(--face-green);  --ri: #ffffff; }
+.qrow.blue   { --rc: var(--face-blue);   --rt: var(--blue);   --rf: var(--face-blue);   --ri: #ffffff; }
+.qrow.shut { opacity: 0.45; }
+.qcell {
+  min-height: 44px; min-width: 0; padding: 0; border: 0; border-radius: 8px; cursor: pointer;
+  background: var(--plate); color: var(--rt); font-size: 15px; font-weight: 700; letter-spacing: -0.02em;
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--rc) 55%, transparent);
+  display: grid; place-items: center;
+  transition: transform 0.1s ease-out, background-color 0.15s ease;
+}
+.qcell:active { transform: scale(0.9); }
+.qcell.skip { opacity: 0.32; }
+.qcell.x { background: var(--rf); color: var(--ri); box-shadow: none; font-size: 20px; }
+.qcell.lock { border-radius: 50%; aspect-ratio: 1; min-height: 0; align-self: center; }
+.qcell svg { width: 16px; height: 16px; display: block; }
+
+.qbottom { display: grid; gap: 12px; }
+.qpen { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.qpen .label { margin-right: 4px; }
+.pen {
+  width: 48px; height: 44px; border: 0; border-radius: 10px; background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--separator);
+  color: var(--danger); font-size: 15px; font-weight: 700; cursor: pointer;
+  transition: transform 0.1s ease-out, background-color 0.15s ease;
+}
+.pen:active { transform: scale(0.93); }
+.pen.x { background: var(--danger); color: #ffffff; box-shadow: none; font-size: 18px; }
+
+.qband {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  background: var(--surface); border-radius: var(--r-md); box-shadow: var(--shadow-sm);
+  padding: 4px 0;
+}
+.qband > div { padding: 8px 14px; display: grid; gap: 2px; min-width: 0; }
+.qband .label { font-size: 12px; }
+.qband .v { font-size: 22px; font-weight: 700; line-height: 1.1; letter-spacing: -0.02em; }
+.qband .total .v { font-size: 26px; color: var(--accent-text); }
+.qband .v small { font-size: 13px; font-weight: 400; letter-spacing: 0; color: var(--label-2); margin-left: 4px; white-space: nowrap; }
+.msg { min-height: 1.4em; }
+
+.banner {
+  background: var(--surface); border-radius: var(--r-lg); box-shadow: var(--shadow-md);
+  padding: 16px; display: grid; gap: 10px;
+}
+.banner .label { color: var(--accent-text); }
+.banner ol { margin: 0; padding-left: 1.4em; display: grid; gap: 4px; font-size: 17px; }
+.banner li:first-child { font-weight: 700; font-size: 22px; letter-spacing: -0.02em; }
+.banner .btn { min-height: 52px; background: var(--accent-fill); color: #ffffff; }
+
+/* ---------- Overlay: Spieler (Sheet von unten, breit/quer als Karte) ---------- */
+.overlay {
+  position: fixed; inset: 0; z-index: 20; background: var(--scrim);
+  display: flex; align-items: flex-end; justify-content: center;
+  animation: scrim-in 0.25s ease-out;
+}
+.panel {
+  width: 100%; max-width: 600px;
+  max-height: calc(100% - env(safe-area-inset-top, 0px) - 24px); overflow-y: auto; overscroll-behavior: contain;
+  background: var(--surface-sheet); border-radius: 14px 14px 0 0; box-shadow: var(--shadow-lg);
+  padding: 20px var(--pad-r) calc(20px + env(safe-area-inset-bottom, 0px)) var(--pad-l);
+  display: grid; gap: 12px;
+  animation: sheet-in 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@keyframes scrim-in { from { opacity: 0; } }
+@keyframes sheet-in { from { transform: translateY(40px); opacity: 0; } }
+.panel h2 { margin: 0; font-size: 22px; font-weight: 700; line-height: 1.2; letter-spacing: -0.02em; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.panel .btn { min-height: 52px; }
+.plist { display: grid; gap: 8px; }
+.prow { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+.prow input {
+  min-height: 48px; width: 100%; padding: 0 14px; font: inherit; font-size: 17px;
+  color: var(--label); background: var(--plate); border: 0; border-radius: var(--r-md);
+  user-select: text; -webkit-user-select: text;
+}
+.prow .btn-ghost { min-height: 48px; font-size: 15px; padding: 0 12px; color: var(--red); }
+.confirm {
+  background: color-mix(in srgb, var(--danger) 8%, var(--surface-sheet)); border-radius: var(--r-md);
+  padding: 14px; display: grid; gap: 10px;
+}
+.confirm p { margin: 0; font-weight: 600; }
+
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+@media (min-width: 640px) and (min-height: 560px) {
+  .overlay { align-items: center; }
+  .panel { width: min(520px, calc(100% - 48px)); border-radius: var(--r-xl); max-height: calc(100% - 64px); padding: 22px 22px 20px; }
+}
+
+@media (max-height: 800px) and (orientation: portrait) {
+  .top { padding-bottom: 8px; }
+  .dice-main { gap: 12px; }
+  .combo td { padding-block: 5px; }
+  .btn { min-height: 52px; }
+}
+
+/* Querformat (iPhone 15/16/17 Pro: ca. 852–874 × 393–402 pt) */
+@media (orientation: landscape) and (max-height: 500px) {
+  .app { max-width: none; }
+  .top { grid-template-columns: minmax(0, 1fr) auto minmax(200px, 300px) minmax(0, 1fr); align-items: center; gap: 14px; padding-block: 2px 6px; }
+  .top-row, .top-row2 { display: contents; }
+  .top .spacer { display: none; }
+  #open-settings { justify-self: end; }
+  .app.noblock .top { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); }
+  .app.noblock .top .spacer { display: block; }
+  h1 { font-size: 20px; }
+  .seg button { min-height: 32px; }
+  .btn-ghost { min-height: 36px; }
+
+  .dice-wrap { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 24px; }
+  .dice-main { padding-block: 4px 8px; gap: 10px; }
+  .dice-side { padding-block: 4px 0; min-height: 0; overflow-y: auto; gap: 10px; }
+  .qwhite { grid-template-columns: repeat(3, 92px); gap: 12px; }
+  .qcolor { grid-template-columns: repeat(4, 92px); gap: 12px; }
+  .sum .big { font-size: 38px; }
+  .hint { font-size: 14px; }
+  .combo td { padding-block: 4px; }
+  .combo td.num { font-size: 20px; }
+  .bar { margin-top: auto; padding-block: 0 calc(8px + env(safe-area-inset-bottom, 0px)); }
+  .btn { min-height: 52px; }
+
+  .block-scroll { padding-block: 4px calc(8px + env(safe-area-inset-bottom, 0px)); gap: 8px; }
+  .chip { min-height: 34px; }
+  .qsheet { gap: 6px; }
+  .qcell { min-height: 40px; font-size: 17px; }
+  .qcell.lock { min-height: 0; width: 40px; justify-self: center; }
+  .qbottom { grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 16px; }
+  .qband { grid-template-columns: repeat(6, 1fr); padding: 2px 0; }
+  .pen { width: 44px; }
+  .qband > div { padding: 6px 8px; }
+  .qband .label { font-size: 12px; letter-spacing: 0; text-transform: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .qband .v { font-size: 20px; }
+  .qband .total .v { font-size: 22px; }
+
+  .overlay { align-items: center; }
+  .panel { width: min(480px, calc(100% - 48px)); max-height: calc(100% - 24px); border-radius: var(--r-xl); padding: 16px 20px; gap: 10px; }
+  .panel h2 { font-size: 20px; }
+  .panel .btn { min-height: 48px; }
+}
+
+/* ---------- Barrierefreiheit ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .die.rolling { animation: none; }
+  .die, .btn, .btn-ghost, .chip, .qcell, .pen, .qrow, .mode button, .seg button { transition: none !important; }
+  @keyframes sheet-in { from { opacity: 0; } }
+}
+@media (prefers-contrast: more) {
+  .combo, .qband, .qrow, .chip, .banner, .btn-secondary, .btn-ghost { box-shadow: inset 0 0 0 1px var(--label); }
+  .qcell:not(.x) { box-shadow: inset 0 0 0 1.5px var(--rt); }
+  .pen:not(.x) { box-shadow: inset 0 0 0 1.5px var(--label); }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="top-row">
+      <div class="brand">
+        <a class="home-link compact" href="../" aria-label="Alle Spiele"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="txt">Spiele</span></a>
+        <h1>Farbreihen</h1>
+      </div>
+      <div class="mode" role="group" aria-label="Spielweise">
+        <button type="button" id="mode-block" aria-pressed="true">Mit Block</button>
+        <button type="button" id="mode-plain" aria-pressed="false">Nur Würfel</button>
+      </div>
+      <span class="spacer" aria-hidden="true"></span>
+    </div>
+    <div class="top-row2">
+      <div class="seg" role="tablist" aria-label="Ansicht">
+        <button type="button" role="tab" id="tab-dice" aria-selected="true" aria-controls="page-dice" data-page="0">Würfel</button>
+        <button type="button" role="tab" id="tab-block" aria-selected="false" aria-controls="page-block" data-page="1">Block</button>
+      </div>
+      <button type="button" class="btn-ghost" id="open-settings">Spieler</button>
+    </div>
+  </header>
+
+  <div class="pager" id="pager">
+    <!-- Würfel -->
+    <section class="page" id="page-dice" role="tabpanel" aria-labelledby="tab-dice">
+      <div class="dice-wrap">
+        <div class="dice-main">
+          <div class="qwhite" id="q-white">
+            <div class="sum" aria-live="polite">
+              <span class="label">Weiß + Weiß</span>
+              <span class="big" id="q-sum">–</span>
+            </div>
+          </div>
+          <div class="qcolor" id="q-color"></div>
+          <p class="hint" id="q-hint">Ist eine Farbreihe geschlossen, tippe den Farbwürfel an, um ihn wegzulegen.</p>
+        </div>
+        <div class="dice-side">
+          <table class="combo" aria-label="Kombinationen aus weißem und farbigem Würfel">
+            <thead><tr><th scope="col">Farbe</th><th scope="col">Weiß 1 +</th><th scope="col">Weiß 2 +</th></tr></thead>
+            <tbody id="q-table"></tbody>
+          </table>
+          <div class="bar">
+            <button type="button" class="btn btn-primary" id="q-roll">Alle 6 würfeln</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Block -->
+    <section class="page" id="page-block" role="tabpanel" aria-labelledby="tab-block">
+      <div class="block-scroll">
+        <div class="banner" id="q-over" hidden></div>
+        <div class="chips" id="q-players" role="group" aria-label="Block von"></div>
+        <div class="qsheet" id="q-sheet"></div>
+        <div class="qbottom">
+          <div class="qpen" id="q-pen"></div>
+          <div class="qband" id="q-band"></div>
+        </div>
+        <p class="hint msg" id="q-msg" aria-live="polite"></p>
+      </div>
+    </section>
+  </div>
+
+  <!-- Spieler -->
+  <div class="overlay" id="settings" hidden>
+    <div class="panel" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+      <h2 id="settings-title">Spieler</h2>
+      <div class="plist" id="plist"></div>
+      <button type="button" class="btn btn-secondary" id="p-add">Spieler hinzufügen</button>
+      <button type="button" class="btn btn-secondary" id="new-game">Neues Spiel</button>
+      <div class="confirm" id="confirm" hidden>
+        <p>Alle Kreuze löschen und neu anfangen?</p>
+        <div class="two">
+          <button type="button" class="btn btn-secondary" id="confirm-no">Abbrechen</button>
+          <button type="button" class="btn btn-primary" id="confirm-yes">Ja, neues Spiel</button>
+        </div>
+      </div>
+      <button type="button" class="btn btn-primary" id="settings-done">Fertig</button>
+      <a class="legal" href="../../datenschutz.html">Datenschutz</a>
+    </div>
+  </div>
+
+  <div class="sr-only" aria-live="polite" id="announce"></div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var $ = function (s) { return document.querySelector(s); };
+
+  /* ---------- Zufall ----------
+     crypto.getRandomValues liefert Zufall aus dem Betriebssystem.
+     Bytes ab 252 werden verworfen, damit 0–251 sich glatt auf 6 Seiten
+     verteilt (252 = 6 × 42) und keine Augenzahl bevorzugt wird. */
+  var buf = new Uint8Array(1);
+  function rollD6() {
+    if (window.crypto && crypto.getRandomValues) {
+      do { crypto.getRandomValues(buf); } while (buf[0] >= 252);
+      return (buf[0] % 6) + 1;
+    }
+    return Math.floor(Math.random() * 6) + 1;
+  }
+  function flickerD6() { return Math.floor(Math.random() * 6) + 1; } // nur für die Animation
+
+  var reduceMotion = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var NAMES = ["", "Eins", "Zwei", "Drei", "Vier", "Fünf", "Sechs"];
+  var FACES = { 1: [4], 2: [2, 6], 3: [2, 4, 6], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8] };
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  var LOCK_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.5 11V8a4.5 4.5 0 0 1 9 0v3" fill="none" stroke="currentColor" stroke-width="2.6"/><rect x="5" y="11" width="14" height="10" fill="currentColor"/></svg>';
+
+  /* ---------- Farbreihen-Regeln ----------
+     Rot und Gelb laufen von 2 bis 12, Grün und Blau von 12 bis 2.
+     Feld 0–10 sind die Zahlen, Feld 11 ist das Schloss. */
+  var UP = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], DOWN = UP.slice().reverse();
+  var COLORS = [
+    { key: "red", name: "Rot", nums: UP }, { key: "yellow", name: "Gelb", nums: UP },
+    { key: "green", name: "Grün", nums: DOWN }, { key: "blue", name: "Blau", nums: DOWN }
+  ];
+  var LOCK = 11, LAST = 10;
+  function tri(n) { return n * (n + 1) / 2; }  // 1, 3, 6, 10, 15 … 78 Punkte
+  function signed(n) { return n < 0 ? "−" + -n : String(n); }  // echtes Minuszeichen
+
+  /* ---------- Spielstand (bleibt beim Schließen der App erhalten) ---------- */
+  var KEY = "quixx-spiel-v1";
+  function blankSheet() { return { red: [], yellow: [], green: [], blue: [], pen: 0 }; }
+  function fresh(players) {
+    players = players || ["Spieler 1", "Spieler 2"];
+    return {
+      v: 1, players: players, view: 0, sheets: players.map(blankSheet),
+      manual: { red: false, yellow: false, green: false, blue: false },
+      dice: { w: [0, 0], c: { red: 0, yellow: 0, green: 0, blue: 0 } }
+    };
+  }
+  function load() {
+    try {
+      var s = JSON.parse(localStorage.getItem(KEY));
+      if (s && s.v === 1 && Array.isArray(s.players) && s.players.length &&
+          Array.isArray(s.sheets) && s.sheets.length === s.players.length && s.dice && s.manual) return s;
+    } catch (e) {}
+    return fresh();
+  }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
+  var S = load();
+  if (S.block === undefined) S.block = true;
+  function blockOn() { return S.block !== false; }
+  if (S.view >= S.players.length) S.view = 0;
+
+  function lockedBySheet(key) { return S.sheets.some(function (s) { return s[key].indexOf(LOCK) !== -1; }); }
+  function closed(key) { return S.manual[key] || lockedBySheet(key); }
+  function sheetTotal(s) {
+    var rows = COLORS.map(function (c) { return tri(s[c.key].length); });
+    return { rows: rows, pen: s.pen * 5, total: rows.reduce(function (a, x) { return a + x; }, 0) - s.pen * 5 };
+  }
+  function gameOver() {
+    var shut = COLORS.filter(function (c) { return closed(c.key); }).length;
+    return shut >= 2 || S.sheets.some(function (s) { return s.pen >= 4; });
+  }
+
+  /* ---------- Würfel ---------- */
+  function makeDie(colorClass) {
+    var d = document.createElement("div");
+    d.className = "die blank " + colorClass;
+    d.setAttribute("aria-hidden", "true");
+    for (var i = 0; i < 9; i++) { var p = document.createElement("span"); p.className = "pip"; d.appendChild(p); }
+    return d;
+  }
+  function showFace(die, v) {
+    var on = FACES[v] || [];
+    die.classList.toggle("blank", !v);
+    for (var i = 0; i < 9; i++) die.children[i].classList.toggle("on", on.indexOf(i) !== -1);
+  }
+  function tumble(dice, finals, done) {
+    if (navigator.vibrate) { try { navigator.vibrate(12); } catch (e) {} }
+    if (reduceMotion) { dice.forEach(function (d, k) { showFace(d, finals[k]); }); done(); return; }
+    dice.forEach(function (d) { d.classList.remove("rolling"); void d.offsetWidth; d.classList.add("rolling"); });
+    var iv = setInterval(function () { dice.forEach(function (d) { showFace(d, flickerD6()); }); }, 65);
+    setTimeout(function () {
+      clearInterval(iv);
+      dice.forEach(function (d, k) { showFace(d, finals[k]); d.classList.remove("rolling"); });
+      done();
+    }, 480);
+  }
+
+  var announce = $("#announce");
+  function say(text) { announce.textContent = ""; setTimeout(function () { announce.textContent = text; }, 30); }
+
+  var busy = false;
+  var qWhite = $("#q-white"), qSumTile = qWhite.firstElementChild, qWhiteDice = [];
+  [0, 1].forEach(function (n) {
+    var box = document.createElement("div");
+    box.className = "die-btn";
+    var d = makeDie("white"), name = document.createElement("span");
+    name.className = "die-name"; name.textContent = "Weiß " + (n + 1);
+    box.appendChild(d); box.appendChild(name);
+    qWhite.insertBefore(box, qSumTile);
+    qWhiteDice.push(d);
+    showFace(d, S.dice.w[n]);
+  });
+
+  var qColor = $("#q-color"), qColorDice = {}, qColorBtns = {};
+  COLORS.forEach(function (c) {
+    var b = document.createElement("button");
+    b.type = "button"; b.className = "die-btn"; b.setAttribute("aria-pressed", "false");
+    var d = makeDie(c.key), name = document.createElement("span");
+    name.className = "die-name"; name.textContent = c.name;
+    b.appendChild(d); b.appendChild(name);
+    b.addEventListener("click", function () {
+      if (busy) return;
+      if (lockedBySheet(c.key)) {
+        diceHint("Die Reihe " + c.name + " wurde im Block geschlossen. Zurücknehmen kannst du das dort.");
+        return;
+      }
+      S.manual[c.key] = !S.manual[c.key];
+      save(); render();
+      say(c.name + (S.manual[c.key] ? " weggelegt." : " wieder im Spiel."));
+    });
+    qColor.appendChild(b);
+    qColorDice[c.key] = d; qColorBtns[c.key] = b;
+    showFace(d, closed(c.key) ? 0 : S.dice.c[c.key]);
+  });
+
+  var qTable = $("#q-table"), qCells = {};
+  COLORS.forEach(function (c) {
+    var tr = document.createElement("tr"), name = document.createElement("td");
+    name.innerHTML = '<span class="swatch ' + c.key + '"></span>' + c.name;
+    var a = document.createElement("td"), b = document.createElement("td");
+    a.className = b.className = "num";
+    tr.appendChild(name); tr.appendChild(a); tr.appendChild(b);
+    qTable.appendChild(tr);
+    qCells[c.key] = [a, b];
+  });
+
+  var qSum = $("#q-sum"), qRoll = $("#q-roll"), qHint = $("#q-hint"), hintTimer = 0;
+  var DEFAULT_DICE_HINT = "Ist eine Farbreihe geschlossen, tippe den Farbwürfel an, um ihn wegzulegen.";
+  function diceHint(text) {
+    qHint.textContent = text;
+    clearTimeout(hintTimer);
+    hintTimer = setTimeout(function () { qHint.textContent = DEFAULT_DICE_HINT; }, 4000);
+  }
+
+  function renderDice() {
+    var rolled = S.dice.w[0] > 0;
+    qSum.textContent = rolled ? S.dice.w[0] + S.dice.w[1] : "–";
+    COLORS.forEach(function (c) {
+      var shut = closed(c.key), btn = qColorBtns[c.key], v = S.dice.c[c.key];
+      btn.classList.toggle("locked", shut);
+      btn.setAttribute("aria-pressed", shut ? "true" : "false");
+      btn.setAttribute("aria-label", c.name + ": " + (shut ? "weggelegt" : (v ? NAMES[v] : "noch nicht gewürfelt")) +
+        ". Antippen zum " + (shut ? "Zurückholen" : "Weglegen") + ".");
+      var show = rolled && v && !shut;
+      qCells[c.key][0].textContent = show ? S.dice.w[0] + v : "–";
+      qCells[c.key][1].textContent = show ? S.dice.w[1] + v : "–";
+      qCells[c.key][0].classList.toggle("off", !show);
+      qCells[c.key][1].classList.toggle("off", !show);
+    });
+    var active = COLORS.filter(function (c) { return !closed(c.key); }).length + 2;
+    qRoll.textContent = active === 6 ? "Alle 6 würfeln" : active + " Würfel würfeln";
+    qRoll.disabled = busy;
+  }
+
+  qRoll.addEventListener("click", function () {
+    if (busy) return;
+    var dice = qWhiteDice.slice();
+    var keys = COLORS.filter(function (c) { return !closed(c.key); }).map(function (c) { return c.key; });
+    keys.forEach(function (k) { dice.push(qColorDice[k]); });
+    var finals = dice.map(function () { return rollD6(); });
+    busy = true;
+    renderDice();
+    tumble(dice, finals, function () {
+      S.dice.w = [finals[0], finals[1]];
+      keys.forEach(function (k, n) { S.dice.c[k] = finals[n + 2]; });
+      COLORS.forEach(function (c) { if (closed(c.key)) { S.dice.c[c.key] = 0; showFace(qColorDice[c.key], 0); } });
+      busy = false;
+      save(); render();
+      say("Weiß " + S.dice.w[0] + " und " + S.dice.w[1] + ", Summe " + (S.dice.w[0] + S.dice.w[1]) + ".");
+    });
+  });
+
+  /* ---------- Block ---------- */
+  var chips = $("#q-players"), qSheet = $("#q-sheet"), qPen = $("#q-pen"), qBand = $("#q-band");
+  var qMsg = $("#q-msg"), overBox = $("#q-over"), msgTimer = 0;
+  var DEFAULT_MSG = "Zahl antippen zum Ankreuzen, nur von links nach rechts. Das letzte Kreuz einer Reihe nimmst du durch erneutes Antippen zurück.";
+  function msg(text) {
+    qMsg.textContent = text;
+    clearTimeout(msgTimer);
+    msgTimer = setTimeout(function () { qMsg.textContent = DEFAULT_MSG; }, 4500);
+  }
+  qMsg.textContent = DEFAULT_MSG;
+
+  function lastCross(m) {
+    var l = -1;
+    m.forEach(function (i) { if (i < LOCK && i > l) l = i; });
+    return l;
+  }
+
+  function renderSheet() {
+    var p = S.view, s = S.sheets[p];
+
+    chips.hidden = S.players.length < 2;
+    chips.innerHTML = S.players.map(function (n, i) {
+      return '<button type="button" class="chip" data-view="' + i + '" aria-pressed="' + (i === p) + '">' + esc(n) + "</button>";
+    }).join("");
+
+    qSheet.innerHTML = COLORS.map(function (c) {
+      var m = s[c.key], last = lastCross(m), mine = m.indexOf(LOCK) !== -1;
+      var shut = closed(c.key) && !mine;
+      var cells = c.nums.map(function (num, i) {
+        var x = m.indexOf(i) !== -1, skip = !x && i < last;
+        return '<button type="button" class="qcell' + (x ? " x" : "") + (skip ? " skip" : "") + '" data-k="' + c.key + '" data-i="' + i +
+          '" aria-label="' + c.name + " " + num + (x ? ", angekreuzt" : skip ? ", übersprungen" : "") + '">' + (x ? "✕" : num) + "</button>";
+      }).join("");
+      cells += '<button type="button" class="qcell lock' + (mine ? " x" : "") + '" data-k="' + c.key + '" data-i="' + LOCK +
+        '" aria-label="Schloss ' + c.name + (mine ? ", geschlossen" : "") + '">' + LOCK_SVG + "</button>";
+      return '<div class="qrow ' + c.key + (shut ? " shut" : "") + '" role="group" aria-label="Reihe ' + c.name + '">' + cells + "</div>";
+    }).join("");
+
+    var pens = "";
+    for (var i = 0; i < 4; i++) {
+      var on = i < s.pen;
+      pens += '<button type="button" class="pen' + (on ? " x" : "") + '" data-pen="' + i + '" aria-label="Fehlwurf ' + (i + 1) + (on ? ", markiert" : "") + '">' + (on ? "✕" : "−5") + "</button>";
+    }
+    qPen.innerHTML = '<span class="label">Fehlwürfe</span>' + pens;
+
+    var t = sheetTotal(s);
+    qBand.innerHTML = COLORS.map(function (c, k) {
+      var n = s[c.key].length;  // inklusive Schloss
+      return '<div><span class="label">' + c.name + '</span><span class="v">' + t.rows[k] +
+        (n ? " <small>" + n + " ✕</small>" : "") + "</span></div>";
+    }).join("") +
+      '<div><span class="label">Fehlwürfe</span><span class="v">' + (t.pen ? "−" + t.pen : 0) + "</span></div>" +
+      '<div class="total"><span class="label">Gesamt</span><span class="v">' + signed(t.total) + "</span></div>";
+
+    if (gameOver()) {
+      var rank = S.players.map(function (n, i) { return { n: n, s: sheetTotal(S.sheets[i]).total }; })
+        .sort(function (a, b) { return b.s - a.s; });
+      overBox.innerHTML = '<p class="label">Spielende</p><ol>' + rank.map(function (r) {
+        return "<li>" + esc(r.n) + " · " + signed(r.s) + " Punkte</li>";
+      }).join("") + '</ol><button type="button" class="btn" id="q-again">Neues Spiel mit denselben Spielern</button>';
+      overBox.hidden = false;
+    } else {
+      overBox.hidden = true; overBox.innerHTML = "";
+    }
+  }
+
+  chips.addEventListener("click", function (e) {
+    var b = e.target.closest("[data-view]");
+    if (!b) return;
+    S.view = +b.dataset.view;
+    save(); renderSheet();
+  });
+
+  qSheet.addEventListener("click", function (e) {
+    var b = e.target.closest(".qcell");
+    if (!b) return;
+    var key = b.dataset.k, idx = +b.dataset.i, c = COLORS.filter(function (x) { return x.key === key; })[0];
+    var m = S.sheets[S.view][key], last = lastCross(m), crosses = m.filter(function (i) { return i < LOCK; }).length;
+
+    if (idx === LOCK) { msg("Das Schloss wird automatisch angekreuzt, wenn du das letzte Feld der Reihe ankreuzt."); return; }
+    if (m.indexOf(idx) !== -1) {
+      if (idx !== last) { msg("Zurücknehmen geht nur beim letzten Kreuz einer Reihe."); return; }
+      m.splice(m.indexOf(idx), 1);
+      if (idx === LAST && m.indexOf(LOCK) !== -1) m.splice(m.indexOf(LOCK), 1);
+      save(); render(); say(c.name + " " + c.nums[idx] + " zurückgenommen.");
+      return;
+    }
+    if (closed(key) && !(idx === LAST && crosses >= 5)) { msg("Die Reihe " + c.name + " ist geschlossen."); return; }
+    if (idx < last) { msg("Links vom letzten Kreuz kannst du nichts mehr ankreuzen."); return; }
+    if (idx === LAST && crosses < 5) { msg("Die " + c.nums[LAST] + " geht erst ab 5 Kreuzen in dieser Reihe."); return; }
+
+    m.push(idx);
+    if (idx === LAST) {
+      m.push(LOCK);
+      msg("Reihe " + c.name + " geschlossen: " + c.nums[LAST] + " und Schloss angekreuzt, also 2 Kreuze. Der Würfel " + c.name + " ist weggelegt.");
+    }
+    m.sort(function (a, b) { return a - b; });
+    save(); render(); say(c.name + " " + c.nums[idx] + " angekreuzt.");
+  });
+
+  qPen.addEventListener("click", function (e) {
+    var b = e.target.closest("[data-pen]");
+    if (!b) return;
+    var s = S.sheets[S.view], i = +b.dataset.pen;
+    s.pen = i < s.pen ? i : i + 1;
+    save(); render();
+  });
+
+  overBox.addEventListener("click", function (e) { if (e.target.id === "q-again") newGame(); });
+
+  /* ---------- Spieler ---------- */
+  var settings = $("#settings"), plist = $("#plist"), confirmBox = $("#confirm");
+  function renderPlayers() {
+    plist.innerHTML = S.players.map(function (n, p) {
+      return '<div class="prow"><input type="text" id="pname-' + p + '" value="' + esc(n) + '" maxlength="16" autocomplete="off" aria-label="Name von Spieler ' + (p + 1) + '">' +
+        (S.players.length > 1 ? '<button type="button" class="btn-ghost" data-remove="' + p + '">Entfernen</button>' : "") + "</div>";
+    }).join("");
+    $("#p-add").disabled = S.players.length >= 6;
+  }
+  plist.addEventListener("input", function (e) {
+    var m = /^pname-(\d+)$/.exec(e.target.id);
+    if (!m) return;
+    S.players[+m[1]] = e.target.value.trim() || "Spieler " + (+m[1] + 1);
+    save(); render();
+  });
+  plist.addEventListener("click", function (e) {
+    var b = e.target.closest("[data-remove]");
+    if (!b) return;
+    var p = +b.dataset.remove;
+    S.players.splice(p, 1); S.sheets.splice(p, 1);
+    if (S.view >= S.players.length) S.view = 0;
+    save(); renderPlayers(); render();
+  });
+  $("#p-add").addEventListener("click", function () {
+    if (S.players.length >= 6) return;
+    S.players.push("Spieler " + (S.players.length + 1));
+    S.sheets.push(blankSheet());
+    save(); renderPlayers(); render();
+    var inp = $("#pname-" + (S.players.length - 1));
+    if (inp) { inp.focus(); inp.select(); }
+  });
+  function newGame() {
+    var keepBlock = S.block;
+    S = fresh(S.players.slice());
+    S.block = keepBlock;
+    qWhiteDice.forEach(function (d) { showFace(d, 0); });
+    COLORS.forEach(function (c) { showFace(qColorDice[c.key], 0); });
+    save(); render(); goPage(0);
+    say("Neues Spiel.");
+  }
+  $("#new-game").addEventListener("click", function () { confirmBox.hidden = false; $("#confirm-no").focus(); });
+  $("#confirm-no").addEventListener("click", function () { confirmBox.hidden = true; });
+  $("#confirm-yes").addEventListener("click", function () { confirmBox.hidden = true; closeSettings(); newGame(); });
+  function openSettings() { renderPlayers(); confirmBox.hidden = true; settings.hidden = false; $("#settings-done").focus(); }
+  function closeSettings() { settings.hidden = true; $("#open-settings").focus(); }
+  $("#open-settings").addEventListener("click", openSettings);
+  $("#settings-done").addEventListener("click", closeSettings);
+  settings.addEventListener("click", function (e) { if (e.target === settings) closeSettings(); });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !settings.hidden) closeSettings(); });
+
+  /* ---------- Wischen zwischen Würfel und Block ---------- */
+  var pager = $("#pager"), tabs = document.querySelectorAll("[data-page]"), page = 0, raf = 0;
+  function setTabs(i) { tabs.forEach(function (t) { t.setAttribute("aria-selected", +t.dataset.page === i ? "true" : "false"); }); }
+  function goPage(i, instant) {
+    page = i; setTabs(i);
+    pager.scrollTo({ left: i * pager.clientWidth, behavior: instant || reduceMotion ? "auto" : "smooth" });
+  }
+  tabs.forEach(function (t) { t.addEventListener("click", function () { goPage(+t.dataset.page); }); });
+  pager.addEventListener("scroll", function () {
+    if (raf) return;
+    raf = requestAnimationFrame(function () {
+      raf = 0;
+      var i = Math.round(pager.scrollLeft / Math.max(1, pager.clientWidth));
+      if (i !== page) { page = i; setTabs(i); }
+    });
+  });
+  // Beim Drehen des Handys auf derselben Seite bleiben
+  window.addEventListener("resize", function () { pager.scrollLeft = page * pager.clientWidth; });
+
+  function render() {
+    COLORS.forEach(function (c) { if (closed(c.key)) showFace(qColorDice[c.key], 0); });
+    renderDice(); renderSheet();
+  }
+  /* ---------- Mit Block / Nur Würfel ---------- */
+  var app = $(".app"), modeBlock = $("#mode-block"), modePlain = $("#mode-plain");
+  function applyMode() {
+    var on = blockOn();
+    app.classList.toggle("noblock", !on);
+    modeBlock.setAttribute("aria-pressed", on ? "true" : "false");
+    modePlain.setAttribute("aria-pressed", on ? "false" : "true");
+    if (!on) { goPage(0, true); }
+  }
+  function setMode(on) { S.block = on; save(); applyMode(); render(); say(on ? "Mit Block." : "Nur Würfel."); }
+  modeBlock.addEventListener("click", function () { setMode(true); });
+  modePlain.addEventListener("click", function () { setMode(false); });
+  applyMode();
+
+  render();
+})();
+</script>
+</body>
+</html>

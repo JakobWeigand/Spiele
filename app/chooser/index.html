@@ -1,0 +1,483 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="app-version" content="1.0.0">
+<meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Spieleabend">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="apple-touch-icon" href="../icon-180.png">
+<link rel="icon" type="image/png" href="../icon-192.png">
+<title>Chooser</title>
+<link rel="stylesheet" href="../shared/base.css">
+<script src="../shared/shell.js"></script>
+<style>
+/* Chooser – Design nach Design/apple-design, Tokens aus ../shared/base.css (Hell/Dunkel automatisch).
+   Oben eine schmale Leiste mit der Anzahl, darunter die ganze Fläche für Finger.
+   Gewählt wird in der Akzentfarbe (Systemblau); die Fingerkreise haben weiche Farben. */
+:root {
+  --chosen: var(--accent);   /* gewählter Kreis und Flut; weiße Schrift darauf hat ≥ 4,5:1 */
+  /* Fingerfarben: weich, aber gut unterscheidbar */
+  --f1: #ff7a6e; --f2: #ffa834; --f3: #4cc777; --f4: #4fb8f0; --f5: #a98bf5; --f6: #f47fb0;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --chosen: #0a6ee6;       /* etwas tiefer als das dunkle Systemblau, damit weiße Schrift auf der Flut ≥ 4,5:1 hat */
+    --f1: #ff6961; --f2: #ffb340; --f3: #4cd775; --f4: #70d7ff; --f5: #c49bff; --f6: #ff7eb3;
+  }
+}
+:root[data-theme="dark"] {
+  --chosen: #0a6ee6;
+  --f1: #ff6961; --f2: #ffb340; --f3: #4cd775; --f4: #70d7ff; --f5: #c49bff; --f6: #ff7eb3;
+}
+
+html, body { height: 100%; }
+body {
+  font-size: 17px; line-height: 1.35; letter-spacing: -0.01em;
+  overflow: hidden; overscroll-behavior: none;
+  user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+}
+button, input { font: inherit; color: inherit; letter-spacing: inherit; }
+
+.app { display: flex; flex-direction: column; height: 100%; height: 100dvh; }
+
+/* Zurück-Knopf: schwebt oben links, mittig auf Höhe der Anzahl-Steuerung.
+   Solange Finger liegen, ist er ausgeblendet und nicht bedienbar (Klasse „away“ + inert). */
+.home-link.float {
+  top: calc(max(10px, env(safe-area-inset-top, 0px)) + 4px);
+  transition: opacity 0.2s ease;
+}
+.home-link.float.away { opacity: 0; pointer-events: none; }
+/* Schmale Geräte: nur der Pfeil als runder 44-px-Knopf, damit die Mitte frei bleibt */
+@media (max-width: 499px) {
+  .home-link.float {
+    top: max(10px, env(safe-area-inset-top, 0px));
+    left: calc(env(safe-area-inset-left, 0px) + 8px);
+    width: 44px; min-height: 44px; padding: 0; justify-content: center;
+  }
+  .home-link.float .txt { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+}
+
+/* Leiste: links Platz für den Zurück-Knopf, Anzahl mittig */
+.bar {
+  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px;
+  padding: max(10px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) 10px max(16px, env(safe-area-inset-left, 0px));
+  border-bottom: 0.5px solid var(--separator);
+}
+.pick { display: flex; align-items: center; gap: 8px; }
+.label {
+  margin: 0 4px 0 0; font-size: 13px; font-weight: 600; letter-spacing: 0.04em;
+  text-transform: uppercase; color: var(--label-2);
+}
+@media (max-width: 359px) {
+  .label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+}
+.step {
+  display: grid; place-items: center;
+  width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%;
+  background: var(--fill); color: var(--label);
+  font-size: 26px; font-weight: 500; line-height: 1; cursor: pointer;
+  touch-action: manipulation;
+  transition: transform 0.16s ease-out, background-color 0.16s ease-out;
+}
+/* Feedback sofort beim Drücken */
+.step:active:not(:disabled) { transform: scale(0.96); background: var(--fill-strong); transition-duration: 0.1s; }
+.step:disabled { opacity: 0.3; cursor: default; }
+#count {
+  width: 64px; height: 44px; padding: 0 4px; border: 0; border-radius: 999px;
+  background: var(--fill); color: var(--label); caret-color: var(--accent); text-align: center;
+  font-size: 22px; font-weight: 600; letter-spacing: -0.02em; font-variant-numeric: tabular-nums;
+  user-select: text; -webkit-user-select: text;
+  transition: box-shadow 0.16s ease-out;
+}
+#count:focus { outline: none; box-shadow: inset 0 0 0 2px var(--accent); }
+#count:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+/* Fläche für die Finger */
+.stage { position: relative; flex: 1; min-height: 0; touch-action: none; }
+#cv { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.status {
+  position: absolute; left: 16px; right: 16px; top: 20px; pointer-events: none;
+  display: grid; gap: 6px; justify-items: center; text-align: center;
+}
+.status .big {
+  margin: 0; font-size: clamp(26px, 7vmin, 40px); font-weight: 700; line-height: 1.1;
+  letter-spacing: -0.022em; text-wrap: balance;
+}
+.status .line { margin: 0; font-size: 15px; line-height: 1.35; letter-spacing: -0.01em; color: var(--label-2); text-wrap: balance; max-width: 34ch; }
+.status.done .big { color: var(--accent); }
+.status.flood .big, .status.flood .line { color: #ffffff; }
+.status.center { top: 50%; transform: translateY(-50%); }
+
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+@media (prefers-reduced-motion: reduce) {
+  .step, .step:active:not(:disabled) { transform: none; }
+}
+</style>
+</head>
+<body>
+<a class="home-link float" href="../" aria-label="Alle Spiele"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="txt">Spiele</span></a>
+<div class="app">
+  <header class="bar">
+    <h1 class="sr-only">Chooser</h1>
+    <span aria-hidden="true"></span>
+    <div class="pick" role="group" aria-label="Wie viele werden gewählt">
+      <span class="label">Wählen</span>
+      <button type="button" class="step" id="minus" aria-label="Einen weniger wählen">−</button>
+      <input id="count" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" value="1" aria-label="Anzahl, die gewählt wird">
+      <button type="button" class="step" id="plus" aria-label="Einen mehr wählen">+</button>
+    </div>
+    <span aria-hidden="true"></span>
+  </header>
+  <main class="stage" id="stage" aria-label="Fläche für die Finger">
+    <canvas id="cv"></canvas>
+    <div class="status center" id="status" aria-live="polite">
+      <p class="big" id="status-big">Finger auflegen</p>
+      <p class="line" id="status-line"></p>
+    </div>
+  </main>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var $ = function (s) { return document.querySelector(s); };
+
+  /* ---------- Zufall aus dem Betriebssystem, ohne Verzerrung ---------- */
+  var u32 = new Uint32Array(1);
+  function randInt(n) {
+    if (!(window.crypto && crypto.getRandomValues)) return Math.floor(Math.random() * n);
+    var limit = Math.floor(0x100000000 / n) * n;
+    do { crypto.getRandomValues(u32); } while (u32[0] >= limit);
+    return u32[0] % n;
+  }
+  function shuffle(a) {
+    for (var i = a.length - 1; i > 0; i--) { var j = randInt(i + 1), t = a[i]; a[i] = a[j]; a[j] = t; }
+    return a;
+  }
+
+  /* ---------- Finger-Zustand ---------- */
+  // phase: idle (keine Finger) · wait (zu wenige) · settle (Finger kommen noch) · count (Countdown) · done (gewählt)
+  var fingers = new Map(), phase = "idle", lastChange = 0, countStart = 0;
+  var SETTLE = 600, PULSES = 3, PULSE_MS = 1000, COUNT = PULSES * PULSE_MS;
+  var chosenAt = 0, flood = null, lastBeat = -1;
+
+  /* ---------- Anzahl, die gewählt wird (ohne Obergrenze) ---------- */
+  var KEY = "chooser-v1", k = 1;
+  try { var saved = JSON.parse(localStorage.getItem(KEY)); if (saved && saved.k >= 1) k = Math.floor(saved.k); } catch (e) {}
+  var countEl = $("#count"), minus = $("#minus"), plus = $("#plus");
+  function setK(v, keepInput) {
+    k = Math.max(1, Math.floor(v) || 1);
+    if (!keepInput) countEl.value = k;
+    minus.disabled = k <= 1;
+    try { localStorage.setItem(KEY, JSON.stringify({ v: 1, k: k })); } catch (e) {}
+    if (phase !== "done") changed();
+    updateStatus();
+  }
+  minus.addEventListener("click", function () { setK(k - 1); });
+  plus.addEventListener("click", function () { setK(k + 1); });
+  countEl.addEventListener("input", function () {
+    var digits = countEl.value.replace(/[^0-9]/g, "");
+    if (digits !== countEl.value) countEl.value = digits;
+    if (digits) setK(+digits, true);
+  });
+  countEl.addEventListener("blur", function () { setK(k); });
+  countEl.addEventListener("focus", function () { countEl.select(); });
+  countEl.addEventListener("keydown", function (e) { if (e.key === "Enter") countEl.blur(); });
+
+  /* ---------- Finger ---------- */
+  var stage = $("#stage"), cv = $("#cv"), ctx = cv.getContext("2d");
+  var palette = [], chosenColor = "#0068da", textColor = "#000000", bgColor = "#f2f2f7";
+  function readColors() {
+    var cs = getComputedStyle(document.documentElement);
+    palette = ["--f1", "--f2", "--f3", "--f4", "--f5", "--f6"].map(function (v) { return cs.getPropertyValue(v).trim(); });
+    chosenColor = cs.getPropertyValue("--chosen").trim();
+    textColor = cs.getPropertyValue("--label").trim();
+    bgColor = cs.getPropertyValue("--bg").trim();
+  }
+  readColors();
+  if (window.matchMedia) {
+    var mq = matchMedia("(prefers-color-scheme: dark)");
+    if (mq.addEventListener) mq.addEventListener("change", readColors);
+  }
+  // Erscheinungsbild per Einstellung (data-theme, gesetzt von shell.js) wechselt ohne Neuladen
+  if (window.MutationObserver) {
+    new MutationObserver(readColors).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+  }
+
+  /* ---------- Zurück-Knopf: gehört nicht zur Finger-Fläche ---------- */
+  // Er liegt außerhalb von #stage (eigenes Element über der Leiste), Berührungen darauf erreichen die Fläche nie.
+  // Solange Finger liegen, wird er ausgeblendet und per inert gesperrt, damit niemand mitten in der Runde rausfliegt.
+  var home = $(".home-link"), homeAway = false;
+  function isHome(e) { return !!(e.target && e.target.closest && e.target.closest(".home-link")); }
+  function syncHome() {
+    var away = fingers.size > 0;
+    if (!home || away === homeAway) return;
+    homeAway = away;
+    home.classList.toggle("away", away);
+    if (away) home.setAttribute("inert", ""); else home.removeAttribute("inert");
+  }
+
+  function freeColor() {
+    // Farbe, die gerade am seltensten benutzt wird
+    var used = palette.map(function () { return 0; });
+    fingers.forEach(function (f) { used[f.ci]++; });
+    var best = 0;
+    used.forEach(function (n, i) { if (n < used[best]) best = i; });
+    return best;
+  }
+  function pos(e) { var r = stage.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; }
+  function changed() { lastChange = performance.now(); if (phase === "count") phase = "settle"; }
+
+  stage.addEventListener("pointerdown", function (e) {
+    if (e.button > 0 || isHome(e)) return;
+    e.preventDefault();
+    if (document.activeElement === countEl) countEl.blur();
+    var p = pos(e);
+    fingers.set(e.pointerId, { x: p.x, y: p.y, ci: freeColor(), born: performance.now(), chosen: null, late: phase === "done" });
+    try { stage.setPointerCapture(e.pointerId); } catch (err) {}
+    if (phase !== "done") changed();
+    syncHome();
+    audio();
+  });
+  stage.addEventListener("pointermove", function (e) {
+    var f = fingers.get(e.pointerId);
+    if (!f) return;
+    var p = pos(e); f.x = p.x; f.y = p.y;
+  });
+  function lift(e) {
+    if (!fingers.has(e.pointerId)) return;
+    fingers.delete(e.pointerId);
+    if (phase !== "done") changed();
+    syncHome();
+  }
+  stage.addEventListener("pointerup", lift);
+  stage.addEventListener("pointercancel", lift);
+  // iOS: Scrollen, Zoomen und Lupe auf der Fläche verhindern (nie auf dem Zurück-Knopf, sonst kommt kein Tipp an)
+  ["touchstart", "touchmove", "touchend"].forEach(function (t) {
+    stage.addEventListener(t, function (e) { if (!isHome(e)) e.preventDefault(); }, { passive: false });
+  });
+
+  /* ---------- Auswahl ---------- */
+  function choose() {
+    var ids = shuffle(Array.from(fingers.keys()));
+    var pick = {};
+    ids.slice(0, k).forEach(function (id) { pick[id] = true; });
+    fingers.forEach(function (f, id) { f.chosen = !!pick[id]; });
+    phase = "done";
+    chosenAt = performance.now();
+    flood = null;
+    if (k === 1) fingers.forEach(function (f) { if (f.chosen) flood = f; });
+    if (navigator.vibrate) { try { navigator.vibrate([30, 60, 120]); } catch (e) {} }
+    chime();
+    updateStatus();
+  }
+
+  /* ---------- Kurzer Ton bei der Auswahl ---------- */
+  var ac = null;
+  function audio() {
+    try {
+      if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)();
+      if (ac.state === "suspended") ac.resume();
+    } catch (e) { ac = null; }
+    return ac;
+  }
+  function thump() {
+    var a = audio(); if (!a) return;
+    var o = a.createOscillator(), g = a.createGain(), t = a.currentTime;
+    o.type = "sine"; o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(70, t + 0.12);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.35, t + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
+    o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + 0.18);
+  }
+  function chime() {
+    var a = audio(); if (!a) return;
+    [660, 990].forEach(function (f, i) {
+      var o = a.createOscillator(), g = a.createGain(), t = a.currentTime + i * 0.09;
+      o.type = "sine"; o.frequency.value = f;
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.18, t + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.35);
+      o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + 0.4);
+    });
+  }
+
+  /* ---------- Status-Text ---------- */
+  var statusEl = $("#status"), big = $("#status-big"), line = $("#status-line"), lastStatus = "";
+  function updateStatus() {
+    var n = fingers.size, b = "", l = "", centered = false, done = false;
+    if (phase === "done") {
+      b = k === 1 ? "Gewählt!" : k + " gewählt!";
+      l = "Alle Finger loslassen für die nächste Runde.";
+      done = true;
+    } else if (n === 0) {
+      b = "Finger auflegen";
+      l = "Alle legen einen Finger aufs Display. Gewählt " + (k === 1 ? "wird 1 Person." : "werden " + k + " Personen.");
+      centered = true;
+    } else if (n <= k) {
+      b = "Noch " + (k + 1 - n) + " Finger";
+      l = "Für " + k + " Gewählte braucht es mindestens " + (k + 1) + " Finger.";
+    } else {
+      b = n + " Finger";
+      l = phase === "count" ? "Stillhalten …" : "Gleich geht es los. Alle Finger liegen lassen.";
+      if (phase === "count") b = "Gleich …";
+    }
+    var key = b + "|" + l + "|" + centered + "|" + done;
+    if (key === lastStatus) return;
+    lastStatus = key;
+    big.textContent = b; line.textContent = l;
+    statusEl.classList.toggle("center", centered);
+    statusEl.classList.toggle("done", done);
+    statusEl.classList.toggle("flood", done && k === 1);
+  }
+
+  /* ---------- Zeichnen ---------- */
+  var W = 0, H = 0, dpr = 1;
+  function resize() {
+    var r = stage.getBoundingClientRect();
+    dpr = Math.min(3, window.devicePixelRatio || 1);
+    W = r.width; H = r.height;
+    cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  window.addEventListener("resize", resize);
+  resize();
+
+  // Bewegung reduzieren: Pochen nur über Deckkraft, Flut und Auswahl als Überblenden
+  var rmq = window.matchMedia ? matchMedia("(prefers-reduced-motion: reduce)") : null;
+  var reduceMotion = !!(rmq && rmq.matches);
+  if (rmq && rmq.addEventListener) rmq.addEventListener("change", function () { reduceMotion = rmq.matches; });
+  // Zustand weiterschalten: läuft per Timer, damit die Auswahl auch ohne Animationsframes kommt
+  function step() {
+    var now = performance.now(), n = fingers.size;
+    if (phase === "done") { if (n === 0) phase = "idle"; }
+    else if (n === 0) phase = "idle";
+    else if (n <= k) phase = "wait";
+    else if (now - lastChange < SETTLE) phase = "settle";
+    else if (phase !== "count") { phase = "count"; countStart = now; lastBeat = -1; }
+    else if (now - countStart >= COUNT) choose();
+    if (phase === "count") {
+      var beat = Math.floor((now - countStart) / PULSE_MS);
+      if (beat !== lastBeat && beat < PULSES) {
+        lastBeat = beat; thump();
+        if (navigator.vibrate) { try { navigator.vibrate(18); } catch (e) {} }
+      }
+    }
+    updateStatus();
+    syncHome();
+  }
+  setInterval(step, 50);
+
+  // Kritisch gedämpfte Feder (Dämpfung 1.0): erreicht das Ziel zügig und ohne Nachschwingen.
+  // response in Sekunden wie bei Apple (ca. 0,3–0,5 s); Rückgabe 0 … 1.
+  function settle(ms, response) {
+    if (ms <= 0) return 0;
+    var w = 2 * Math.PI / response, t = ms / 1000;
+    return 1 - (1 + w * t) * Math.exp(-w * t);
+  }
+  // Lineares Überblenden über dur Millisekunden (für „Bewegung reduzieren“)
+  function fade(ms, dur) { return Math.max(0, Math.min(1, ms / dur)); }
+  function circle(x, y, r) { ctx.beginPath(); ctx.arc(x, y, Math.max(0, r), 0, Math.PI * 2); }
+
+  function frame(now) {
+    ctx.clearRect(0, 0, W, H);
+    var R = Math.max(38, Math.min(58, Math.min(W, H) * 0.11));
+    var breathe = reduceMotion ? 0 : Math.sin(now / 520) * 2;        // ruhiges Atmen beim Warten
+    var since = now - chosenAt, done = phase === "done";
+
+    // Herzschlag: pro Sekunde einmal größer und wieder kleiner (sin² ergibt ein weiches Hoch-Runter ohne Nachschwingen).
+    // Bei „Bewegung reduzieren“ bleibt die Größe gleich, der Schlag zeigt sich nur in der Deckkraft.
+    var beat = 0;
+    if (phase === "count") {
+      var p = ((now - countStart) % PULSE_MS) / PULSE_MS;
+      beat = Math.pow(Math.sin(Math.PI * Math.min(1, p / 0.55)), 2);  // Schlag in der ersten Hälfte, dann Ruhe
+    }
+    var swell = reduceMotion ? 0 : beat;
+
+    // Eine Person gewählt: die Akzentfarbe flutet vom Gewinnerfinger aus den Bildschirm (reduziert: Überblenden)
+    if (done && flood) {
+      ctx.fillStyle = chosenColor;
+      if (reduceMotion) {
+        ctx.globalAlpha = fade(since, 320);
+        ctx.fillRect(0, 0, W, H);
+        ctx.globalAlpha = 1;
+      } else {
+        var maxR = Math.hypot(Math.max(flood.x, W - flood.x), Math.max(flood.y, H - flood.y));
+        circle(flood.x, flood.y, maxR * 1.05 * settle(since, 0.55));
+        ctx.fill();
+      }
+    }
+
+    fingers.forEach(function (f) {
+      // Kreis erscheint sofort beim Auflegen und wächst ohne Überschwingen auf (reduziert: gleich in voller Größe)
+      var grow = reduceMotion ? 1 : settle(now - f.born, 0.3);
+      var r = R * (0.55 + 0.45 * grow);
+      var col = palette[f.ci] || textColor;
+      ctx.save();
+
+      if (done && !f.late) {
+        if (f.chosen) {
+          var g = reduceMotion ? 1 : settle(since, 0.45);
+          var show = reduceMotion ? fade(since, 320) : 1;
+          var rc = R * (1 + 0.3 * g);
+          // zwei Druckwellen nach außen (nicht bei „Bewegung reduzieren“)
+          if (!reduceMotion) {
+            [0, 160].forEach(function (delay) {
+              var t = (since - delay) / 750;
+              if (t <= 0 || t >= 1) return;
+              ctx.globalAlpha = (1 - t) * 0.8;
+              ctx.strokeStyle = flood ? "#ffffff" : chosenColor;
+              ctx.lineWidth = 8 * (1 - t) + 2;
+              circle(f.x, f.y, rc + t * R * 3.2); ctx.stroke();
+            });
+          }
+          ctx.globalAlpha = 1;
+          if (flood) {
+            // heller Hof in der Flut um den Finger (weiß, auch im Dunkeln), darin der gewählte Kreis
+            ctx.fillStyle = "#ffffff"; circle(f.x, f.y, rc + 14 + breathe); ctx.fill();
+          } else {
+            ctx.globalAlpha = 0.2 * show; ctx.fillStyle = chosenColor;
+            circle(f.x, f.y, rc + 18 + breathe * 2); ctx.fill();
+            ctx.globalAlpha = 1;
+          }
+          if (show < 1) { ctx.fillStyle = col; circle(f.x, f.y, rc); ctx.fill(); }  // reduziert: Fingerfarbe blendet in Akzent über
+          ctx.globalAlpha = show;
+          ctx.fillStyle = chosenColor; circle(f.x, f.y, rc); ctx.fill();
+          ctx.strokeStyle = flood ? "#ffffff" : bgColor; ctx.lineWidth = 6;
+          circle(f.x, f.y, rc * 0.58); ctx.stroke();
+        } else {
+          // nicht gewählt: sanft schrumpfen und verblassen (reduziert: nur verblassen)
+          var out = reduceMotion ? fade(since, 320) : settle(since, 0.35);
+          ctx.globalAlpha = 1 - 0.88 * out; ctx.fillStyle = col;
+          circle(f.x, f.y, r * (1 - (reduceMotion ? 0 : 0.3) * out)); ctx.fill();
+        }
+      } else if (f.late) {
+        ctx.strokeStyle = flood ? "#ffffff" : textColor; ctx.globalAlpha = 0.4; ctx.lineWidth = 3;
+        circle(f.x, f.y, r); ctx.stroke();
+      } else {
+        // Finger liegt: Kreis plus Ring. Beim Countdown pocht beides im Takt.
+        var rr = r * (1 + 0.07 * swell);
+        ctx.fillStyle = col;
+        ctx.globalAlpha = reduceMotion ? 0.72 + 0.28 * beat : 1;
+        circle(f.x, f.y, rr); ctx.fill();
+        ctx.strokeStyle = col; ctx.lineWidth = 5 + 3 * swell;
+        ctx.globalAlpha = 0.3 + 0.55 * beat;
+        circle(f.x, f.y, rr + 12 + breathe + 16 * swell); ctx.stroke();
+      }
+      ctx.restore();
+    });
+    requestAnimationFrame(frame);
+  }
+
+  setK(k);
+  requestAnimationFrame(frame);
+  // Offline-Speicher und Updates übernimmt ../shared/shell.js für die ganze App.
+})();
+</script>
+</body>
+</html>

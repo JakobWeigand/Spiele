@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="app-version" content="1.0.0">
+<meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f2f2f7">
+<meta name="color-scheme" content="light dark">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Spieleabend">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="description" content="Silbertablett: sechs Farbwürfel, Würfelfelder, Silbertablett und digitaler Block. Offline und zu zweit online.">
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="apple-touch-icon" href="../icon-180.png">
+<link rel="icon" type="image/png" href="../icon-192.png">
+<link rel="stylesheet" href="../shared/base.css">
+<link rel="stylesheet" href="app.css">
+<script src="../shared/shell.js"></script>
+<title>Silbertablett</title>
+</head>
+<body>
+<div class="app">
+  <header class="head material">
+    <div class="titlebar">
+      <div class="title-group">
+        <a class="home-link compact" href="../" aria-label="Alle Spiele"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="txt">Spiele</span></a>
+        <h1 class="title">Silbertablett</h1>
+      </div>
+      <div class="head-actions">
+        <button class="pill" id="room-btn" type="button" data-state="off" aria-haspopup="dialog">
+          <span class="dot" aria-hidden="true"></span><span id="room-label">Zusammen</span>
+        </button>
+      </div>
+    </div>
+    <div class="seg" id="view-seg" role="tablist" aria-label="Ansicht wählen">
+      <button id="view-dice" type="button" role="tab" aria-selected="true">Würfeln</button>
+      <button id="view-block" type="button" role="tab" aria-selected="false">Block</button>
+    </div>
+  </header>
+
+  <main id="main">
+    <!-- Nicht genutzt: Die gemeinsame Würfellogik erwartet diese Elemente -->
+    <section class="mode" id="kniffel" aria-hidden="true" hidden>
+      <div class="status">
+        <div class="status-block">
+          <p class="label">Zug</p>
+          <div class="turn"><span id="k-turn">1</span> <small>/ 13</small></div>
+        </div>
+        <div class="status-block right">
+          <p class="label">Würfe übrig</p>
+          <div class="throws" id="k-throws" aria-hidden="true">
+            <span class="box on"></span><span class="box on"></span><span class="box on"></span>
+            <span class="count" id="k-left">3</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="kdice" id="k-dice"></div>
+
+      <p class="hint" id="k-hint">Würfle zuerst. Danach tippst du einen Würfel an, um ihn zu halten.</p>
+
+      <div class="tiles">
+        <div class="tile">
+          <p class="label">Augensumme</p>
+          <div class="value" id="k-sum">–</div>
+        </div>
+        <div class="tile">
+          <p class="label">Bester Wurf</p>
+          <div class="value" id="k-best">–</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="mode" id="quixx" aria-hidden="true" hidden>
+      <div class="qwhite" id="q-white">
+        <div class="sum" aria-live="polite">
+          <span class="label">Weiß + Weiß</span>
+          <span class="big" id="q-sum">–</span>
+        </div>
+      </div>
+
+      <div class="qcolor" id="q-color"></div>
+
+      <p class="hint">Ist eine Farbreihe geschlossen, tippe den Farbwürfel an, um ihn wegzulegen.</p>
+
+      <div class="list">
+        <table aria-label="Kombinationen aus weißem und farbigem Würfel">
+          <thead>
+            <tr><th scope="col">Farbe</th><th scope="col">Weiß 1 +</th><th scope="col">Weiß 2 +</th></tr>
+          </thead>
+          <tbody id="q-table"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Silbertablett: Würfel -->
+    <section class="mode" id="clever" aria-label="Würfeln" hidden>
+      <div class="status">
+        <button class="who" id="c-who" type="button" aria-haspopup="dialog">
+          <span class="label" id="c-who-label">Runde 1 / 6 · am Zug</span>
+          <span class="name" id="c-name">Spieler 1</span>
+        </button>
+        <div class="status-block right">
+          <p class="label">Würfe übrig</p>
+          <div class="throws" id="c-throws" aria-hidden="true">
+            <span class="box on"></span><span class="box on"></span><span class="box on"></span>
+            <span class="count" id="c-left">3</span>
+          </div>
+        </div>
+      </div>
+
+      <p class="banner" id="c-banner" hidden></p>
+
+      <div class="cdice" id="c-cup"></div>
+
+      <div class="crow">
+        <div>
+          <p class="label">Würfelfelder</p>
+          <div class="cslots" id="c-slots"></div>
+        </div>
+        <div class="bw" aria-live="polite">
+          <span class="label">Blau + Weiß</span>
+          <span class="big" id="c-bw">–</span>
+        </div>
+      </div>
+
+      <div class="tray-wrap">
+        <p class="label">Silbertablett</p>
+        <div class="tray" id="c-tray"><p class="tray-empty" id="c-tray-empty">leer</p></div>
+      </div>
+
+      <div>
+        <p class="hint" id="c-hint"></p>
+        <button class="linkbtn" id="c-skip" type="button" hidden>Keinen nehmen – Wurf verfällt</button>
+      </div>
+    </section>
+
+    <!-- Blöcke (js/blaetter.js) -->
+    <section class="block" id="blk-clever" aria-label="Block" hidden></section>
+  </main>
+
+  <footer class="bar material" id="bar-kniffel" hidden>
+    <button class="btn btn-secondary" id="k-next" type="button">Nächster Zug</button>
+    <button class="btn btn-primary" id="k-roll" type="button">Würfeln</button>
+  </footer>
+  <footer class="bar single material" id="bar-quixx" hidden>
+    <button class="btn btn-primary" id="q-roll" type="button">Alle 6 würfeln</button>
+  </footer>
+  <footer class="bar material" id="bar-clever" hidden>
+    <button class="btn btn-secondary" id="c-alt" type="button">Rückgängig</button>
+    <button class="btn btn-primary" id="c-main" type="button">Würfeln</button>
+  </footer>
+  <footer class="bar material" id="bar-block" hidden>
+    <button class="btn btn-secondary" id="blk-new" type="button">Neuer Block</button>
+    <button class="btn btn-primary" id="blk-players" type="button" aria-haspopup="dialog">Spieler</button>
+  </footer>
+
+  <div class="sr-only" aria-live="polite" id="announce"></div>
+</div>
+
+<!-- Zusammen spielen -->
+<dialog class="sheet" id="room-dlg" aria-labelledby="room-title">
+  <div class="scrim"></div>
+  <div class="panel" tabindex="-1" autofocus>
+    <div class="grab">
+      <div class="sheet-head">
+        <h2 id="room-title">Zusammen spielen</h2>
+        <button class="linkbtn strong" type="button" data-close>Fertig</button>
+      </div>
+    </div>
+    <div class="sheet-body">
+      <div class="group" id="room-off">
+        <p>Alle Handys im selben Raum sehen dieselben Würfel, live und auch aus der Ferne. Würfeln kann jedes Handy.</p>
+        <button class="btn btn-primary" id="room-create" type="button">Neuen Raum erstellen</button>
+        <p class="or label">oder</p>
+        <div class="field">
+          <label class="label" for="room-code">Raumcode eingeben</label>
+          <div class="join">
+            <input class="text code-in" id="room-code" maxlength="8" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="K7QMX">
+            <button class="btn btn-secondary" id="room-join" type="button">Beitreten</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="group" id="room-on" hidden>
+        <div class="field">
+          <p class="label">Raumcode</p>
+          <div class="code-big" id="room-code-big">–</div>
+        </div>
+        <div class="conn" id="room-conn" data-state="connecting"><span class="dot" aria-hidden="true"></span><span id="room-conn-text">Verbinde …</span></div>
+        <p id="room-share-hint">Schick den Link an deine Mitspieler. Wer ihn öffnet, ist sofort im Raum.</p>
+        <div class="row2">
+          <button class="btn btn-secondary" id="room-leave" type="button">Raum verlassen</button>
+          <button class="btn btn-primary" id="room-share" type="button">Link teilen</button>
+        </div>
+        <p class="small">Die Würfel laufen über öffentliche Server (HiveMQ und EMQX). Teile den Code nur mit deinen Mitspielern. Der Block bleibt auf deinem Gerät.</p>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<!-- Spieler der Würfelrunde -->
+<dialog class="sheet" id="c-setup" aria-labelledby="cs-title">
+  <div class="scrim"></div>
+  <div class="panel" tabindex="-1" autofocus>
+    <div class="grab">
+      <div class="sheet-head">
+        <h2 id="cs-title">Würfelrunde</h2>
+        <button class="linkbtn" type="button" data-close>Abbrechen</button>
+      </div>
+    </div>
+    <div class="sheet-body">
+      <div class="field">
+        <p class="label" id="cs-count-label">Spieler</p>
+        <div class="seg" role="radiogroup" aria-labelledby="cs-count-label" id="cs-count">
+          <button type="button" role="radio" data-n="1">1</button>
+          <button type="button" role="radio" data-n="2">2</button>
+          <button type="button" role="radio" data-n="3">3</button>
+          <button type="button" role="radio" data-n="4">4</button>
+        </div>
+        <p class="small" id="cs-rounds">6 Runden</p>
+      </div>
+      <div class="field">
+        <label class="label" for="cs-n0">Namen in Spielreihenfolge</label>
+        <input class="text" id="cs-n0" maxlength="16" autocomplete="off">
+        <input class="text" id="cs-n1" maxlength="16" autocomplete="off" aria-label="Spieler 2">
+        <input class="text" id="cs-n2" maxlength="16" autocomplete="off" aria-label="Spieler 3">
+        <input class="text" id="cs-n3" maxlength="16" autocomplete="off" aria-label="Spieler 4">
+      </div>
+      <div class="row2">
+        <button class="btn btn-secondary" id="cs-save" type="button">Namen übernehmen</button>
+        <button class="btn btn-primary" id="cs-new" type="button">Neues Spiel</button>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<!-- Block: Spieler -->
+<dialog class="sheet" id="players-dlg" aria-labelledby="pl-title">
+  <div class="scrim"></div>
+  <div class="panel" tabindex="-1" autofocus>
+    <div class="grab">
+      <div class="sheet-head">
+        <h2 id="pl-title">Spieler</h2>
+        <button class="linkbtn" type="button" data-close>Abbrechen</button>
+      </div>
+    </div>
+    <div class="sheet-body">
+      <div class="field">
+        <p class="label" id="pl-count-label">Anzahl</p>
+        <div class="seg" role="radiogroup" aria-labelledby="pl-count-label" id="pl-count"></div>
+      </div>
+      <div class="field" id="pl-names-wrap">
+        <p class="label">Namen</p>
+        <div class="field" id="pl-names"></div>
+      </div>
+      <button class="btn btn-primary" id="pl-save" type="button">Übernehmen</button>
+      <p class="small">Die Namen bleiben auf diesem Gerät.</p>
+    </div>
+  </div>
+</dialog>
+
+<!-- Wert eintragen -->
+<dialog class="sheet" id="pick-dlg" aria-labelledby="pick-title">
+  <div class="scrim"></div>
+  <div class="panel" tabindex="-1" autofocus>
+    <div class="grab">
+      <div class="sheet-head">
+        <h2 id="pick-title">Eintragen</h2>
+        <button class="linkbtn" type="button" data-close>Abbrechen</button>
+      </div>
+    </div>
+    <div class="sheet-body">
+      <p class="small" id="pick-sub" hidden></p>
+      <button class="suggest" id="pick-suggest" type="button" hidden><span></span><b></b></button>
+      <div class="picks" id="pick-grid"></div>
+      <button class="btn btn-danger sm" id="pick-clear" type="button" hidden>Eintrag löschen</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- Bestätigen -->
+<dialog class="sheet" id="confirm-dlg" role="alertdialog" aria-labelledby="confirm-title" aria-describedby="confirm-text">
+  <div class="scrim"></div>
+  <div class="panel" tabindex="-1" autofocus>
+    <div class="grab">
+      <div class="sheet-head"><h2 id="confirm-title">Sicher?</h2></div>
+    </div>
+    <div class="sheet-body">
+      <p id="confirm-text"></p>
+      <button class="btn btn-danger" id="confirm-ok" type="button">Löschen</button>
+      <button class="btn btn-secondary" id="confirm-cancel" type="button" data-close>Abbrechen</button>
+    </div>
+  </div>
+</dialog>
+
+
+<script src="js/ui.js"></script>
+<script src="js/wuerfel.js"></script>
+<script src="js/blaetter.js"></script>
+</body>
+</html>

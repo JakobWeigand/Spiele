@@ -71,7 +71,7 @@ a:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
 
   <section>
     <h2>Speicher auf deinem Gerät</h2>
-    <p>Die Apps speichern Spielstand, Einstellungen und eingegebene Namen im Speicher deines Browsers. Außerdem legt jede App eine Offline-Kopie von sich selbst an. Diese Daten bleiben auf deinem Gerät und werden nicht übertragen.</p>
+    <p>Die Apps speichern Spielstand, Einstellungen und eingegebene Namen im Speicher deines Browsers. Außerdem legt jede App eine Offline-Kopie von sich selbst an; die Gesamt-App „Spieleabend“ speichert dabei alle Spiele auf einmal und sucht regelmäßig nach Updates, indem sie die Versionsdatei bei GitHub Pages abruft. Diese Daten bleiben auf deinem Gerät und werden nicht übertragen.</p>
     <p>Das Speichern ist für die Funktion nötig, die du nutzt. Deshalb braucht es dafür keine Einwilligung (§ 25 Abs. 2 Nr. 2 TDDDG). Löschen kannst du alles in den Einstellungen deines Browsers bei den Website-Daten von jakobweigand.github.io.</p>
   </section>
 
@@ -93,6 +93,12 @@ a:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
   </section>
 
   <section>
+    <h2>Zusammen spielen beim Silbertablett</h2>
+    <p>Erst wenn du im Silbertablett auf „Zusammen“ tippst und einen Raum erstellst oder beitrittst, verbindet sich die App mit zwei öffentlichen MQTT-Servern: broker.hivemq.com (HiveMQ GmbH) und broker.emqx.io (EMQ Technologies). Beide werden parallel genutzt, damit ein Ausfall nicht stört.</p>
+    <p>Übertragen werden der Raumcode, eine zufällige Geräte-ID, der Würfelstand und die Namen der Würfelrunde. Die Verbindung zum Server ist per TLS verschlüsselt, die Inhalte selbst aber nicht: Die Betreiber und alle, die den Raumcode kennen, können den Würfelstand lesen. Der letzte Stand bleibt auf den Servern gespeichert, bis er überschrieben wird. Die Server erfahren außerdem deine IP-Adresse. Wo die Server stehen, geben die Betreiber für den öffentlichen Zugang nicht genau an; eine Verarbeitung außerhalb der EU ist möglich. Der digitale Block wird nie übertragen.</p>
+  </section>
+
+  <section>
     <h2>Rechtsgrundlage der Online-Funktionen</h2>
     <p>Die Online-Funktionen nutzt du freiwillig und auf eigenen Wunsch. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO, weil die Verarbeitung für die von dir gewünschte Funktion nötig ist. Soweit Daten dabei in Länder außerhalb der EU gehen, geschieht das aus demselben Grund (Art. 49 Abs. 1 lit. b DSGVO). Alle Spiele funktionieren auch ohne Online-Funktion.</p>
   </section>
@@ -100,10 +106,10 @@ a:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
   <section>
     <h2>Deine Rechte</h2>
     <p>Du hast das Recht auf Auskunft, Berichtigung, Löschung, Einschränkung der Verarbeitung, Datenübertragbarkeit und Widerspruch (Art. 15 bis 21 DSGVO). Außerdem kannst du dich bei einer Datenschutz-Aufsichtsbehörde beschweren (Art. 77 DSGVO).</p>
-    <p>Der Betreiber dieser Seiten hat keinen eigenen Server und speichert keine Daten über dich. Für Daten bei GitHub, PeerJS, Google oder ntfy.sh wende dich bitte direkt an diese Anbieter.</p>
+    <p>Der Betreiber dieser Seiten hat keinen eigenen Server und speichert keine Daten über dich. Für Daten bei GitHub, PeerJS, Google, ntfy.sh, HiveMQ oder EMQ wende dich bitte direkt an diese Anbieter.</p>
   </section>
 
-  <p class="foot">Stand 9. Oktober 2026 · <a href="./">Zur Startseite</a></p>
+  <p class="foot">Stand 10. Oktober 2026 · <a href="./">Zur Startseite</a></p>
 </main>
 </body>
 </html>

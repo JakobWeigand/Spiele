@@ -1,0 +1,771 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="app-version" content="1.0.0">
+<meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Spieleabend">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="apple-touch-icon" href="../icon-180.png">
+<link rel="icon" type="image/png" href="../icon-192.png">
+<title>Heiß &amp; Kalt</title>
+<link rel="stylesheet" href="../shared/base.css">
+<script src="../shared/shell.js"></script>
+<style>
+/* Heiß & Kalt im Apple-Stil (Design/apple-design): Farben, Schrift und Hell/Dunkel kommen aus ../shared/base.css.
+   Oben der Hinweis als Skala zwischen zwei Gegensätzen, darunter 16 Begriffe im 4×4-Raster.
+   Signalfarben: Blau für das Geheimwort und den gewählten Hinweis, Rot für Streichen und Verlieren, Grün für Gewinnen.
+   Volle Farbflächen mit weißer Schrift nutzen in beiden Modi dieselben Töne, damit der Kontrast immer ≥ 4,5:1 bleibt. */
+:root {
+  --solid-accent: #0068da;   /* Geheimwort, Hauptknopf */
+  --solid-hot: #d70015;      /* Streichen, verloren */
+  --solid-win: #1f7a3a;      /* gewonnen */
+  --tint-text: var(--blue);  /* blaue Schrift auf grauen Flächen: etwas kräftiger als --accent, damit ≥ 4,5:1 */
+  --pad-l: max(16px, env(safe-area-inset-left, 0px));
+  --pad-r: max(16px, env(safe-area-inset-right, 0px));
+  --press: transform 0.1s ease-out;
+}
+
+html, body { height: 100%; }
+body {
+  font-size: 16px; line-height: 1.35; letter-spacing: -0.01em; overflow: hidden;
+  user-select: none; -webkit-user-select: none;
+}
+button, input { letter-spacing: inherit; }
+
+.app { display: flex; flex-direction: column; height: 100%; height: 100dvh; max-width: 620px; margin: 0 auto; padding-top: env(safe-area-inset-top, 0px); }
+
+/* ---------- Kopfzeile: Zurück links, Online rechts, darunter großer Titel ---------- */
+.top {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: "back net" "title title" "meta meta";
+  align-items: center; gap: 0 12px; padding: 4px var(--pad-r) 8px var(--pad-l);
+}
+/* Bleibt über dem Sichtschutz sichtbar und bedienbar (die Kopfzeile bildet bewusst keinen eigenen Stapelkontext). */
+.top .home-link { grid-area: back; justify-self: start; position: relative; z-index: 16; }
+h1 { grid-area: title; margin: 2px 0 0; font-size: 30px; font-weight: 700; line-height: 1.1; letter-spacing: -0.025em; }
+.meta { grid-area: meta; margin: 4px 0 0; font-size: 15px; color: var(--label-2); letter-spacing: -0.005em; }
+.meta strong { color: var(--label); font-weight: 600; }
+.btn-ghost {
+  grid-area: net; justify-self: end;
+  min-height: 36px; padding: 0 14px; border: 0; border-radius: 999px;
+  background: var(--fill); color: var(--tint-text); font-size: 15px; font-weight: 600; cursor: pointer;
+  transition: var(--press), background-color 0.2s ease;
+}
+.btn-ghost:active { transform: scale(0.96); background: var(--fill-strong); }
+@media (max-width: 340px) { .top .home-link .txt { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; } }
+
+.main {
+  flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  padding: 6px var(--pad-r) 16px var(--pad-l); display: grid; gap: 14px; align-content: start;
+}
+.side { display: grid; gap: 12px; align-content: start; min-width: 0; }
+.label { margin: 0 0 -4px; padding: 0 4px; font-size: 13px; font-weight: 600; line-height: 1.3; letter-spacing: 0; color: var(--label-2); }
+.hint { margin: 0; padding: 0 4px; font-size: 15px; color: var(--label-2); text-wrap: balance; }
+.hint strong { color: var(--label); font-weight: 600; }
+
+/* Farbige Karte: Geheimwort (blau), gewonnen (grün), verloren (rot) */
+.band {
+  background: var(--solid-accent); color: #ffffff; padding: 12px 16px 14px; border-radius: var(--r-lg);
+  display: grid; gap: 2px; box-shadow: var(--shadow-md);
+}
+.band .label { margin: 0; padding: 0; color: #ffffff; opacity: 0.9; }
+.band .word-big { margin: 0; font-size: clamp(26px, 7vw, 34px); font-weight: 700; line-height: 1.1; letter-spacing: -0.025em; overflow-wrap: anywhere; }
+.band .sub { margin: 2px 0 0; font-size: 15px; color: #ffffff; opacity: 0.92; }
+.band.won { background: var(--solid-win); }
+.band.lost { background: var(--solid-hot); }
+
+/* ---------- Hinweis-Skala: vier Stufen als segmentierte Auswahl ---------- */
+.scale { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr) minmax(0, 1fr); align-items: center; gap: 10px; }
+.pole { font-size: 16px; font-weight: 600; line-height: 1.15; letter-spacing: -0.01em; overflow-wrap: anywhere; }
+.pole.r { text-align: right; }
+.cells { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; padding: 2px; border-radius: 10px; background: var(--fill); }
+.cell { height: 22px; padding: 0; border: 0; border-radius: 8px; background: transparent; }
+.cell.on { background: var(--accent-fill); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.14); }
+button.cell { height: 40px; cursor: pointer; transition: var(--press), background-color 0.2s ease; }
+button.cell:not(.on) { background: var(--surface); box-shadow: inset 0 0 0 0.5px var(--separator); }
+button.cell:active { transform: scale(0.94); }
+button.cell.on { background: var(--accent-fill); }
+.clue { display: grid; gap: 8px; padding: 12px 14px; background: var(--surface); border-radius: var(--r-md); box-shadow: var(--shadow-sm); }
+.clue .say { margin: 0; font-size: 18px; font-weight: 600; letter-spacing: -0.015em; text-align: center; }
+.clue.small { padding: 8px 12px; gap: 4px; }
+.clue.small .pole { font-size: 14px; font-weight: 500; }
+.clue.small .cell { height: 12px; border-radius: 6px; }
+.clue.small .cells { border-radius: 8px; }
+.clue.small .say { font-size: 14px; font-weight: 400; letter-spacing: 0; color: var(--label-2); }
+.history { display: grid; gap: 6px; }
+
+/* ---------- Gegensatzpaare zur Auswahl ---------- */
+.pairs { display: grid; gap: 8px; }
+.pair-btn {
+  min-height: 50px; padding: 6px 14px; border: 0; border-radius: var(--r-md);
+  background: var(--surface); color: var(--label); box-shadow: var(--shadow-sm);
+  font-size: 17px; font-weight: 600; letter-spacing: -0.015em; cursor: pointer;
+  transition: var(--press), background-color 0.2s ease;
+}
+.pair-btn:active { transform: scale(0.97); }
+.pair-btn[aria-pressed="true"] { background: color-mix(in srgb, var(--accent) 14%, var(--surface)); box-shadow: inset 0 0 0 2px var(--accent); }
+.link-btn {
+  justify-self: start; min-height: 44px; padding: 0 4px; border: 0; background: none;
+  color: var(--accent); font-size: 15px; font-weight: 600; cursor: pointer; transition: opacity 0.15s ease;
+}
+.link-btn:active { opacity: 0.4; }
+
+/* ---------- 16 Begriffe ---------- */
+.grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; align-content: start; align-self: start; }
+.word {
+  min-height: 58px; padding: 6px 4px; border: 0; border-radius: var(--r-md); background: var(--surface); color: var(--label);
+  box-shadow: var(--shadow-sm);
+  font-size: clamp(13px, 3.5vw, 16px); font-weight: 600; line-height: 1.15; letter-spacing: -0.01em; cursor: pointer;
+  overflow-wrap: anywhere; hyphens: auto; -webkit-hyphens: auto;
+  transition: var(--press), opacity 0.25s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+}
+.word:active:not(:disabled) { transform: scale(0.96); }
+.word:disabled { cursor: default; }
+.word.removed { opacity: 0.3; text-decoration: line-through; box-shadow: none; background: var(--fill); }
+.word.marked {
+  background: color-mix(in srgb, var(--red) 12%, var(--surface)); color: var(--label);
+  box-shadow: inset 0 0 0 2.5px var(--red); text-decoration: line-through 2px var(--red);
+}
+.word.secret { background: var(--solid-accent); color: #ffffff; box-shadow: var(--shadow-md); }
+.word.secret.removed { opacity: 1; background: var(--solid-hot); color: #ffffff; }
+.grid.pick .word:not(.removed) { box-shadow: inset 0 0 0 2px var(--accent), var(--shadow-sm); }
+
+/* ---------- Leiste unten ---------- */
+.bar {
+  display: grid; grid-template-columns: 1fr; gap: 10px;
+  padding: 10px var(--pad-r) calc(12px + env(safe-area-inset-bottom, 0px)) var(--pad-l);
+  border-top: 0.5px solid var(--separator); background: var(--bg);
+}
+.bar.two { grid-template-columns: 1fr 1.4fr; }
+.btn {
+  min-height: 56px; border: 0; border-radius: 14px; cursor: pointer;
+  font-size: 17px; font-weight: 600; letter-spacing: -0.015em; line-height: 1.15; padding: 0 14px;
+  transition: var(--press), opacity 0.2s ease, background-color 0.2s ease;
+}
+.btn:active:not(:disabled) { transform: scale(0.97); }
+.btn:disabled { opacity: 0.4; cursor: default; }
+.btn-primary { background: var(--solid-accent); color: #ffffff; }
+.btn-secondary { background: var(--surface); color: var(--tint-text); box-shadow: var(--shadow-sm); }
+.btn-danger { background: var(--solid-hot); color: #ffffff; }
+.panel .btn-secondary { background: var(--surface-raised); }   /* im Sheet eine Stufe heller, sonst verschwindet der Knopf im Dunkelmodus */
+
+/* ---------- Online-Dialog: Sheet von unten, auf breiten Bildschirmen und quer als Karte ---------- */
+.overlay { position: fixed; inset: 0; z-index: 20; background: var(--scrim); display: flex; align-items: flex-end; justify-content: center; }
+.panel {
+  width: 100%; max-width: 600px; max-height: calc(100% - env(safe-area-inset-top, 0px) - 24px); overflow-y: auto; overscroll-behavior: contain;
+  background: var(--surface-sheet); border-radius: 14px 14px 0 0; box-shadow: var(--shadow-lg);
+  padding: 22px var(--pad-r) calc(18px + env(safe-area-inset-bottom, 0px)) var(--pad-l); display: grid; gap: 12px;
+}
+.overlay:not([hidden]) { animation: hk-fade 0.25s ease-out; }
+.overlay:not([hidden]) .panel { animation: hk-sheet 0.42s cubic-bezier(0.32, 0.72, 0, 1); }
+@keyframes hk-fade { from { background: transparent; } }
+@keyframes hk-sheet { from { transform: translateY(100%); } }
+@keyframes hk-pop { from { transform: scale(0.94); opacity: 0; } }
+.panel h2 { margin: 0; font-size: 22px; font-weight: 700; line-height: 1.15; letter-spacing: -0.02em; }
+.panel .label { margin: 4px 0 -6px; }
+#net-code-box, #net-join-box { display: grid; gap: 8px; }
+#net-code-box .label, #net-join-box .label { margin: 4px 0 0; }
+.note { margin: 0; font-size: 15px; color: var(--label-2); }
+.note a { color: var(--accent); text-underline-offset: 3px; }
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.field {
+  min-height: 50px; width: 100%; padding: 0 14px; font-size: 17px; color: var(--label); background: var(--surface-raised);
+  border: 0; border-radius: 12px; box-shadow: inset 0 0 0 0.5px var(--separator);
+  user-select: text; -webkit-user-select: text;
+}
+.field::placeholder { color: var(--label-3); }
+#join-code { text-transform: uppercase; letter-spacing: 0.12em; text-align: center; font-size: 24px; font-weight: 700; }
+.row { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+.row .btn { min-height: 50px; border-radius: 12px; }
+.code {
+  margin: 0; padding: 10px; background: var(--surface-raised); border-radius: var(--r-md); box-shadow: var(--shadow-sm);
+  text-align: center; font-size: 44px; font-weight: 700; letter-spacing: 0.16em; font-variant-numeric: tabular-nums;
+}
+#net-status:empty { display: none; }
+@media (min-width: 700px), (orientation: landscape) and (max-height: 520px) {
+  .overlay { align-items: center; padding: max(12px, env(safe-area-inset-top, 0px)) var(--pad-r) max(12px, env(safe-area-inset-bottom, 0px)) var(--pad-l); }
+  .panel { max-width: 460px; max-height: 100%; border-radius: var(--r-xl); padding: 22px 20px 18px; }
+  .overlay:not([hidden]) .panel { animation: hk-pop 0.3s cubic-bezier(0.32, 0.72, 0, 1); }
+}
+
+/* ---------- Sichtschutz an einem Handy ---------- */
+.cover {
+  position: fixed; inset: 0; z-index: 15; background: var(--bg); color: var(--label);
+  display: grid; place-content: center; justify-items: center; gap: 14px; text-align: center;
+  padding: calc(env(safe-area-inset-top, 0px) + 64px) var(--pad-r) calc(env(safe-area-inset-bottom, 0px) + 24px) var(--pad-l);
+  overflow-y: auto;
+}
+.cover h2 { margin: 0; font-size: 28px; font-weight: 700; line-height: 1.15; letter-spacing: -0.022em; text-wrap: balance; }
+.cover p { margin: 0; max-width: 26em; font-size: 17px; color: var(--label-2); text-wrap: balance; }
+.cover .btn { margin-top: 8px; min-width: min(280px, 100%); background: var(--solid-accent); color: #ffffff; }
+.cover:not([hidden]) > * { animation: hk-pop 0.3s cubic-bezier(0.32, 0.72, 0, 1); }
+
+.rules {
+  margin: 0; padding: 12px 16px 12px 34px; display: grid; gap: 8px;
+  background: var(--surface); border-radius: var(--r-md); box-shadow: var(--shadow-sm);
+  color: var(--label); font-size: 15px;
+}
+.rules li::marker { color: var(--label-2); font-weight: 600; }
+.stats { margin: 0; padding: 0 4px; font-size: 13px; color: var(--label-2); letter-spacing: 0; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* ---------- Querformat: Kopf in einer Zeile, Begriffe links ---------- */
+@media (orientation: landscape) and (max-height: 520px) {
+  .app { max-width: none; }
+  .top { grid-template-columns: auto auto minmax(0, 1fr) auto; grid-template-areas: "back title meta net"; gap: 0 14px; padding-block: 2px 4px; }
+  h1 { margin: 0; font-size: 20px; letter-spacing: -0.02em; white-space: nowrap; }
+  .meta { margin: 0; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .main { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); column-gap: 20px; }
+  .word { min-height: 48px; }
+  .grid { order: -1; }
+  .bar { padding-block: 8px calc(8px + env(safe-area-inset-bottom, 0px)); }
+  .btn { min-height: 48px; }
+  .cover { padding-top: calc(env(safe-area-inset-top, 0px) + 52px); }
+}
+
+/* Bewegung reduzieren: Überblenden statt Gleiten, kein Skalieren */
+@media (prefers-reduced-motion: reduce) {
+  .overlay:not([hidden]) .panel, .cover:not([hidden]) > * { animation: hk-fade-in 0.2s ease; }
+  .btn:active:not(:disabled), .word:active:not(:disabled), .pair-btn:active, button.cell:active, .btn-ghost:active { transform: none; }
+}
+@keyframes hk-fade-in { from { opacity: 0; } }
+@media (prefers-reduced-transparency: reduce) { .overlay { background: rgba(0, 0, 0, 0.6); } }
+@media (prefers-contrast: more) {
+  .word, .clue, .pair-btn, .rules, .btn-secondary { box-shadow: inset 0 0 0 1px var(--label-2); }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <a class="home-link" href="../" aria-label="Alle Spiele"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="txt">Spiele</span></a>
+    <h1>Heiß &amp; Kalt</h1>
+    <button type="button" class="btn-ghost" id="net-btn">Online</button>
+    <p class="meta" id="meta"></p>
+  </header>
+  <main class="main" id="main">
+    <div class="side" id="side"></div>
+    <div class="grid" id="grid" role="group" aria-label="Begriffe"></div>
+  </main>
+  <footer class="bar" id="bar"></footer>
+</div>
+
+<!-- Ein Handy: Geheimwort verdecken und weitergeben -->
+<div class="cover" id="cover" hidden>
+  <h2 id="cover-title"></h2>
+  <p id="cover-text"></p>
+  <button type="button" class="btn" id="cover-btn"></button>
+</div>
+
+<!-- Online -->
+<div class="overlay" id="online" hidden>
+  <div class="panel" role="dialog" aria-modal="true" aria-labelledby="online-title">
+    <h2 id="online-title">Online spielen</h2>
+    <p class="note">Zu zweit auf zwei Handys, zum Beispiel beim Telefonieren. Eine Person erstellt ein Spiel und sagt der anderen den Code. Das Geheimwort sieht nur das Handy der Person, die die Hinweise gibt.</p>
+    <p class="note">Für die Verbindung erfahren Server von PeerJS und Google deine IP-Adresse. Mehr unter <a href="../../datenschutz.html">Datenschutz</a>.</p>
+    <p class="label">Dein Name</p>
+    <input type="text" class="field" id="my-name" maxlength="14" autocomplete="off" aria-label="Dein Name">
+    <div class="two-col" id="net-choose">
+      <button type="button" class="btn btn-primary" id="net-create">Spiel erstellen</button>
+      <button type="button" class="btn btn-secondary" id="net-join">Beitreten</button>
+    </div>
+    <div id="net-code-box" hidden>
+      <p class="label">Dein Code</p>
+      <p class="code" id="net-code">····</p>
+    </div>
+    <div id="net-join-box" hidden>
+      <p class="label">Code eingeben</p>
+      <div class="row">
+        <input type="text" class="field" id="join-code" maxlength="4" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="Code des Spiels">
+        <button type="button" class="btn btn-primary" id="net-connect">Verbinden</button>
+      </div>
+    </div>
+    <p class="note" id="net-status" aria-live="polite"></p>
+    <button type="button" class="btn btn-secondary" id="net-close">Schließen</button>
+  </div>
+</div>
+
+<div class="sr-only" aria-live="polite" id="announce"></div>
+
+<script>
+(function () {
+  "use strict";
+  var $ = function (s) { return document.querySelector(s); };
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+
+  /* ---------- Zufall aus dem Betriebssystem, ohne Verzerrung ---------- */
+  var u32 = new Uint32Array(1);
+  function randInt(n) {
+    if (!(window.crypto && crypto.getRandomValues)) return Math.floor(Math.random() * n);
+    var limit = Math.floor(0x100000000 / n) * n;
+    do { crypto.getRandomValues(u32); } while (u32[0] >= limit);
+    return u32[0] % n;
+  }
+  function shuffle(a) { for (var i = a.length - 1; i > 0; i--) { var j = randInt(i + 1), t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+
+  /* ---------- Spielmaterial ---------- */
+  var WORDS = [
+    "Banane", "Vulkan", "Pinguin", "Zahnbürste", "Gitarre", "Eiffelturm", "Kaktus", "Schokolade", "Rakete", "Regenschirm", "Feuerwehrauto", "Wolke",
+    "Kaffee", "Pizza", "Elefant", "Kühlschrank", "Sauna", "Zitrone", "Schneemann", "Drache", "Bibliothek", "Krankenhaus", "Wüste", "Gletscher",
+    "Leuchtturm", "Bienenstock", "Igel", "Hai", "Schmetterling", "Krokodil", "Giraffe", "Eule", "Katze", "Hund", "Pferd", "Schnecke",
+    "Ameise", "Delfin", "Tintenfisch", "Löwe", "Maus", "Kuh", "Huhn", "Papagei", "Frosch", "Bär", "Fuchs", "Wal",
+    "Spinne", "Biene", "Erdbeere", "Wassermelone", "Chili", "Knoblauch", "Honig", "Eiscreme", "Popcorn", "Brezel", "Sushi", "Suppe",
+    "Salat", "Käse", "Senf", "Gurke", "Kartoffel", "Ei", "Toast", "Pfannkuchen", "Spaghetti", "Burger", "Croissant", "Kuchen",
+    "Kaugummi", "Limonade", "Milch", "Wein", "Bier", "Tee", "Brot", "Butter", "Apfel", "Kokosnuss", "Ananas", "Pilz",
+    "Zwiebel", "Karotte", "Handy", "Laptop", "Fernseher", "Kamera", "Kopfhörer", "Armbanduhr", "Brille", "Schlüssel", "Kerze", "Lampe",
+    "Spiegel", "Kissen", "Bett", "Sofa", "Stuhl", "Tisch", "Teppich", "Badewanne", "Dusche", "Toilette", "Waschmaschine", "Mikrowelle",
+    "Toaster", "Staubsauger", "Föhn", "Bügeleisen", "Hammer", "Schraube", "Leiter", "Seil", "Kette", "Messer", "Gabel", "Löffel",
+    "Teller", "Tasse", "Flasche", "Koffer", "Rucksack", "Geldbeutel", "Kreditkarte", "Briefmarke", "Zeitung", "Buch", "Bleistift", "Radiergummi",
+    "Schere", "Kleber", "Tafel", "Globus", "Landkarte", "Kompass", "Fernglas", "Teleskop", "Mikroskop", "Fahrrad", "Auto", "Bus",
+    "Zug", "Flugzeug", "Hubschrauber", "Schiff", "U-Boot", "Traktor", "Skateboard", "Ski", "Schlitten", "Zelt", "Lagerfeuer", "Hängematte",
+    "Sonnenbrille", "Badeanzug", "Mütze", "Schal", "Handschuh", "Stiefel", "Krawatte", "Kleid", "Jeans", "Pyjama", "Regenjacke", "Ring",
+    "Krone", "Diamant", "Gold", "Münze", "Schatzkiste", "Pirat", "Ritter", "Prinzessin", "Hexe", "Zauberer", "Vampir", "Geist",
+    "Roboter", "Alien", "Dinosaurier", "Einhorn", "Superheld", "Clown", "Astronaut", "Polizist", "Arzt", "Lehrer", "Koch", "Bauer",
+    "Pilot", "Friseur", "Baby", "Oma", "Schule", "Kirche", "Schloss", "Burg", "Bahnhof", "Flughafen", "Stadion", "Zoo",
+    "Zirkus", "Museum", "Kino", "Strand", "Insel", "Berg", "Wald", "See", "Fluss", "Meer", "Höhle", "Dschungel",
+    "Bauernhof", "Spielplatz", "Mond", "Sonne", "Stern", "Regenbogen", "Gewitter", "Schnee", "Nebel", "Tornado", "Erdbeben", "Feuer",
+    "Eiswürfel", "Sand", "Stein", "Baum", "Rose", "Sonnenblume", "Gras", "Weihnachtsbaum", "Osterei", "Geburtstag", "Hochzeit", "Urlaub",
+    "Party", "Hausaufgaben", "Montag", "Wochenende", "Fußball", "Tennis", "Schach", "Puzzle", "Würfel", "Luftballon", "Trampolin", "Achterbahn",
+    "Karussell", "Feuerwerk", "Konfetti", "Geschenk", "Teddybär", "Puppe", "Videospiel", "Klavier", "Trommel", "Trompete", "Geige", "Mikrofon",
+    "Disco", "Oper", "Zahnarzt", "Pflaster", "Spritze", "Wecker", "Kalender", "Passwort", "Selfie", "Internet", "Podcast", "Steuererklärung",
+    "Supermarkt", "Tankstelle", "Ampel", "Brücke", "Tunnel", "Aufzug", "Treppe", "Fenster", "Dachboden", "Keller", "Garten", "Swimmingpool",
+    "Gefängnis", "Rathaus", "Socke", "Zahnpasta", "Shampoo", "Parfüm", "Lippenstift", "Nagellack", "Tattoo", "Bart", "Glatze", "Muskel",
+    "Herz", "Gehirn", "Nase", "Ohr", "Schatten", "Echo", "Traum", "Albtraum", "Witz", "Geheimnis", "Lüge", "Kuss",
+    "Umarmung"
+  ];
+  var PAIRS = [
+    ["heiß", "kalt"], ["süß", "sauer"], ["groß", "klein"], ["alt", "neu"], ["laut", "leise"], ["hart", "weich"],
+    ["schnell", "langsam"], ["schwer", "leicht"], ["teuer", "billig"], ["gefährlich", "harmlos"], ["natürlich", "künstlich"], ["drinnen", "draußen"],
+    ["nass", "trocken"], ["hell", "dunkel"], ["rund", "eckig"], ["fröhlich", "traurig"], ["sauber", "schmutzig"], ["modern", "altmodisch"],
+    ["wichtig", "unwichtig"], ["selten", "alltäglich"], ["gesund", "ungesund"], ["spannend", "langweilig"], ["für Kinder", "für Erwachsene"], ["Sommer", "Winter"],
+    ["Stadt", "Land"], ["Tag", "Nacht"], ["Wasser", "Land"], ["Luxus", "Alltag"], ["flüssig", "fest"], ["glatt", "rau"],
+    ["lang", "kurz"], ["dick", "dünn"], ["scharf", "mild"], ["hoch", "tief"], ["ruhig", "wild"], ["ordentlich", "chaotisch"],
+    ["romantisch", "unromantisch"], ["nützlich", "nutzlos"], ["einfach", "kompliziert"], ["echt", "erfunden"], ["privat", "öffentlich"], ["Arbeit", "Freizeit"],
+    ["bunt", "einfarbig"], ["lecker", "eklig"], ["schön", "hässlich"], ["stark", "schwach"], ["reich", "arm"], ["leer", "voll"],
+    ["offen", "geschlossen"], ["nah", "fern"], ["oben", "unten"], ["lebendig", "leblos"], ["essbar", "ungenießbar"], ["elegant", "lässig"],
+    ["gemütlich", "ungemütlich"], ["berühmt", "unbekannt"], ["mutig", "ängstlich"], ["entspannt", "stressig"], ["praktisch", "unpraktisch"], ["angesagt", "out"],
+    ["Zukunft", "Vergangenheit"], ["Technik", "Natur"], ["Kopf", "Bauch"], ["Hund", "Katze"], ["Kaffee", "Tee"], ["Party", "Bibliothek"],
+    ["Held", "Bösewicht"], ["Himmel", "Hölle"], ["Feuer", "Wasser"], ["Strand", "Berge"], ["Morgen", "Abend"], ["Frühling", "Herbst"],
+    ["Sport", "Sofa"], ["roh", "gekocht"], ["gesellig", "einsam"], ["gerade", "krumm"], ["spitz", "stumpf"], ["sicher", "riskant"],
+    ["tut weh", "tut gut"], ["duftet", "stinkt"], ["wertvoll", "wertlos"], ["Kalorienbombe", "Diät"], ["beliebt", "unbeliebt"], ["normal", "verrückt"],
+    ["analog", "digital"], ["formell", "locker"], ["kitschig", "stylisch"], ["kindisch", "seriös"], ["geheimnisvoll", "offensichtlich"], ["beruhigend", "aufregend"],
+    ["schwimmt", "geht unter"], ["fliegt", "bleibt am Boden"], ["passt in die Hosentasche", "passt nicht ins Auto"], ["Montag", "Freitag"], ["Oma", "Teenager"], ["Weihnachten", "Halloween"],
+    ["Mittelalter", "Science-Fiction"], ["Stille", "Lärm"], ["Ordnung", "Abenteuer"], ["Frühstück", "Abendessen"], ["gibt es überall", "gibt es kaum"], ["macht glücklich", "macht Angst"],
+    ["braucht Strom", "braucht keinen Strom"], ["Deutschland", "Ausland"], ["lustig", "ernst"], ["sanft", "brutal"], ["glänzend", "matt"], ["klebrig", "rutschig"],
+    ["klug", "dumm"], ["schick", "schäbig"]
+  ];
+  var ROUNDS = 5, GRID = 16, HAND = 3;
+  // Hinweis: 0 = sehr links, 1 = eher links, 2 = eher rechts, 3 = sehr rechts
+  function clueText(c) { var p = PAIRS[c.p]; return (c.pos === 0 || c.pos === 3 ? "sehr " : "eher ") + (c.pos < 2 ? p[0] : p[1]); }
+
+  /* ---------- Gespeichert: Name und Bilanz ---------- */
+  var KEY = "heisskalt-v1";
+  var P = { v: 1, myName: "", wins: 0, losses: 0 };
+  try { var sv = JSON.parse(localStorage.getItem(KEY)); if (sv && sv.v === 1) P = sv; } catch (e) {}
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(P)); } catch (e) {} }
+
+  /* ---------- Spielstand ----------
+     phase: lobby · clue (Hinweisgeber wählt) · guess (Rater streicht) · final (letzter Tipp) · won · lost */
+  function freshState() {
+    return { phase: "lobby", words: [], secret: -1, removed: {}, marks: {}, round: 1, clues: [], used: [],
+      hand: [], pick: -1, pos: -1, giver: 0, games: 0, wins: P.wins, losses: P.losses, why: "", finalPick: -1 };
+  }
+  var S = freshState();
+  // Den Spielstand vom anderen Handy nie ungeprüft übernehmen: nur bekannte Phasen, ganze Zahlen im erlaubten Bereich, Texte gekürzt.
+  // Sonst könnte ein manipuliertes Handy HTML einschleusen oder die App abstürzen lassen.
+  function intIn(v, lo, hi) { return typeof v === "number" && v % 1 === 0 && v >= lo && v <= hi; }
+  function cleanState(s) {
+    var f = freshState();
+    if (!s || typeof s !== "object") return f;
+    function pair(p) { return intIn(p, 0, PAIRS.length - 1); }
+    f.phase = ["lobby", "clue", "guess", "final", "won", "lost"].indexOf(s.phase) !== -1 ? s.phase : "lobby";
+    f.words = Array.isArray(s.words) ? s.words.slice(0, GRID).map(function (w) { return String(w).slice(0, 40); }) : [];
+    for (var i = 0; i < GRID; i++) {
+      if (s.removed && s.removed[i] === true) f.removed[i] = true;
+      if (s.marks && s.marks[i] === true) f.marks[i] = true;
+    }
+    if (intIn(s.secret, 0, GRID - 1)) f.secret = s.secret;
+    if (intIn(s.finalPick, 0, GRID - 1)) f.finalPick = s.finalPick;
+    if (intIn(s.round, 1, ROUNDS)) f.round = s.round;
+    f.clues = (Array.isArray(s.clues) ? s.clues : []).filter(function (c) { return c && pair(c.p) && intIn(c.pos, 0, 3); })
+      .slice(0, ROUNDS).map(function (c) { return { p: c.p, pos: c.pos }; });
+    if ((f.phase === "guess" || f.phase === "final") && !f.clues.length) f.phase = "lobby";   // Raten ohne Hinweis gibt es nicht
+    f.used = (Array.isArray(s.used) ? s.used : []).filter(pair);
+    f.hand = (Array.isArray(s.hand) ? s.hand : []).filter(pair).slice(0, HAND);
+    if (pair(s.pick)) f.pick = s.pick;
+    if (intIn(s.pos, 0, 3)) f.pos = s.pos;
+    f.giver = s.giver === 1 ? 1 : 0;
+    f.games = intIn(s.games, 0, 1e6) ? s.games : 0;
+    f.wins = intIn(s.wins, 0, 1e6) ? s.wins : 0;
+    f.losses = intIn(s.losses, 0, 1e6) ? s.losses : 0;
+    f.why = s.why === "struck" || s.why === "wrong" ? s.why : "";
+    return f;
+  }
+  var NET = { role: null, conn: null, peer: null, me: 0, names: [] };
+  var reveal = false, passOn = false, knowMode = false;   // nur für ein Handy bzw. lokale Anzeige
+
+  function online() { return !!NET.role; }
+  function names() { return online() ? NET.names : ["Hinweisgeber", "Rater"]; }
+  // Rolle dieses Handys: online fest, an einem Handy je nach Phase
+  function myRole() {
+    if (online()) return S.giver === NET.me ? "giver" : "guesser";
+    return S.phase === "clue" ? "giver" : "guesser";
+  }
+  function canSeeSecret() {
+    if (S.phase === "won" || S.phase === "lost") return true;
+    if (online()) return S.giver === NET.me && S.secret >= 0;
+    return S.phase === "clue" && reveal;
+  }
+  function left() { var n = 0; for (var i = 0; i < GRID; i++) if (!S.removed[i]) n++; return n; }
+  function markedCount() { return Object.keys(S.marks).length; }
+
+  function drawHand() {
+    var free = PAIRS.map(function (_, i) { return i; }).filter(function (i) { return S.used.indexOf(i) === -1; });
+    return shuffle(free).slice(0, HAND);
+  }
+
+  /* ---------- Regeln (läuft am selben Handy oder beim Handy, das das Spiel erstellt hat) ---------- */
+  function newGame() {
+    if (S.games > 0) S.giver = 1 - S.giver;            // Rollen tauschen
+    S.words = shuffle(WORDS.slice()).slice(0, GRID);
+    S.secret = randInt(GRID);
+    S.removed = {}; S.marks = {}; S.round = 1; S.clues = []; S.used = []; S.why = ""; S.finalPick = -1;
+    S.hand = drawHand(); S.pick = -1; S.pos = -1;
+    S.phase = "clue"; S.games++;
+    reveal = false; passOn = false; knowMode = false;
+  }
+  function end(win, why) {
+    S.phase = win ? "won" : "lost"; S.why = why || "";
+    if (win) S.wins++; else S.losses++;
+    if (!online()) { P.wins = S.wins; P.losses = S.losses; save(); }
+    knowMode = false;
+  }
+  // from: Spieler, der die Aktion auslöst (online wichtig für die Rechte)
+  function apply(type, v, from) {
+    var giverAct = !online() || from === S.giver, guesserAct = !online() || from !== S.giver;
+    if (type === "start") { if (S.phase === "lobby" || S.phase === "won" || S.phase === "lost") newGame(); }
+    else if (type === "pick" && giverAct && S.phase === "clue" && S.hand.indexOf(v) !== -1) { S.pick = v; }
+    else if (type === "pos" && giverAct && S.phase === "clue" && intIn(v, 0, 3)) { S.pos = v; }
+    else if (type === "redraw" && giverAct && S.phase === "clue") { S.hand = drawHand(); S.pick = -1; }
+    else if (type === "give" && giverAct && S.phase === "clue" && S.pick >= 0 && S.pos >= 0) {
+      S.clues.push({ p: S.pick, pos: S.pos }); S.used.push(S.pick);
+      S.phase = "guess"; S.marks = {};
+      if (!online()) passOn = true;
+    }
+    else if (type === "mark" && guesserAct && S.phase === "guess" && intIn(v, 0, GRID - 1) && !S.removed[v]) {
+      if (S.marks[v]) delete S.marks[v]; else S.marks[v] = true;
+    }
+    else if (type === "remove" && guesserAct && S.phase === "guess" && markedCount() > 0) {
+      if (S.marks[S.secret]) { Object.keys(S.marks).forEach(function (i) { S.removed[i] = true; }); S.marks = {}; end(false, "struck"); return; }
+      Object.keys(S.marks).forEach(function (i) { S.removed[i] = true; });
+      S.marks = {};
+      if (left() === 1) { end(true, ""); return; }
+      if (S.round >= ROUNDS) { S.phase = "final"; return; }
+      S.round++; S.hand = drawHand(); S.pick = -1; S.pos = -1; S.phase = "clue";
+      reveal = false;
+    }
+    else if (type === "final" && guesserAct && (S.phase === "guess" || S.phase === "final") && intIn(v, 0, GRID - 1) && !S.removed[v]) {
+      S.finalPick = v; S.marks = {};
+      end(v === S.secret, v === S.secret ? "" : "wrong");
+    }
+  }
+
+  /* ---------- Aktionen: lokal direkt, online über das Handy, das das Spiel erstellt hat ---------- */
+  function act(type, v) {
+    if (NET.role === "guest") { send({ t: "act", a: type, v: v }); return; }
+    apply(type, v, online() ? NET.me : 0);
+    render();
+  }
+
+  /* ---------- Zeichnen ---------- */
+  var side = $("#side"), grid = $("#grid"), bar = $("#bar"), meta = $("#meta");
+  function scaleHtml(c, interactive, small) {
+    var p = PAIRS[c.p];
+    var cells = "";
+    for (var i = 0; i < 4; i++) {
+      var on = c.pos === i;
+      cells += interactive
+        ? '<button type="button" class="cell' + (on ? " on" : "") + '" data-act="pos" data-v="' + i + '" aria-pressed="' + on + '" aria-label="' + esc(clueText({ p: c.p, pos: i })) + '"></button>'
+        : '<span class="cell' + (on ? " on" : "") + '"></span>';
+    }
+    return '<div class="clue' + (small ? " small" : "") + '">' +
+      '<div class="scale"><span class="pole">' + esc(p[0]) + '</span><div class="cells">' + cells + '</div><span class="pole r">' + esc(p[1]) + "</span></div>" +
+      (c.pos >= 0 ? '<p class="say">' + esc(clueText(c)) + "</p>" : "") + "</div>";
+  }
+  function historyHtml(skipLast) {
+    var list = S.clues.slice(0, skipLast ? -1 : undefined);
+    if (!list.length) return "";
+    return '<p class="label">Bisherige Hinweise</p><div class="history">' +
+      list.map(function (c) { return scaleHtml(c, false, true); }).join("") + "</div>";
+  }
+  function stats() { return '<p class="stats">Gemeinsam gewonnen ' + S.wins + " · verloren " + S.losses + "</p>"; }
+
+  function renderSide() {
+    var role = myRole(), n = names(), giverName = esc(n[S.giver]), guesserName = esc(n[1 - S.giver]);
+    var secretWord = S.secret >= 0 && S.words[S.secret] ? esc(S.words[S.secret]) : "";
+    var h = "";
+    if (S.phase === "lobby") {
+      h = '<p class="label">So geht es</p><ol class="rules">' +
+        "<li>16 Begriffe liegen aus. Eines davon ist das Geheimwort, nur der Hinweisgeber kennt es.</li>" +
+        "<li>Der Hinweisgeber wählt ein Gegensatzpaar und zeigt, wo das Geheimwort liegt, zum Beispiel „eher heiß“.</li>" +
+        "<li>Die Rater streichen danach mindestens einen Begriff, der nicht passt.</li>" +
+        "<li>Nach 5 Hinweisen soll nur noch das Geheimwort übrig sein. Wird es gestrichen, habt ihr gemeinsam verloren.</li></ol>" +
+        (online() ? '<p class="hint">Verbunden mit <strong>' + esc(n[1 - NET.me]) + "</strong>. " + (S.giver === NET.me ? "Du gibst" : giverName + " gibt") + " im ersten Spiel die Hinweise.</p>" : "") + stats();
+    } else if (S.phase === "won" || S.phase === "lost") {
+      var won = S.phase === "won";
+      h = '<div class="band' + (won ? " won" : " lost") + '"><p class="label">' + (won ? "Gefunden" : "Verloren") + '</p><p class="word-big">' + secretWord + '</p><p class="sub">' +
+        (won ? "Ihr wart auf einer Wellenlänge." : S.why === "struck" ? "Das Geheimwort wurde gestrichen." : "Getippt war „" + esc(S.words[S.finalPick] || "") + "“.") + "</p></div>" +
+        historyHtml(false) + stats();
+    } else if (S.phase === "clue" && role === "giver") {
+      h = '<div class="band"><p class="label">Dein Geheimwort</p><p class="word-big">' + secretWord + "</p></div>" +
+        '<p class="label">Gegensatzpaar wählen</p><div class="pairs">' +
+        S.hand.map(function (i) {
+          return '<button type="button" class="pair-btn" data-act="pick" data-v="' + i + '" aria-pressed="' + (S.pick === i) + '">' + esc(PAIRS[i][0]) + " ↔ " + esc(PAIRS[i][1]) + "</button>";
+        }).join("") + '</div><button type="button" class="link-btn" data-act="redraw">Andere Paare ziehen</button>' +
+        (S.pick >= 0 ? '<p class="label">Wo liegt dein Geheimwort?</p>' + scaleHtml({ p: S.pick, pos: S.pos }, true, false) : "") +
+        historyHtml(false);
+    } else if (S.phase === "clue") {
+      h = '<p class="hint"><strong>' + giverName + "</strong> sucht einen Hinweis aus …</p>" + historyHtml(false);
+    } else if (S.phase === "guess" || S.phase === "final") {
+      var cur = S.clues[S.clues.length - 1];
+      h = '<p class="label">Hinweis ' + S.clues.length + " von " + ROUNDS + "</p>" + scaleHtml(cur, false, false);
+      if (S.phase === "final") h += role === "guesser"
+        ? '<p class="hint"><strong>Letzte Chance:</strong> Tippe auf das Geheimwort.</p>'
+        : '<p class="hint"><strong>' + guesserName + "</strong> tippt auf das Geheimwort …</p>";
+      else if (role === "guesser") h += knowMode
+        ? '<p class="hint"><strong>Du weißt es?</strong> Tippe auf das Geheimwort. Liegst du falsch, ist das Spiel verloren.</p>'
+        : '<p class="hint">Tippe Begriffe an, die nicht passen, und streiche mindestens einen.</p>';
+      else h += '<div class="band"><p class="label">Dein Geheimwort</p><p class="word-big">' + secretWord + '</p></div><p class="hint"><strong>' + guesserName + "</strong> streicht Begriffe …</p>";
+      h += historyHtml(true);
+    }
+    side.innerHTML = h;
+  }
+
+  function renderGrid() {
+    var show = canSeeSecret(), role = myRole();
+    var picking = S.phase === "final" || (S.phase === "guess" && knowMode);
+    var canTap = role === "guesser" && (S.phase === "guess" || S.phase === "final");
+    grid.classList.toggle("pick", picking && role === "guesser");
+    if (!S.words.length) { grid.innerHTML = ""; grid.hidden = true; return; }
+    grid.hidden = false;
+    grid.innerHTML = S.words.map(function (w, i) {
+      var cls = "word" + (S.removed[i] ? " removed" : "") + (S.marks[i] ? " marked" : "") + (show && i === S.secret ? " secret" : "");
+      var dis = !canTap || S.removed[i];
+      return '<button type="button" class="' + cls + '" data-i="' + i + '"' + (dis ? " disabled" : "") +
+        ' aria-label="' + esc(w) + (S.removed[i] ? ", gestrichen" : S.marks[i] ? ", zum Streichen markiert" : "") + '">' + esc(w) + "</button>";
+    }).join("");
+  }
+
+  function renderBar() {
+    var role = myRole(), h = "", two = false;
+    if (S.phase === "lobby") h = '<button type="button" class="btn btn-primary" data-act="start">Spiel starten</button>';
+    else if (S.phase === "won" || S.phase === "lost") h = '<button type="button" class="btn btn-primary" data-act="start">Nochmal, Rollen tauschen</button>';
+    else if (S.phase === "clue" && role === "giver")
+      h = '<button type="button" class="btn btn-primary" data-act="give"' + (S.pick >= 0 && S.pos >= 0 ? "" : " disabled") + ">Hinweis geben</button>";
+    else if (S.phase === "guess" && role === "guesser") {
+      two = true;
+      h = knowMode
+        ? '<button type="button" class="btn btn-secondary" data-act="know-off">Zurück</button><button type="button" class="btn btn-primary" disabled>Geheimwort antippen</button>'
+        : '<button type="button" class="btn btn-secondary" data-act="know">Ich weiß es</button>' +
+          '<button type="button" class="btn btn-danger" data-act="remove"' + (markedCount() ? "" : " disabled") + ">Streichen" + (markedCount() ? " (" + markedCount() + ")" : "") + "</button>";
+    }
+    bar.classList.toggle("two", two);
+    bar.innerHTML = h;
+    bar.hidden = !h;
+  }
+
+  function renderMeta() {
+    var n = names(), t = "";
+    if (S.phase === "lobby") t = online() ? "Online mit <strong>" + esc(n[1 - NET.me]) + "</strong>" : "An einem Handy oder online zu zweit";
+    else if (S.phase === "won" || S.phase === "lost") t = "Spiel " + S.games + " · " + (S.phase === "won" ? "gewonnen" : "verloren");
+    else {
+      t = "Runde " + S.round + " von " + ROUNDS + " · " + left() + " Begriffe übrig";
+      if (online()) t += " · " + (myRole() === "giver" ? "<strong>Du gibst Hinweise</strong>" : "<strong>Du rätst</strong>");
+    }
+    meta.innerHTML = t;
+    $("#net-btn").textContent = online() ? "Trennen" : "Online";
+  }
+
+  var cover = $("#cover");
+  function renderCover() {
+    // Nur an einem Handy: vor dem Hinweis verdecken, danach zum Weitergeben auffordern
+    if (online()) { cover.hidden = true; return; }
+    if (S.phase === "clue" && !reveal) {
+      $("#cover-title").textContent = "Hinweisgeber ist dran";
+      $("#cover-text").textContent = "Nur der Hinweisgeber schaut jetzt aufs Handy. Alle anderen schauen weg.";
+      $("#cover-btn").textContent = "Geheimwort zeigen";
+      cover.hidden = false;
+    } else if (S.phase === "guess" && passOn) {
+      $("#cover-title").textContent = "Hinweis steht";
+      $("#cover-text").textContent = "Gib das Handy jetzt an die Rater weiter.";
+      $("#cover-btn").textContent = "Wir raten";
+      cover.hidden = false;
+    } else cover.hidden = true;
+  }
+  $("#cover-btn").addEventListener("click", function () {
+    if (S.phase === "clue") reveal = true; else passOn = false;
+    render();
+  });
+
+  function render() {
+    renderMeta(); renderSide(); renderGrid(); renderBar(); renderCover();
+    if (NET.role === "host") broadcast();
+  }
+
+  /* ---------- Bedienung ---------- */
+  function onAct(e) {
+    var b = e.target.closest("[data-act]");
+    if (!b || b.disabled) return;
+    var a = b.dataset.act, v = b.dataset.v != null ? +b.dataset.v : undefined;
+    if (a === "know") { knowMode = true; render(); return; }
+    if (a === "know-off") { knowMode = false; render(); return; }
+    act(a, v);
+  }
+  side.addEventListener("click", onAct);
+  bar.addEventListener("click", onAct);
+  grid.addEventListener("click", function (e) {
+    var b = e.target.closest(".word");
+    if (!b || b.disabled) return;
+    var i = +b.dataset.i;
+    if (S.phase === "final" || knowMode) act("final", i);
+    else act("mark", i);
+  });
+
+  /* ---------- Online (PeerJS, erst bei Bedarf geladen) ----------
+     Das Handy, das das Spiel erstellt, führt den Spielstand. Das Geheimwort bekommt das andere Handy nur,
+     wenn es die Hinweise gibt. */
+  // PeerJS 1.5.4 liegt unverändert im App-Ordner (MIT-Lizenz in peerjs-LICENSE.txt) und kommt nicht von einem fremden CDN.
+  // So kann unterwegs niemand anderen Code unterschieben und kein CDN erfährt, wer online spielt.
+  var PEER_SRC = "peerjs.min.js";
+  var ID_PREFIX = "heisskalt-spiele-";
+  var CODE_CHARS = "ABCDEFGHJKLMNPRSTUVWXYZ";
+  var onlineEl = $("#online"), netStatus = $("#net-status"), myNameEl = $("#my-name");
+  function status(t) { netStatus.textContent = t; }
+  function myName() { return (myNameEl.value || "").trim() || P.myName || "Ich"; }
+  function cleanName(n) { return String(n || "").slice(0, 14) || "Mitspieler"; }
+  function send(m) { try { if (NET.conn && NET.conn.open) NET.conn.send(m); } catch (e) {} }
+  function broadcast() {
+    var st = JSON.parse(JSON.stringify(S)), over = S.phase === "won" || S.phase === "lost";
+    if (S.giver !== 1 && !over) { st.secret = -1; st.hand = []; }    // Gast rät: Geheimwort bleibt hier
+    send({ t: "state", s: st, names: NET.names });
+  }
+  function withPeer(cb) {
+    if (window.Peer) { cb(); return; }
+    status("Lade Online-Funktion …");
+    var sc = document.createElement("script");
+    sc.src = PEER_SRC; sc.async = true; sc.onload = cb;
+    sc.onerror = function () { status("Die Online-Funktion konnte nicht geladen werden. Ist das Handy mit dem Internet verbunden?"); };
+    document.head.appendChild(sc);
+  }
+  function errText(e) {
+    var t = e && e.type;
+    if (t === "network" || t === "server-error" || t === "socket-error" || t === "socket-closed") return "Keine Verbindung zum Vermittlungsdienst. Bitte Internet prüfen und nochmal versuchen.";
+    return "Verbindung fehlgeschlagen" + (t ? " (" + t + ")" : "") + ". Bitte nochmal versuchen.";
+  }
+  // Solange eine Online-Sitzung läuft (vom Erstellen bzw. Suchen bis zum Trennen), darf die Shell
+  // kein Update per Neuladen einspielen, sonst bricht die Verbindung ab. Die Merkvariable hält die Aufrufe ausgeglichen.
+  var netHeld = false;
+  function holdNet() { if (netHeld) return; netHeld = true; if (window.Shell) Shell.hold(true); }
+  function releaseNet() { if (!netHeld) return; netHeld = false; if (window.Shell) Shell.hold(false); }
+  function netReset() {
+    try { if (NET.conn) NET.conn.close(); } catch (e) {}
+    try { if (NET.peer) NET.peer.destroy(); } catch (e) {}
+    NET.role = null; NET.conn = null; NET.peer = null; NET.me = 0; NET.names = [];
+    releaseNet();
+  }
+  function wire(c, role) {
+    c.on("open", function () {
+      NET.conn = c; NET.role = role; NET.me = role === "host" ? 0 : 1;
+      holdNet();
+      c.send({ t: "hello", name: myName() });
+      status("Verbunden.");
+    });
+    c.on("data", function (m) {
+      if (!m || typeof m !== "object") return;
+      if (m.t === "hello") {
+        if (role === "host") { NET.names = [myName(), cleanName(m.name)]; S = freshState(); S.wins = 0; S.losses = 0; enterOnline(); }
+        else { NET.names = [cleanName(m.name), myName()]; enterOnline(); }
+      } else if (m.t === "state" && role === "guest") {
+        var wasPhase = S.phase;
+        S = cleanState(m.s);
+        if (Array.isArray(m.names) && m.names.length === 2) NET.names = m.names.map(cleanName);
+        if (S.phase !== "guess") knowMode = false;
+        if (wasPhase !== S.phase) say(phaseSay());
+        render();
+      } else if (m.t === "act" && role === "host") {
+        apply(m.a, m.v, 1); render();
+      }
+    });
+    c.on("close", function () { if (NET.conn === c) leaveOnline("Die Verbindung ist getrennt. Ihr spielt jetzt wieder an einem Handy."); });
+    c.on("error", function () { if (NET.conn === c) leaveOnline("Die Verbindung ist abgebrochen."); });
+  }
+  function makeCode() { var c = ""; for (var i = 0; i < 4; i++) c += CODE_CHARS[randInt(CODE_CHARS.length)]; return c; }
+  function hostGame() {
+    withPeer(function () {
+      netReset();
+      var code = makeCode(), peer = NET.peer = new Peer(ID_PREFIX + code.toLowerCase());
+      holdNet();
+      $("#net-join-box").hidden = true; $("#net-code-box").hidden = false; $("#net-code").textContent = "····";
+      status("Erstelle Spiel …");
+      peer.on("open", function () { $("#net-code").textContent = code; status("Sag den Code am Telefon an. Warte auf die andere Person …"); });
+      peer.on("connection", function (c) { if (NET.conn) { c.on("open", function () { c.close(); }); return; } wire(c, "host"); });
+      peer.on("error", function (e) { if (e.type === "unavailable-id") { hostGame(); return; } if (!NET.role) { releaseNet(); status(errText(e)); } });
+    });
+  }
+  function joinGame() {
+    var code = ($("#join-code").value || "").toUpperCase().replace(/[^A-Z]/g, "");
+    if (code.length !== 4) { status("Der Code hat vier Buchstaben."); return; }
+    withPeer(function () {
+      netReset();
+      var peer = NET.peer = new Peer();
+      holdNet();
+      status("Suche Spiel " + code + " …");
+      peer.on("open", function () { wire(peer.connect(ID_PREFIX + code.toLowerCase(), { reliable: true }), "guest"); });
+      peer.on("error", function (e) {
+        if (NET.role) return;
+        releaseNet();
+        status(e.type === "peer-unavailable" ? "Kein Spiel mit dem Code " + code + " gefunden. Code prüfen und nochmal versuchen." : errText(e));
+      });
+    });
+  }
+  function enterOnline() { onlineEl.hidden = true; reveal = false; passOn = false; knowMode = false; render(); say("Verbunden mit " + NET.names[1 - NET.me] + "."); }
+  function leaveOnline(msg) {
+    var was = !!NET.role;
+    netReset(); S = freshState(); reveal = false; passOn = false; knowMode = false; render();
+    if (was && msg) { openOnline(); status(msg); }
+  }
+  function openOnline() {
+    myNameEl.value = P.myName || "";
+    $("#net-code-box").hidden = true; $("#net-join-box").hidden = true;
+    status(""); onlineEl.hidden = false;
+  }
+  myNameEl.addEventListener("input", function () { P.myName = myNameEl.value.trim(); save(); });
+  $("#net-btn").addEventListener("click", function () { if (online()) leaveOnline(""); else openOnline(); });
+  $("#net-create").addEventListener("click", hostGame);
+  $("#net-join").addEventListener("click", function () {
+    $("#net-code-box").hidden = true; $("#net-join-box").hidden = false; status("");
+    if (!NET.role) { try { if (NET.peer) NET.peer.destroy(); } catch (e) {} NET.peer = null; releaseNet(); }
+    $("#join-code").focus();
+  });
+  $("#join-code").addEventListener("input", function (e) { e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 4); });
+  $("#join-code").addEventListener("keydown", function (e) { if (e.key === "Enter") joinGame(); });
+  $("#net-connect").addEventListener("click", joinGame);
+  $("#net-close").addEventListener("click", function () { onlineEl.hidden = true; if (!NET.role) netReset(); });
+
+  var announce = $("#announce");
+  function say(t) { announce.textContent = ""; if (t) setTimeout(function () { announce.textContent = t; }, 30); }
+  function phaseSay() {
+    return { clue: "Neue Runde.", guess: "Neuer Hinweis.", final: "Letzte Chance.", won: "Gewonnen!", lost: "Verloren." }[S.phase] || "";
+  }
+
+  render();
+})();
+</script>
+</body>
+</html>
