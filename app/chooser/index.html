@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="app-version" content="1.2.0">
+<meta name="app-version" content="1.2.1">
 <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0d1b2a" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -23,17 +23,17 @@
 :root {
   --chosen: var(--accent);   /* gewählter Kreis und Flut; weiße Schrift darauf hat ≥ 4,5:1 */
   /* Fingerfarben: weich, aber gut unterscheidbar */
-  --f1: #c0392b; --f2: #e2b33c; --f3: #2e8b6e; --f4: #4a6fa5; --f5: #c4588a;
+  --f1: #1a2c42; --f2: #4a6fa5; --f3: #b8c4d4; --f4: #6a7d93; --f5: #3a4a5c; /* Navy Research: navy, blue, light-blue, gray, slate */
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --chosen: var(--accent-fill); /* Navy-Blau, weiße Schrift darauf ≥ 4,5:1 */
-    --f1: #e8705f; --f2: #e2b33c; --f3: #4fbf98; --f4: #8fb0e0; --f5: #e48ab2;
+    --f1: #ffffff; --f2: #4a6fa5; --f3: #b8c4d4; --f4: #6a7d93; --f5: #dde3ea;
   }
 }
 :root[data-theme="dark"] {
   --chosen: var(--accent-fill);
-  --f1: #e8705f; --f2: #e2b33c; --f3: #4fbf98; --f4: #8fb0e0; --f5: #e48ab2;
+  --f1: #ffffff; --f2: #4a6fa5; --f3: #b8c4d4; --f4: #6a7d93; --f5: #dde3ea;
 }
 
 html, body { height: 100%; }
